@@ -13,6 +13,7 @@ const SHADERS := [
 	{ "path": "res://shaders/hyperkart.gdshader", "name": "Hyperkart" },
 	{ "path": "res://shaders/gyroid.gdshader", "name": "Gyroid" },
 	{ "path": "res://shaders/accident_bug.gdshader", "name": "Accident Bug" },
+	{ "path": "res://shaders/apollo_shadow.gdshader", "name": "Apollo Shadow" },
 ]
 
 var _loaded_shaders: Array[Shader] = []
