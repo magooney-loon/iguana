@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dfyeamw4sg2af"]
 
 [ext_resource type="Script" uid="uid://cjx024rn3rvwi" path="res://engine/visualizer.gd" id="1"]
-[ext_resource type="Shader" uid="uid://bngpavr7kjh2w" path="res://shaders/spectrum_debug.gdshader" id="2"]
+[ext_resource type="Shader" uid="uid://bngpavr7kjh2w" path="res://shaders/signal_scope.gdshader" id="2"]
 [ext_resource type="AudioStream" uid="uid://dl3ppges2sw77" path="res://default.ogg" id="3"]
 [ext_resource type="Script" uid="uid://nsmlada460xa" path="res://ui/player_ui.gd" id="4"]
 

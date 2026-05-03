@@ -150,9 +150,9 @@ uniform vec2 rect_size = vec2(1600.0, 900.0);
 
 Use `UV` for normalized rect coordinates and `UV * rect_size` for pixel-precise drawing.
 
-## Spectrum Debug
+## Signal Scope
 
-`shaders/spectrum_debug.gdshader` is the diagnostic shader. It is designed for people making their own shaders, so they can see what the engine is extracting from a song.
+`shaders/signal_scope.gdshader` is the diagnostic shader. It is designed for people making their own shaders, so they can see what the engine is extracting from a song.
 
 It shows:
 
@@ -183,7 +183,7 @@ The bottom player bar provides load, play/pause, seek, and song info.
 
 ```gdscript
 const SHADERS := [
-	{ "path": "res://shaders/spectrum_debug.gdshader", "name": "Spectrum Debug" },
+	{ "path": "res://shaders/signal_scope.gdshader", "name": "Signal Scope" },
 	{ "path": "res://shaders/your_shader.gdshader", "name": "Your Shader" },
 ]
 ```
@@ -194,7 +194,7 @@ const SHADERS := [
 ├── engine/
 │   └── visualizer.gd              # Audio analysis engine + shader switching
 ├── shaders/
-│   └── spectrum_debug.gdshader    # Debug HUD showing engine output
+│   └── signal_scope.gdshader    # Debug HUD showing engine output
 ├── ui/
 │   └── player_ui.gd               # Player bar
 ├── main.tscn

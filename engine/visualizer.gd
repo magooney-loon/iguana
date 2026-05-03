@@ -5,15 +5,15 @@ const BAND_GATE_MARGIN := 0.025
 const BAND_MIN_SPAN := 0.28
 
 const SHADERS := [
-	{ "path": "res://shaders/spectrum_debug.gdshader", "name": "Spectrum Debug" },
-	{ "path": "res://shaders/sacred_fractal.gdshader", "name": "Sacred Fractal" },
-	{ "path": "res://shaders/octagrams.gdshader", "name": "Octagrams" },
-	{ "path": "res://shaders/squiggly.gdshader", "name": "Squiggly" },
-	{ "path": "res://shaders/phantom_star.gdshader", "name": "Phantom Star" },
-	{ "path": "res://shaders/hyperkart.gdshader", "name": "Hyperkart" },
-	{ "path": "res://shaders/gyroid.gdshader", "name": "Gyroid" },
-	{ "path": "res://shaders/accident_bug.gdshader", "name": "Accident Bug" },
-	{ "path": "res://shaders/apollo_shadow.gdshader", "name": "Apollo Shadow" },
+	{ "path": "res://shaders/signal_scope.gdshader", "name": "Signal Scope" },
+	{ "path": "res://shaders/mandala.gdshader", "name": "Mandala" },
+	{ "path": "res://shaders/starfall.gdshader", "name": "Starfall" },
+	{ "path": "res://shaders/flow_state.gdshader", "name": "Flow State" },
+	{ "path": "res://shaders/afterimage.gdshader", "name": "Afterimage" },
+	{ "path": "res://shaders/overdrive.gdshader", "name": "Overdrive" },
+	{ "path": "res://shaders/lattice.gdshader", "name": "Lattice" },
+	{ "path": "res://shaders/glitch_garden.gdshader", "name": "Glitch Garden" },
+	{ "path": "res://shaders/shadow_fold.gdshader", "name": "Shadow Fold" },
 ]
 
 var _loaded_shaders: Array[Shader] = []
@@ -107,7 +107,7 @@ var _shuffle_on    := false
 var _label: Label
 var _label_timer := 0.0
 
-# Debug overlay container (shown only for spectrum_debug shader)
+# Debug overlay container (shown only for signal scope shader)
 var _debug_overlay: Control
 var _debug_values: Array[Label] = []
 var _debug_top_values: Array[Label] = []
@@ -277,7 +277,7 @@ func _update_debug_overlay_visibility() -> void:
 	if _debug_overlay == null:
 		return
 	# Show debug labels only when the spectrum_debug shader is active
-	_debug_overlay.visible = (SHADERS[_shader_index].name == "Spectrum Debug")
+	_debug_overlay.visible = (SHADERS[_shader_index].name == "Signal Scope")
 
 func _toggle_shuffle() -> void:
 	_shuffle_on    = !_shuffle_on
