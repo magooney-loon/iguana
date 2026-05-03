@@ -1,0 +1,38 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
+[application]
+
+config/name="Iguana"
+config/description="Audio-reactive GDShader visualizer."
+config/tags=PackedStringArray("audio", "visualization")
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.6")
+config/icon="res://icon.webp"
+
+[audio]
+
+buses/default_bus_layout="uid://byxtiup0hs2og"
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/vsync/vsync_mode=0
+
+[rendering]
+
+environment/defaults/default_clear_color=Color(0.12549, 0.12549, 0.12549, 1)
