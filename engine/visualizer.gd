@@ -1,26 +1,40 @@
 extends ColorRect
 
 const SHADERS := [
-	{ "path": "res://shaders/cosmic_abyss.gdshader", "name": "Cosmic Abyss" },
-	{ "path": "res://shaders/starfall.gdshader", "name": "Starfall" },
-	{ "path": "res://shaders/afterimage.gdshader", "name": "Afterimage" },
-	{ "path": "res://shaders/glitch_garden.gdshader", "name": "Glitch Garden" },
-	{ "path": "res://shaders/signal_scope.gdshader", "name": "Signal Scope" },
+	{ "path": "res://shaders/cosmic_abyss.gdshader",     "name": "Cosmic Abyss" },
+	{ "path": "res://shaders/starfall.gdshader",          "name": "Starfall" },
+	{ "path": "res://shaders/afterimage.gdshader",        "name": "Afterimage" },
+	{ "path": "res://shaders/glitch_garden.gdshader",     "name": "Glitch Garden" },
+	{ "path": "res://shaders/signal_scope.gdshader",      "name": "Signal Scope" },
+	{ "path": "res://shaders/feedback_vortex.gdshader",   "name": "Feedback Vortex" },
 ]
 
 var _analyzer: AudioAnalyzer
 var _loaded_shaders: Array[Shader] = []
 var _shader_index   := 0
 
+# Feedback buffer: self renders into _feedback_vp; shader reads from _backbuffer_vp.
+# Two-viewport design avoids the GPU "same texture as framebuffer and uniform" error:
+# _backbuffer_vp copies _feedback_vp's output each frame (renders after it in the tree),
+# so the shader always reads last frame's completed output, never its own live target.
+var _feedback_vp:   SubViewport
+var _backbuffer_vp: SubViewport
+
 # Auto-shuffle
 const SHUFFLE_INTERVAL := 45.0
 var _shuffle_timer := 0.0
 var _shuffle_on    := false
 
-# UI overlay (context menu, debug HUD, label)
+# Beat-triggered switching cooldown (prevents rapid-fire switches)
+const SWITCH_COOLDOWN_MIN := 4.0
+var _switch_cooldown := 0.0
+
+# Frame counter for shaders that need per-frame parity or rhythm effects
+var _frame_count := 0
+
+# UI overlay (lives on SubViewportContainer, not inside SubViewport)
 var _ui: VisualizerUI
 
-# Build a NoiseTexture2D for shaders that sample a noise channel
 var _noise_tex: NoiseTexture2D
 
 
@@ -34,16 +48,45 @@ func _ready() -> void:
 	for def in SHADERS:
 		_loaded_shaders.append(load(def.path))
 
-	# Start with the first shader
 	material = ShaderMaterial.new()
 	(material as ShaderMaterial).shader = _loaded_shaders[0]
 
-	# Build UI overlay (label, context menu, debug HUD)
-	_ui = VisualizerUI.new()
-	_ui.setup(_analyzer, SHADERS)
-	add_child(_ui)
+	# _feedback_vp is our direct parent (SubViewport); container is its parent.
+	# stretch = true on the container means Godot manages SubViewport size automatically.
+	_feedback_vp = get_parent() as SubViewport
+	var container := _feedback_vp.get_parent() as SubViewportContainer
 
-	# Build a NoiseTexture2D for shaders that sample a noise channel
+	# Build the backbuffer: a separate SubViewport with a TextureRect that copies
+	# _feedback_vp's output. It is added as a sibling of VisualizerContainer so
+	# Godot renders it AFTER _feedback_vp, guaranteeing it always holds the
+	# previous frame by the time the shader runs next frame.
+	_backbuffer_vp = SubViewport.new()
+	_backbuffer_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_backbuffer_vp.transparent_bg = false
+	_backbuffer_vp.size = Vector2i(1600, 900)
+
+	var bb_rect := TextureRect.new()
+	bb_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bb_rect.expand_mode  = TextureRect.EXPAND_IGNORE_SIZE
+	bb_rect.stretch_mode = TextureRect.STRETCH_SCALE
+	bb_rect.texture = _feedback_vp.get_texture()
+	_backbuffer_vp.add_child(bb_rect)
+
+	# Keep backbuffer resolution in sync with the display area.
+	container.resized.connect(func():
+		if container.size != Vector2.ZERO:
+			_backbuffer_vp.size = Vector2i(container.size)
+	)
+
+	# UI lives on the container so it is NOT captured in the feedback texture.
+	# If it were inside the SubViewport its labels would trail and spiral forever.
+	_ui = VisualizerUI.new()
+	_ui.setup(_analyzer, SHADERS, self)
+
+	# Defer both add_child calls: parent nodes are still setting up at _ready() time.
+	container.add_child.call_deferred(_ui)
+	container.get_parent().add_child.call_deferred(_backbuffer_vp)
+
 	var fnoise := FastNoiseLite.new()
 	fnoise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 	fnoise.frequency = 0.04
@@ -91,12 +134,23 @@ func _shuffle() -> void:
 
 func _process(delta: float) -> void:
 	_analyzer.process(delta)
+	_frame_count += 1
 
-	# Shuffle timer (only when audio is active)
 	if _analyzer.is_sounding:
+		# Beat-triggered switching: fires on a strong confirmed kick.
+		# Only active when shuffle is on; cooldown prevents rapid switches.
+		_switch_cooldown = maxf(0.0, _switch_cooldown - delta)
+		if _shuffle_on and _switch_cooldown <= 0.0 \
+				and _analyzer._beat_confidence > 0.5 \
+				and _analyzer._kick_envelope > 0.85:
+			_shuffle()
+			_switch_cooldown = SWITCH_COOLDOWN_MIN
+
+		# Timer-based fallback (fires when beat confidence is too low to trigger above)
 		_shuffle_timer += delta
 		if _shuffle_on and _shuffle_timer >= SHUFFLE_INTERVAL:
 			_shuffle()
+			_switch_cooldown = SWITCH_COOLDOWN_MIN
 
 	_ui.process_ui(delta)
 	_push_uniforms(material as ShaderMaterial)
@@ -107,6 +161,20 @@ func _process(delta: float) -> void:
 func _push_uniforms(mat: ShaderMaterial) -> void:
 	var a := _analyzer
 	mat.set_shader_parameter("rect_size", get_rect().size)
+
+	# Read from the backbuffer (copy of last frame), not from _feedback_vp itself.
+	# The GPU forbids using a viewport's own texture as both framebuffer and sampler.
+	mat.set_shader_parameter("prev_frame", _backbuffer_vp.get_texture())
+
+	# Mouse: normalized [0,1] position within the visualizer area.
+	var container := _feedback_vp.get_parent() as SubViewportContainer
+	var mp := container.get_local_mouse_position() / container.size
+	mat.set_shader_parameter("mouse_pos",  mp.clamp(Vector2.ZERO, Vector2.ONE))
+	mat.set_shader_parameter("mouse_down", 1.0 if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) else 0.0)
+
+	# Frame counter: enables per-frame parity and rhythm effects.
+	mat.set_shader_parameter("frame", _frame_count)
+
 	mat.set_shader_parameter("sub_bass",    a._sub_bass)
 	mat.set_shader_parameter("bass",        a._bass)
 	mat.set_shader_parameter("low_mid",     a._low_mid)

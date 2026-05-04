@@ -7,6 +7,7 @@ extends Control
 var _analyzer: AudioAnalyzer
 var _shaders: Array
 var _shader_index := 0
+var _visualizer: ColorRect  # reference back to the visualizer node (in SubViewport)
 
 # Shader name overlay
 var _label: Label
@@ -25,9 +26,10 @@ var _debug_flux_values: Array[Label] = []
 var _debug_derived_values: Array[Label] = []
 
 
-func setup(analyzer: AudioAnalyzer, shaders: Array) -> void:
+func setup(analyzer: AudioAnalyzer, shaders: Array, visualizer: ColorRect) -> void:
 	_analyzer = analyzer
 	_shaders = shaders
+	_visualizer = visualizer
 
 
 func _ready() -> void:
@@ -85,7 +87,7 @@ func _gui_input(event: InputEvent) -> void:
 
 func _on_context_menu_index_pressed(index: int) -> void:
 	if index == _player_toggle_idx:
-		var player_bar := get_parent().owner.get_node("PlayerBar") as Control
+		var player_bar := _visualizer.get_tree().root.get_node("Main/PlayerBar") as Control
 		player_bar.visible = !player_bar.visible
 		_context_menu.set_item_checked(index, player_bar.visible)
 	elif index == _fullscreen_idx:
@@ -98,7 +100,7 @@ func _on_context_menu_index_pressed(index: int) -> void:
 			_context_menu.set_item_checked(index, true)
 	elif index < _shaders.size():
 		var id := _context_menu.get_item_id(index)
-		get_parent()._switch(id)
+		_visualizer._switch(id)
 
 
 # ── Shader change notification ─────────────────────────────────────
