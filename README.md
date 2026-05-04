@@ -76,8 +76,34 @@ void fragment() {
 **Key rules:**
 - Warp inputs must use **aspect-corrected** coordinates (`center`, not raw `uv`) — raw UV coordinates produce a stretched warp field on 16:9 displays.
 - Spiral arms must use an **integer arm count** (`floor(4.0 + bass * 3.0)`). A non-integer `N` in `sin(angle * N)` leaves a hard seam along the left-center horizontal line because `atan2` has a branch cut there.
+- **Never use `atan()` in the warp field.** `atan2` jumps ±π at the negative x-axis. With a non-integer coefficient that discontinuity survives the `sin()`, and the warp compounds it every frame into a hard vertical cut on the left side of the screen. Use Cartesian `warped.x / warped.y / length(warped)` in warp expressions instead. `atan` is fine in the new-geometry layer (current frame only), not in the feedback path.
 - **Do not clamp** the sample UV. Use `smoothstep` edge fade instead — clamping smears the border pixel into a visible artifact.
 - `prev_frame` uses `hint_default_black` so the first frame starts from black.
+
+---
+
+## Feedback Brightness — Equilibrium Formula
+
+Every pixel in a feedback shader converges to a steady-state brightness. If a pixel has `new_col` added to it each frame and the trail decays by factor `d`, the equilibrium is:
+
+```
+brightness_equilibrium = new_col_per_pixel / (1.0 - d)
+```
+
+With `d = 0.928` (common starting point), equilibrium is `new_col / 0.072 ≈ 14× emission`. A per-pixel emission of just `0.07` converges to 1.0 — clipped white. Broadly lit areas (plasma fills, volumetric rays, wide glow shells) white out fast because they add `new_col > 0` to every pixel on every frame.
+
+**Practical limits:**
+
+| Decay | Equilibrium multiplier | Max safe per-pixel emission |
+|---|---|---|
+| 0.98 | 50× | 0.02 |
+| 0.93 | 14× | 0.07 |
+| 0.90 | 10× | 0.10 |
+| 0.85 |  7× | 0.14 |
+
+Keep per-pixel emissions low. Narrow features (thin rings, sharp spiral bands, point sources) are safe at higher values because most pixels see `new_col ≈ 0` most frames.
+
+**Post-processing lives inside the loop.** The final `COLOR` becomes `prev_frame` next frame. Any tonemap, gamma, or bloom applied before `COLOR = ...` is baked into the feedback and amplifies over time. Bloom is the worst offender — it expands bright areas spatially, increasing the number of pixels that receive `new_col > 0` next frame. Either skip bloom in feedback shaders or apply it very mildly after the feedback composite is already converged.
 
 ---
 
@@ -331,11 +357,10 @@ The ⚙ settings window has a **Visualization** tab (shader selector, shuffle in
 │   ├── audio_analyzer.gd          # Full audio analysis pipeline
 │   └── visualizer.gd              # Shader switching, feedback buffer, uniform push
 ├── shaders/
-│   ├── cosmic_abyss.gdshader      # Recursive fractal arms + morphing rings
 │   ├── starfall.gdshader          # Raymarched octahedra, beat-phase motion
 │   ├── afterimage.gdshader        # IFS-folded box raymarch + phantom pulses
-│   ├── glitch_garden.gdshader     # Folded SDF, economical, crystalline
-│   └── feedback_vortex.gdshader   # Full MilkDrop feedback loop (reference shader)
+│   ├── phosphorescence.gdshader   # Organic blob raymarch, multi-layer 2D overlays
+│   └── submersion.gdshader        # MilkDrop feedback loop — polar tunnel, mercury rings
 ├── ui/
 │   ├── player_ui.gd               # Player bar + floating settings window
 │   └── visualizer_ui.gd           # Shader name label overlay
