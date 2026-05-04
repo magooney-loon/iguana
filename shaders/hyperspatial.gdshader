@@ -172,16 +172,15 @@ void fragment() {
 	float edge_fade = smoothstep(0.0, 0.05, min(edge_d.x, edge_d.y));
 
 	vec3 trail = texture(prev_frame, sample_uv).rgb;
-	float decay = 0.925 + energy * 0.05;
+	float decay = 0.80 + energy * 0.08;   // fast fade — shapes stay crisp, no fog
 	trail *= decay * edge_fade;
 
 	// Kick inversion: briefly flip feedback into negative-space
 	float invert = smoothstep(0.65, 0.95, kick) * beat_confidence;
 	trail = mix(trail, vec3(0.25, 0.05, 0.35) - trail, invert * 0.25);
 
-	// ── Deep void background (not pure black — faint pulsing indigo) ─
-	vec3 bg = vec3(0.015, 0.003, 0.035) * (1.0 + sub_bass * 0.4 + energy * 0.2);
-	vec3 col = bg;
+	// ── Pure black void — no background emission (was causing fog) ──
+	vec3 col = vec3(0.0);
 
 	// Outline thickness: crisp and opaque
 	float thick = 100.0 + energy * 50.0;
@@ -214,8 +213,7 @@ void fragment() {
 		float fill = morph_fill(p, r_outer * 0.92, sides, star, roundness, wobble, t);
 
 		vec3 mandala_col = deep_palette(t * 0.06);
-		col += mandala_col * outline * 0.10;
-		col += mandala_col * fill * 0.018;
+		col += mandala_col * outline * 0.12;
 
 		// Middle ring — different morph phase
 		float r_mid = r_outer * 0.55;
@@ -271,8 +269,7 @@ void fragment() {
 			sin(fi * 0.8 + t * 0.03) * 0.5 + 0.5
 		);
 
-		col += shape_col * outline * 0.09;
-		col += shape_col * fill * 0.015;
+		col += shape_col * outline * 0.11;
 	}
 
 	// ── 3. OUTER RING — large slow shapes far from center ───────────
@@ -300,8 +297,7 @@ void fragment() {
 		                        wobble * 0.4, t + fi * 4.0);
 
 		vec3 ring_col = warm_palette(fi / 4.0 + t * 0.03 + 0.5);
-		col += ring_col * outline * 0.08;
-		col += ring_col * fill * 0.012;
+		col += ring_col * outline * 0.10;
 	}
 
 	// ── 4. SPIRAL TENDRILS — organic, breathing ─────────────────────
@@ -413,8 +409,7 @@ void fragment() {
 		float fill = smoothstep(flower_r + 0.003, flower_r - 0.015, r);
 
 		vec3 flower_col = deep_palette(t * 0.05 + 0.15);
-		col += flower_col * glow * 0.08;
-		col += flower_col * fill * 0.012;
+		col += flower_col * glow * 0.10;
 
 		// Second bloom layer, smaller, counter-rotating
 		float petals2 = 6.0 + 4.0 * sin(t * 0.09 + 2.0);
@@ -453,8 +448,8 @@ void fragment() {
 	// ── COMPOSITE with feedback ─────────────────────────────────────
 	vec3 final_col = trail + col;
 
-	// Reinhard tonemap — keeps deep colors rich, prevents blowout
-	final_col = final_col / (1.0 + final_col * 0.6);
+	// Harder tonemap — crush the fog, let shapes punch through
+	final_col = final_col / (1.0 + final_col * 1.2);
 
 	// Vignette: deep edges
 	float vig = 1.0 - smoothstep(0.35, 1.05, length(uv - 0.5) * 1.5);
