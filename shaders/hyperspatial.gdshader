@@ -171,7 +171,13 @@ void fragment() {
 	vec2 edge_d = min(sample_uv, 1.0 - sample_uv);
 	float edge_fade = smoothstep(0.0, 0.05, min(edge_d.x, edge_d.y));
 
-	vec3 trail = texture(prev_frame, sample_uv).rgb;
+	// Chromatic aberration — dimensional rift RGB split
+	float ca = 0.0008 + energy * 0.0010;
+	vec3 trail;
+	trail.r = texture(prev_frame, sample_uv + vec2(ca, 0.0)).r;
+	trail.g = texture(prev_frame, sample_uv).g;
+	trail.b = texture(prev_frame, sample_uv - vec2(ca, 0.0)).b;
+
 	float decay = 0.80 + energy * 0.08;   // fast fade — shapes stay crisp, no fog
 	trail *= decay * edge_fade;
 
@@ -423,6 +429,44 @@ void fragment() {
 		col += flower_col2 * glow2 * 0.07;
 	}
 
+	// ── 8. DIMENSIONAL SHOCKWAVE — expanding ring on onset ──────────
+	{
+		float shock_phase = fract(beat_phase);
+		float shock_r = shock_phase * 0.45;
+		float shock_w = 0.015 + (1.0 - shock_phase) * 0.02;
+		float shock = exp(-pow((length(uv_c) - shock_r) / shock_w, 2.0)) * onset * 0.05;
+		col += teal_palette(t * 0.06) * shock * 1.5;
+		col += warm_palette(t * 0.05) * shock * kick;
+	}
+
+	// ── 9. NOISE TENDRILS — fractal branching from center ───────────
+	{
+		float tendrils = 0.0;
+		for (int i = 0; i < 5; i++) {
+			float fi = float(i);
+			float angle = fi * TAU / 5.0 + t * 0.025;
+			vec2 dir = vec2(cos(angle), sin(angle));
+			float proj = dot(uv_c, dir);
+			float perp = abs(length(uv_c - dir * max(proj, 0.0)));
+			float noise = texture(noise_tex, vec2(proj * 3.0 + t * 0.06 + fi * 0.6, fi * 0.4)).r;
+			perp += (noise - 0.5) * 0.03;
+			float branch = exp(-perp * (150.0 + energy * 60.0)) * noise * 0.010;
+			branch *= smoothstep(0.0, 0.06, proj) * smoothstep(0.5, 0.05, proj);
+			tendrils += branch;
+		}
+		tendrils *= (0.3 + energy * 1.5) * activity;
+		col += deep_palette(t * 0.05 + 0.7) * tendrils * 1.0;
+		col += teal_palette(t * 0.06 + 0.3) * tendrils * 0.5;
+	}
+
+	// ── 10. ORGANIC NOISE TEXTURE ────────────────────────────────────
+	{
+		float n1 = texture(noise_tex, uv * 3.0 + t * 0.02).r;
+		float n2 = texture(noise_tex, uv * 6.0 - t * 0.015 + 2.5).r;
+		float cell = abs(n1 - n2) * 0.05;
+		col += teal_palette(t * 0.04 + 0.5) * cell * (0.3 + energy * 0.5);
+	}
+
 	// ── Percussion accents ──────────────────────────────────────────
 	vec3 kick_col = warm_palette(t * 0.08);
 	col += kick_col * kick * 0.07;
@@ -451,9 +495,15 @@ void fragment() {
 	// Harder tonemap — crush the fog, let shapes punch through
 	final_col = final_col / (1.0 + final_col * 1.2);
 
+	// Mild gamma lift — brightens without causing feedback drift
+	final_col = pow(max(final_col, vec3(0.0)), vec3(0.94));
+
 	// Vignette: deep edges
 	float vig = 1.0 - smoothstep(0.35, 1.05, length(uv - 0.5) * 1.5);
 	final_col *= mix(0.5, 1.0, vig);
+
+	// Film grain — prevents banding in feedback accumulation
+	final_col += (texture(noise_tex, uv * 300.0 + fract(t * 0.07)).r - 0.5) * 0.012;
 
 	COLOR = vec4(clamp(final_col, 0.0, 1.0), 1.0);
 }
