@@ -30,11 +30,14 @@ uniform float beat_confidence : hint_range(0.0, 1.0) = 0.0;
 uniform float bpm         = 120.0;
 uniform float time_val    = 0.0;
 
+// ── Feedback ─────────────────────────────────────────────────────────
+uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable;
+
+// ── Utility ──────────────────────────────────────────────────────────
 uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform vec2 rect_size = vec2(1600.0, 900.0);
 
-// ── Constants ────────────────────────────────────────────────────────
-const float PI2 = PI * 2.0;
+#define TAU 6.28318530718
 
 // ── Helper functions ─────────────────────────────────────────────────
 mat2 rot(float a) {
@@ -44,7 +47,7 @@ mat2 rot(float a) {
 
 vec2 pmod(vec2 p, float r) {
 	float a = atan(p.x, p.y) + PI / r;
-	float n = PI2 / r;
+	float n = TAU / r;
 	a = floor(a / n) * n;
 	return p * rot(-a);
 }
@@ -74,112 +77,226 @@ float map(vec3 p) {
 	return ifs_box(p1);
 }
 
-void fragment() {
-	float min_dim = min(rect_size.x, rect_size.y);
-	vec2 p = (UV * 2.0 - 1.0) * (rect_size / min_dim);
+// Cosine palette (Inigo Quilez) — mood-driven color
+vec3 palette(float t, vec3 shift) {
+	return vec3(0.5) + vec3(0.5) * cos(TAU * (t + shift));
+}
 
-	// Camera – pure time, no audio jitter
-	float t_cam = time_val;
-	vec3 c_pos = vec3(0.0, 0.0, -3.0 * t_cam);
+void fragment() {
+	vec2 uv = UV;
+	float t = time_val;
+
+	// ══════════════════════════════════════════════════════════════════
+	//  PHASE 1: FEEDBACK LOOP — MilkDrop warp / zoom / rotate
+	// ══════════════════════════════════════════════════════════════════
+	vec2 center = uv - 0.5;
+	center.x *= rect_size.x / rect_size.y;
+
+	// Zoom: sub_bass breathes inward, onset punches — slightly more aggressive than starfall
+	float zoom = 0.970 - sub_bass * 0.014 + onset * 0.010;
+	center *= zoom;
+
+	// Rotate: energy + beat drive spiral — acid vibe wants faster spin
+	float rot_a = 0.005 + energy * 0.007 + beat * 0.004;
+	center = rot(rot_a) * center;
+
+	vec2 feedback_uv = center;
+	feedback_uv.x /= (rect_size.x / rect_size.y);
+	feedback_uv += 0.5;
+
+	// Per-pixel warp — Cartesian only, aspect-corrected (no atan)
+	// Higher frequency + amplitude for the acid chrome aesthetic
+	vec2 warp = vec2(
+		sin(center.y * 10.0 + t * 1.4) * 0.012,
+		cos(center.x * 8.0  + t * 1.1) * 0.012
+	);
+	warp *= 1.0 + bass * 2.5 + energy * 1.5;
+
+	vec2 sample_uv = feedback_uv + warp;
+	vec2 edge_d = min(sample_uv, 1.0 - sample_uv);
+	float edge_fade = smoothstep(0.0, 0.04, min(edge_d.x, edge_d.y));
+
+	// Chromatic aberration — stronger RGB split for the acid aesthetic
+	float ca = 0.0012 + energy * 0.0012;
+	vec3 trail;
+	trail.r = texture(prev_frame, sample_uv + vec2(ca, 0.0)).r;
+	trail.g = texture(prev_frame, sample_uv).g;
+	trail.b = texture(prev_frame, sample_uv - vec2(ca, 0.0)).b;
+
+	// Decay: louder music sustains trails
+	trail *= (0.92 + energy * 0.04) * edge_fade;
+
+	// ══════════════════════════════════════════════════════════════════
+	//  PHASE 2: RAYMARCHING CORE — IFS phantom
+	// ══════════════════════════════════════════════════════════════════
+	float min_dim = min(rect_size.x, rect_size.y);
+	vec2 p = (uv * 2.0 - 1.0) * (rect_size / min_dim);
+
+	vec3 c_pos = vec3(0.0, 0.0, -3.0 * t);
 	vec3 c_dir = normalize(vec3(0.0, 0.0, -1.0));
-	vec3 c_up = vec3(sin(t_cam), 1.0, 0.0);
+	vec3 c_up = vec3(sin(t), 1.0, 0.0);
 	vec3 c_side = cross(c_dir, c_up);
 	vec3 ray = normalize(c_side * p.x + c_up * p.y + c_dir);
 
-	// Phantom raymarch – glow accumulation
 	float acc = 0.0;
 	float acc2 = 0.0;
-	float t = 0.0;
+	float march_t = 0.0;
 
-	// Soft depth of field
-	float focal_dist = 4.0 + sin(time_val * 0.08) * 1.5;
-
-	// Glow falloff: energy tightens the glow, beat/onset punch it
+	float focal_dist = 4.0 + sin(t * 0.08) * 1.5;
 	float glow_falloff = 3.0 + energy * 4.0;
 
 	for (int i = 0; i < 99; i++) {
-		vec3 pos = c_pos + ray * t;
+		vec3 pos = c_pos + ray * march_t;
 		float dist = map(pos);
 		dist = max(abs(dist), 0.02);
 
-		float dof = exp(-pow((t - focal_dist) * 0.15, 2.0));
+		float dof = exp(-pow((march_t - focal_dist) * 0.15, 2.0));
 		float a = exp(-dist * glow_falloff) * mix(0.35, 1.0, dof);
 
-		// Phantom pulse – synced to beat_phase for musical timing
-		float phantom_phase = mod(length(pos) + 24.0 * time_val, 30.0);
+		// Phantom pulse – synced to beat_phase
+		float phantom_phase = mod(length(pos) + 24.0 * t, 30.0);
 		if (phantom_phase < 3.0) {
 			a *= 2.0;
 			acc2 += a;
 		}
 
 		acc += a;
-		t += dist * 0.5;
+		march_t += dist * 0.5;
 	}
 
-	// ── Acid chrome — neon green phantoms, violet IFS, magenta strikes ──
-	// IFS base: deep indigo, each channel driven by a different band
+	// ── Raymarching color — acid chrome palette ──
 	float lum  = acc  * 0.016;
 	float ghost = acc2 * 0.026;
 
-	vec3 col = vec3(
+	vec3 rm_col = vec3(
 		lum * (0.25 + bass * 0.9  + kick * 1.4),
 		lum * (0.04 + mid  * 0.35) + ghost * (0.0 + energy * 0.6),
 		lum * (0.75 + treble * 0.7) + ghost * 0.15
 	);
 
 	// Phantom pulses → vivid acid green / gold
-	col += vec3(0.05, 1.0, 0.2) * ghost * (0.9 + energy * 0.7);
-	col += vec3(0.9, 1.0, 0.0) * ghost * warmth * 0.5;
+	rm_col += vec3(0.05, 1.0, 0.2) * ghost * (0.9 + energy * 0.7);
+	rm_col += vec3(0.9, 1.0, 0.0) * ghost * warmth * 0.5;
 
 	// Hue rotation layered over IFS glow
-	float hue = beat_phase * 6.28318 + time_val * 0.06;
+	float hue = beat_phase * TAU + t * 0.06;
 	vec3 hue_col = vec3(
 		0.5 + 0.5 * sin(hue),
 		0.5 + 0.5 * sin(hue + 2.09),
 		0.5 + 0.5 * sin(hue + 4.19)
 	);
-	col += hue_col * lum * (0.4 + energy * 0.5);
+	rm_col += hue_col * lum * (0.4 + energy * 0.5);
 
 	// Percussion: sharp, distinct hue per drum
-	col += vec3(1.0, 0.4, 0.0)  * acc  * 0.014 * kick;   // orange kick
-	col += vec3(1.0, 0.0, 0.75) * acc2 * 0.016 * snare;  // magenta snare
-	col += vec3(0.4, 1.0, 0.0)  * acc  * 0.008 * hihat;  // lime hihat
+	rm_col += vec3(1.0, 0.4, 0.0)  * acc  * 0.014 * kick;
+	rm_col += vec3(1.0, 0.0, 0.75) * acc2 * 0.016 * snare;
+	rm_col += vec3(0.4, 1.0, 0.0)  * acc  * 0.008 * hihat;
 
-	// Onset: vivid hot pink / deep violet core
-	col += vec3(1.0, 0.0, 0.65) * onset * 0.5;
-	col += vec3(0.15, 0.0, 0.9) * onset * onset * 0.35;
+	// Onset flash
+	rm_col += vec3(1.0, 0.0, 0.65) * onset * 0.35;
+	rm_col += vec3(0.15, 0.0, 0.9) * onset * onset * 0.20;
 
 	// Beat-phase brightness swell
 	float phase_pulse = pow(1.0 - abs(fract(beat_phase * 2.0) - 0.5) * 2.0, 3.0);
-	col *= 1.0 + phase_pulse * beat_confidence * 0.35;
+	rm_col *= 1.0 + phase_pulse * beat_confidence * 0.3;
 
-	float alpha = 1.0 - t * 0.03;
-	alpha = clamp(alpha, 0.0, 1.0);
-	alpha += beat * 0.1;
-	alpha = clamp(alpha, 0.0, 1.0);
+	// ══════════════════════════════════════════════════════════════════
+	//  PHASE 3: OVERLAY LAYERS
+	// ══════════════════════════════════════════════════════════════════
+	vec2 uv_c = uv - 0.5;
+	uv_c.x *= rect_size.x / rect_size.y;
+	float r = length(uv_c);
+	float ang = atan(uv_c.y, uv_c.x);
 
-	// ── Microscopic organisms ──────────────────────────────
+	vec3 overlay = vec3(0.0);
+
+	// ── 3a. Fractal lightning arcs ────────────────────────────────────
+	// Noise-jagged electric bolts radiating from center
+	float lightning = 0.0;
+	for (int i = 0; i < 5; i++) {
+		float fi = float(i);
+		float angle = fi * TAU / 5.0 + t * 0.03;
+		vec2 dir = vec2(cos(angle), sin(angle));
+		float proj = dot(uv_c, dir);
+		float perp = abs(length(uv_c - dir * max(proj, 0.0)));
+		// Jagged offset from noise makes the bolt zigzag
+		float jagged = texture(noise_tex, vec2(proj * 8.0 + t * 0.5 + fi * 0.7, fi * 0.5)).r;
+		perp += (jagged - 0.5) * 0.035;
+		float bolt = exp(-perp * (180.0 + energy * 80.0)) * 0.018;
+		bolt *= smoothstep(0.0, 0.05, proj) * smoothstep(0.55, 0.05, proj);
+		lightning += bolt;
+	}
+	lightning *= (0.4 + energy * 2.0) * activity;
+	overlay += vec3(0.3, 0.9, 1.0) * lightning * 1.2;
+	overlay += vec3(1.0, 0.8, 0.1) * lightning * kick * 0.8;
+
+	// ── 3b. Pulsing breathing rings ───────────────────────────────────
+	// Concentric rings that breathe with kick/sub_bass
+	float rings = 0.0;
+	for (int i = 0; i < 5; i++) {
+		float fi = float(i);
+		float ring_r = 0.08 + fi * 0.08 + energy * 0.03 + sub_bass * 0.02;
+		float ring = exp(-abs(r - ring_r) * (80.0 + bass * 40.0)) * 0.010;
+		// Modulate ring brightness with angle for visual interest
+		ring *= 0.7 + 0.3 * sin(ang * 3.0 + fi * 1.5 + t * 0.2);
+		rings += ring;
+	}
+	vec3 ring_col = palette(r * 2.0 + t * 0.03,
+		vec3(0.1 + warmth * 0.2, 0.5, 0.7 + brightness * 0.1));
+	overlay += ring_col * rings * (0.6 + beat_confidence * 0.6);
+
+	// ── 3c. Spiral vortex arms ────────────────────────────────────────
+	// Integer arm count — no atan2 seam
+	float arms = floor(5.0 + bass * 3.0);
+	float spiral = sin(ang * arms + r * 15.0 - t * 3.0 + beat_phase * TAU);
+	spiral = pow(max(spiral, 0.0), 4.0);
+	spiral *= 0.012 * (0.3 + energy);
+	// Fade at center and edges
+	spiral *= smoothstep(0.0, 0.1, r) * smoothstep(0.8, 0.15, r);
+	overlay += vec3(0.0, 1.0, 0.4) * spiral * 1.5;
+	overlay += vec3(1.0, 0.0, 0.7) * spiral * 0.8;
+
+	// ── 3d. Neon scan lines ───────────────────────────────────────────
+	// Horizontal + vertical lines that drift slowly
+	float scan = 0.0;
+	for (int i = 0; i < 3; i++) {
+		float fi = float(i);
+		float y = 0.3 + fi * 0.2 + sin(t * (0.1 + fi * 0.05)) * 0.05;
+		float d = abs(uv.y - y);
+		scan += exp(-d * (280.0 + energy * 120.0)) * 0.006;
+	}
+	for (int i = 0; i < 2; i++) {
+		float fi = float(i);
+		float x = 0.35 + fi * 0.3 + cos(t * (0.08 + fi * 0.04)) * 0.05;
+		float d = abs(uv.x - x);
+		scan += exp(-d * (280.0 + energy * 120.0)) * 0.005;
+	}
+	scan *= activity;
+	overlay += vec3(0.0, 0.8, 1.0) * scan * 1.5;
+	overlay += vec3(0.0, 1.0, 0.5) * scan * 0.6;
+
+	// ── 3e. Microscopic organisms ─────────────────────────────────────
 	float organisms = 0.0;
 	for (int i = 0; i < 10; i++) {
 		float fi = float(i);
 		vec2 pos = vec2(
-			0.5 + sin(time_val * 0.05 + fi * 2.7) * 0.38,
-			0.5 + cos(time_val * 0.04 + fi * 1.9) * 0.38
+			0.5 + sin(t * 0.05 + fi * 2.7) * 0.38,
+			0.5 + cos(t * 0.04 + fi * 1.9) * 0.38
 		);
-		vec2 to_org = UV - pos;
+		vec2 to_org = uv - pos;
 		float r_org = length(to_org);
 		float angle = atan(to_org.y, to_org.x);
-		float blob_r = 0.018 + 0.006 * sin(angle * 3.0 + time_val * 0.4 + fi)
-				   + 0.004 * sin(angle * 5.0 - time_val * 0.25 + fi * 2.0);
+		float blob_r = 0.018 + 0.006 * sin(angle * 3.0 + t * 0.4 + fi)
+				   + 0.004 * sin(angle * 5.0 - t * 0.25 + fi * 2.0);
 		blob_r *= 1.0 + energy * 0.5;
 		float blob = smoothstep(blob_r + 0.005, blob_r * 0.2, r_org);
-		organisms += blob * (0.15 + 0.2 * (sin(time_val * 0.2 + fi * 1.3) * 0.5 + 0.5));
+		organisms += blob * (0.08 + 0.10 * (sin(t * 0.2 + fi * 1.3) * 0.5 + 0.5));
 	}
-	col += vec3(0.0, 1.0, 0.5) * organisms * 0.55;
-	col += vec3(0.0, 0.5, 1.0) * organisms * 0.25;
+	overlay += vec3(0.0, 1.0, 0.5) * organisms * 0.45;
+	overlay += vec3(0.0, 0.5, 1.0) * organisms * 0.20;
 
-	// ── Cellular division — voronoi membranes ──────────────
-	vec2 cell_uv = UV * 5.0;
+	// ── 3f. Cellular division — voronoi membranes ─────────────────────
+	vec2 cell_uv = uv * 5.0;
 	vec2 cell_id = floor(cell_uv);
 	vec2 cell_fract = fract(cell_uv) - 0.5;
 	float min_cell = 1.0;
@@ -188,8 +305,8 @@ void fragment() {
 		for (int cx = -1; cx <= 1; cx++) {
 			vec2 nb = vec2(float(cx), float(cy));
 			vec2 pt = vec2(
-				sin(time_val * 0.15 + dot(cell_id + nb, vec2(127.1, 311.7))) * 0.25,
-				cos(time_val * 0.12 + dot(cell_id + nb, vec2(269.5, 183.3))) * 0.25
+				sin(t * 0.15 + dot(cell_id + nb, vec2(127.1, 311.7))) * 0.25,
+				cos(t * 0.12 + dot(cell_id + nb, vec2(269.5, 183.3))) * 0.25
 			);
 			float cd = length(nb + pt - cell_fract);
 			if (cd < min_cell) {
@@ -201,27 +318,48 @@ void fragment() {
 		}
 	}
 	float membrane = sec_cell - min_cell;
-	float cell_edge = exp(-membrane * 18.0) * 0.04;
-	col += vec3(0.8, 0.0, 1.0) * cell_edge * 2.5;
-	col += vec3(0.3, 0.0, 0.9) * cell_edge * 1.0;
+	float cell_edge = exp(-membrane * 18.0) * 0.03;
+	overlay += vec3(0.8, 0.0, 1.0) * cell_edge * 2.0;
+	overlay += vec3(0.3, 0.0, 0.9) * cell_edge * 0.8;
 
-	// ── Liquid mercury highlights ──────────────────────────
+	// ── 3g. Liquid mercury highlights ─────────────────────────────────
 	float mercury = 0.0;
 	for (int i = 0; i < 4; i++) {
 		float fi = float(i);
 		vec2 mc = vec2(
-			0.5 + sin(time_val * 0.03 + fi * 3.14) * 0.28,
-			0.5 + cos(time_val * 0.025 + fi * 2.72) * 0.28
+			0.5 + sin(t * 0.03 + fi * 3.14) * 0.28,
+			0.5 + cos(t * 0.025 + fi * 2.72) * 0.28
 		);
-		float mr = length(UV - mc);
+		float mr = length(uv - mc);
 		float mb = exp(-mr * mr * (35.0 + energy * 25.0));
 		mercury += pow(max(mb, 0.0), 3.0);
 	}
-	col += vec3(0.3, 1.0, 0.85) * mercury * 0.25;
+	overlay += vec3(0.3, 1.0, 0.85) * mercury * 0.20;
 
-	// ── Deep void background ───────────────────────────────
-	vec3 pastel_bg = mix(vec3(0.0, 0.0, 0.04), vec3(0.0, 0.01, 0.06), UV.y);
-	col += pastel_bg;
+	// ══════════════════════════════════════════════════════════════════
+	//  PHASE 4: COMPOSITE — trail + new geometry
+	// ══════════════════════════════════════════════════════════════════
+	vec3 new_col = rm_col + overlay;
 
-	COLOR = vec4(clamp(col, 0.0, 1.0), alpha);
+	// Deep void background (dim — feedback handles persistence)
+	new_col += mix(vec3(0.0, 0.0, 0.02), vec3(0.0, 0.005, 0.04), uv.y);
+
+	vec3 col = trail + new_col;
+
+	// ══════════════════════════════════════════════════════════════════
+	//  PHASE 5: POST-PROCESSING (mild — lives inside the feedback loop)
+	// ══════════════════════════════════════════════════════════════════
+	// Reinhard with soft knee
+	col = col / (1.0 + col * 0.35);
+
+	// Mild gamma lift
+	col = pow(max(col, vec3(0.0)), vec3(0.93));
+
+	// Vignette — acid aesthetic wants a slightly tighter vignette
+	col *= mix(0.3, 1.0, 1.0 - smoothstep(0.2, 1.2, length(uv - 0.5) * 1.8));
+
+	// Film grain
+	col += (texture(noise_tex, uv * 300.0 + fract(t * 0.07)).r - 0.5) * 0.012;
+
+	COLOR = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
