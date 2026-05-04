@@ -5,6 +5,7 @@ const SHADERS := [
 	{ "path": "res://shaders/afterimage.gdshader",      "name": "Afterimage" },
 	{ "path": "res://shaders/phosphorescence.gdshader", "name": "Phosphorescence" },
 	{ "path": "res://shaders/submersion.gdshader",      "name": "Submersion" },
+	{ "path": "res://shaders/primordial.gdshader",      "name": "Primordial" },
 ]
 
 var _analyzer: AudioAnalyzer
