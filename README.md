@@ -357,11 +357,6 @@ The ⚙ settings window has a **Visualization** tab (shader selector, shuffle in
 │   ├── audio_analyzer.gd          # Full audio analysis pipeline
 │   └── visualizer.gd              # Shader switching, feedback buffer, uniform push
 ├── shaders/
-│   ├── starfall.gdshader          # Raymarched octahedra, beat-phase motion
-│   ├── afterimage.gdshader        # IFS-folded box raymarch + phantom pulses
-│   ├── phosphorescence.gdshader   # Organic blob raymarch, multi-layer 2D overlays
-│   ├── submersion.gdshader        # MilkDrop feedback loop — polar tunnel, mercury rings
-│   └── primordial.gdshader        # Animated Voronoi + domain warp — biological chaos
 ├── ui/
 │   ├── player_ui.gd               # Player bar + floating settings window
 │   └── visualizer_ui.gd           # Shader name label overlay
