@@ -79,6 +79,7 @@ func _build_bar() -> void:
 
 	_play_btn = Button.new()
 	_play_btn.custom_minimum_size.x = 36
+	_play_btn.add_theme_font_size_override("font_size", 18)
 	_play_btn.focus_mode = Control.FOCUS_NONE
 	_play_btn.pressed.connect(_on_play_pause)
 	top.add_child(_play_btn)
@@ -86,6 +87,8 @@ func _build_bar() -> void:
 	var stop_btn := Button.new()
 	stop_btn.text = "⏹"
 	stop_btn.tooltip_text = "Stop"
+	stop_btn.custom_minimum_size.x = 36
+	stop_btn.add_theme_font_size_override("font_size", 18)
 	stop_btn.focus_mode = Control.FOCUS_NONE
 	stop_btn.pressed.connect(_on_stop)
 	top.add_child(stop_btn)
@@ -98,13 +101,11 @@ func _build_bar() -> void:
 	_song_label.clip_text = true
 	top.add_child(_song_label)
 
-	top.add_child(_vsep())
-
 	_time_label = Label.new()
 	_time_label.text = "0:00 / 0:00"
 	_time_label.add_theme_font_size_override("font_size", 12)
 	_time_label.modulate.a = 0.7
-	_time_label.custom_minimum_size.x = 88
+	_time_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	top.add_child(_time_label)
 
@@ -113,6 +114,8 @@ func _build_bar() -> void:
 	var fs_btn := Button.new()
 	fs_btn.text = "⛶"
 	fs_btn.tooltip_text = "Fullscreen  [F]"
+	fs_btn.custom_minimum_size.x = 36
+	fs_btn.add_theme_font_size_override("font_size", 18)
 	fs_btn.focus_mode = Control.FOCUS_NONE
 	fs_btn.pressed.connect(_toggle_fullscreen)
 	top.add_child(fs_btn)
@@ -120,6 +123,8 @@ func _build_bar() -> void:
 	var set_btn := Button.new()
 	set_btn.text = "⚙"
 	set_btn.tooltip_text = "Settings"
+	set_btn.custom_minimum_size.x = 36
+	set_btn.add_theme_font_size_override("font_size", 18)
 	set_btn.focus_mode = Control.FOCUS_NONE
 	set_btn.pressed.connect(_toggle_settings)
 	top.add_child(set_btn)
