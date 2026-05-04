@@ -44,16 +44,66 @@ func _ready() -> void:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Style
+#  Aero Glass Theme — helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+const _C_GLASS     := Color(0.08, 0.09, 0.16, 0.68)
+const _C_GLASS_LT := Color(0.14, 0.16, 0.26, 0.55)
+const _C_BORDER   := Color(0.55, 0.65, 0.85, 0.18)
+const _C_HILITE   := Color(0.70, 0.80, 1.00, 0.22)   # top-edge reflection
+const _C_SHADOW   := Color(0.0, 0.0, 0.02, 0.45)
+const _C_BTN      := Color(0.16, 0.18, 0.28, 0.35)
+const _C_BTN_H    := Color(0.30, 0.38, 0.55, 0.45)
+const _C_BTN_P    := Color(0.08, 0.09, 0.14, 0.50)
+const _C_ACCENT   := Color(0.40, 0.58, 0.92, 0.35)
+
+
+func _glass_box(bg: Color, radius: float = 10.0, highlight: bool = true) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color           = bg
+	s.border_color       = _C_BORDER
+	s.set_border_width_all(1)
+	s.corner_radius_top_left     = int(radius)
+	s.corner_radius_top_right    = int(radius)
+	s.corner_radius_bottom_right = int(radius)
+	s.corner_radius_bottom_left  = int(radius)
+	s.shadow_color       = _C_SHADOW
+	s.shadow_size        = 8
+	s.shadow_offset      = Vector2(0, 3)
+	if highlight:
+		s.border_color = _C_HILITE
+	return s
+
+
+func _apply_glass_btn(btn: Button) -> void:
+	var n := _glass_box(_C_BTN, 7.0, true)
+	n.content_margin_left   = 10.0
+	n.content_margin_right  = 10.0
+	n.content_margin_top    = 4.0
+	n.content_margin_bottom = 4.0
+	var h := _glass_box(_C_BTN_H, 7.0, true)
+	h.content_margin_left   = 10.0
+	h.content_margin_right  = 10.0
+	h.content_margin_top    = 4.0
+	h.content_margin_bottom = 4.0
+	var p := _glass_box(_C_BTN_P, 7.0, true)
+	p.content_margin_left   = 10.0
+	p.content_margin_right  = 10.0
+	p.content_margin_top    = 4.0
+	p.content_margin_bottom = 4.0
+	btn.add_theme_stylebox_override("normal",  n)
+	btn.add_theme_stylebox_override("hover",   h)
+	btn.add_theme_stylebox_override("pressed", p)
+
+
 func _apply_style() -> void:
-	var style := StyleBoxFlat.new()
-	style.bg_color              = Color(0.06, 0.06, 0.08, 1.0)
-	style.content_margin_left   = 12.0
-	style.content_margin_right  = 12.0
-	style.content_margin_top    = 6.0
-	style.content_margin_bottom = 6.0
+	# Main bar — frosted glass panel
+	var style := _glass_box(Color(0.06, 0.07, 0.12, 0.72), 12.0, true)
+	style.content_margin_left   = 14.0
+	style.content_margin_right  = 14.0
+	style.content_margin_top    = 8.0
+	style.content_margin_bottom = 8.0
+	style.shadow_size = 14
 	add_theme_stylebox_override("panel", style)
 
 
@@ -75,6 +125,7 @@ func _build_bar() -> void:
 	load_btn.text = "Load"
 	load_btn.focus_mode = Control.FOCUS_NONE
 	load_btn.pressed.connect(_on_load)
+	_apply_glass_btn(load_btn)
 	top.add_child(load_btn)
 
 	_play_btn = Button.new()
@@ -82,6 +133,7 @@ func _build_bar() -> void:
 	_play_btn.add_theme_font_size_override("font_size", 18)
 	_play_btn.focus_mode = Control.FOCUS_NONE
 	_play_btn.pressed.connect(_on_play_pause)
+	_apply_glass_btn(_play_btn)
 	top.add_child(_play_btn)
 
 	var stop_btn := Button.new()
@@ -91,6 +143,7 @@ func _build_bar() -> void:
 	stop_btn.add_theme_font_size_override("font_size", 18)
 	stop_btn.focus_mode = Control.FOCUS_NONE
 	stop_btn.pressed.connect(_on_stop)
+	_apply_glass_btn(stop_btn)
 	top.add_child(stop_btn)
 
 	top.add_child(_vsep())
@@ -118,6 +171,7 @@ func _build_bar() -> void:
 	fs_btn.add_theme_font_size_override("font_size", 18)
 	fs_btn.focus_mode = Control.FOCUS_NONE
 	fs_btn.pressed.connect(_toggle_fullscreen)
+	_apply_glass_btn(fs_btn)
 	top.add_child(fs_btn)
 
 	var set_btn := Button.new()
@@ -127,16 +181,40 @@ func _build_bar() -> void:
 	set_btn.add_theme_font_size_override("font_size", 18)
 	set_btn.focus_mode = Control.FOCUS_NONE
 	set_btn.pressed.connect(_toggle_settings)
+	_apply_glass_btn(set_btn)
 	top.add_child(set_btn)
 
-	# ── Bottom row: seek bar ──────────────────────────────────────────────────
+	# ── Bottom row: seek bar (glass track + glowing grabber) ───────────
 	_seek_bar = HSlider.new()
 	_seek_bar.min_value  = 0.0
 	_seek_bar.max_value  = 1.0
 	_seek_bar.step       = 0.01
 	_seek_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_seek_bar.custom_minimum_size.y = 18
 	_seek_bar.focus_mode = Control.FOCUS_NONE
 	_seek_bar.value_changed.connect(_on_seek_changed)
+
+	# Slider track (background)
+	var sb_bg := _glass_box(Color(0.04, 0.05, 0.10, 0.50), 5.0, false)
+	sb_bg.content_margin_top = 6.0
+	sb_bg.content_margin_bottom = 6.0
+	_seek_bar.add_theme_stylebox_override("slider", sb_bg)
+
+	# Filled portion
+	var sb_fill := _glass_box(Color(0.30, 0.45, 0.75, 0.50), 5.0, false)
+	sb_fill.content_margin_top = 6.0
+	sb_fill.content_margin_bottom = 6.0
+	_seek_bar.add_theme_stylebox_override("fill", sb_fill)
+
+	# Grabber
+	var sb_grab := _glass_box(Color(0.55, 0.70, 1.0, 0.80), 8.0, true)
+	sb_grab.content_margin_left = 4.0
+	sb_grab.content_margin_right = 4.0
+	sb_grab.content_margin_top = 4.0
+	sb_grab.content_margin_bottom = 4.0
+	_seek_bar.add_theme_stylebox_override("grabber_area", sb_grab)
+	_seek_bar.add_theme_stylebox_override("grabber_area_highlight", sb_grab)
+
 	vbox.add_child(_seek_bar)
 
 
@@ -153,20 +231,32 @@ func _build_settings_window() -> void:
 	_settings_win.title    = "Settings"
 	_settings_win.size     = Vector2i(440, 580)
 	_settings_win.min_size = Vector2i(360, 420)
+	_settings_win.transparent = true
 	_settings_win.close_requested.connect(func(): _settings_win.hide())
 	_settings_win.hide()
 	add_child(_settings_win)
 
+	# Glass background panel for the entire window content
+	var bg_panel := PanelContainer.new()
+	bg_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg_panel.add_theme_stylebox_override("panel", _glass_box(Color(0.06, 0.07, 0.12, 0.82), 14.0, true))
+	_settings_win.add_child(bg_panel)
+
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left",   10)
-	margin.add_theme_constant_override("margin_right",  10)
-	margin.add_theme_constant_override("margin_top",    8)
-	margin.add_theme_constant_override("margin_bottom", 10)
-	_settings_win.add_child(margin)
+	margin.add_theme_constant_override("margin_left",   12)
+	margin.add_theme_constant_override("margin_right",  12)
+	margin.add_theme_constant_override("margin_top",    10)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	bg_panel.add_child(margin)
 
 	var tabs := TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	# Tab bar glass style
+	tabs.add_theme_stylebox_override("tab_fg", _glass_box(_C_BTN_H, 8.0, true))
+	tabs.add_theme_stylebox_override("tab_bg", _glass_box(_C_BTN, 8.0, true))
+	tabs.add_theme_stylebox_override("tab_hover", _glass_box(_C_ACCENT, 8.0, true))
+	tabs.add_theme_stylebox_override("panel", _glass_box(Color(0.04, 0.05, 0.09, 0.60), 10.0, false))
 	margin.add_child(tabs)
 
 	tabs.add_child(_build_general_tab())
@@ -246,6 +336,7 @@ func _build_shaders_tab() -> Control:
 		btn.button_group = group
 		btn.alignment    = HORIZONTAL_ALIGNMENT_LEFT
 		btn.pressed.connect(_on_shader_btn.bind(i))
+		_apply_glass_btn(btn)
 		vbox.add_child(btn)
 		_shader_btns.append(btn)
 
@@ -329,6 +420,8 @@ func _dbg_row(parent: VBoxContainer, display: String, key: String, max_val: floa
 	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.custom_minimum_size   = Vector2(80, 14)
 	bar.show_percentage = false
+	bar.add_theme_stylebox_override("background", _glass_box(Color(0.03, 0.04, 0.08, 0.50), 4.0, false))
+	bar.add_theme_stylebox_override("fill", _glass_box(Color(0.35, 0.52, 0.85, 0.55), 4.0, false))
 	row.add_child(bar)
 
 	var val_lbl := Label.new()
