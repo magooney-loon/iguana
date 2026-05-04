@@ -364,10 +364,16 @@ func _build_debug_tab() -> Control:
 	scroll.name = "Debug"
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
+	var pad := MarginContainer.new()
+	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pad.add_theme_constant_override("margin_right", 4)
+	pad.add_theme_constant_override("margin_bottom", 8)
+	scroll.add_child(pad)
+
 	var vbox := VBoxContainer.new()
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_theme_constant_override("separation", 3)
-	scroll.add_child(vbox)
+	pad.add_child(vbox)
 
 	_dbg.clear()
 
