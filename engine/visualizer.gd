@@ -156,13 +156,19 @@ func _ready() -> void:
 
 # ── Right-click context menu ────────────────────────────────────────
 
+var _player_toggle_idx := 0
+
 func _build_context_menu() -> void:
 	_context_menu = PopupMenu.new()
 	_context_menu.name = "ShaderContextMenu"
 	for i in SHADERS.size():
 		_context_menu.add_radio_check_item(SHADERS[i].name, i)
 	_context_menu.set_item_checked(_shader_index, true)
-	_context_menu.id_pressed.connect(_on_context_menu_id_pressed)
+	_context_menu.add_separator()
+	_context_menu.add_check_item("Show Player")
+	_player_toggle_idx = _context_menu.item_count - 1
+	_context_menu.set_item_checked(_player_toggle_idx, true)
+	_context_menu.index_pressed.connect(_on_context_menu_index_pressed)
 	add_child(_context_menu)
 
 func _gui_input(event: InputEvent) -> void:
@@ -173,8 +179,13 @@ func _gui_input(event: InputEvent) -> void:
 			_context_menu.popup(Rect2i(int(mb.global_position.x), int(mb.global_position.y), 0, 0))
 			accept_event()
 
-func _on_context_menu_id_pressed(id: int) -> void:
-	if id >= 0 and id < SHADERS.size():
+func _on_context_menu_index_pressed(index: int) -> void:
+	if index == _player_toggle_idx:
+		var player_bar := owner.get_node("PlayerBar") as Control
+		player_bar.visible = !player_bar.visible
+		_context_menu.set_item_checked(index, player_bar.visible)
+	elif index < SHADERS.size():
+		var id := _context_menu.get_item_id(index)
 		_switch(id)
 		for i in SHADERS.size():
 			_context_menu.set_item_checked(i, i == id)
