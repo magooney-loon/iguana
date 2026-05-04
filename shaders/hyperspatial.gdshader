@@ -183,9 +183,9 @@ void fragment() {
 	vec3 bg = vec3(0.015, 0.003, 0.035) * (1.0 + sub_bass * 0.4 + energy * 0.2);
 	vec3 col = bg;
 
-	// Outline thickness: soft glow, not razor-sharp
-	float thick = 35.0 + energy * 20.0;
-	float thick_fine = 55.0 + energy * 30.0;
+	// Outline thickness: crisp and opaque
+	float thick = 100.0 + energy * 50.0;
+	float thick_fine = 160.0 + energy * 80.0;
 
 	// Kick-explosion: all shapes briefly expand on kick
 	float kick_pulse = kick * 0.06 * beat_confidence;
@@ -214,8 +214,8 @@ void fragment() {
 		float fill = morph_fill(p, r_outer * 0.92, sides, star, roundness, wobble, t);
 
 		vec3 mandala_col = deep_palette(t * 0.06);
-		col += mandala_col * outline * 0.065;
-		col += mandala_col * fill * 0.012;
+		col += mandala_col * outline * 0.10;
+		col += mandala_col * fill * 0.018;
 
 		// Middle ring — different morph phase
 		float r_mid = r_outer * 0.55;
@@ -225,7 +225,7 @@ void fragment() {
 		float outline_mid = morph_shape(p_mid, r_mid, sides_mid, star_mid,
 		                                roundness * 0.5, wobble * 0.6, t + 3.0, thick_fine);
 		vec3 mid_col = teal_palette(t * 0.08 + 0.4);
-		col += mid_col * outline_mid * 0.05;
+		col += mid_col * outline_mid * 0.08;
 
 		// Inner ring — small, fast morph
 		float r_inner = r_outer * 0.28;
@@ -235,7 +235,7 @@ void fragment() {
 		float outline_inner = morph_shape(p_inner, r_inner, sides_inner, star_inner,
 		                                  0.05, wobble * 0.8, t + 7.0, thick_fine);
 		vec3 inner_col = warm_palette(t * 0.07 + 0.2);
-		col += inner_col * outline_inner * 0.04;
+		col += inner_col * outline_inner * 0.07;
 	}
 
 	// ── 2. ORBITING MORPHING SHAPES ─────────────────────────────────
@@ -271,8 +271,8 @@ void fragment() {
 			sin(fi * 0.8 + t * 0.03) * 0.5 + 0.5
 		);
 
-		col += shape_col * outline * 0.06;
-		col += shape_col * fill * 0.008;
+		col += shape_col * outline * 0.09;
+		col += shape_col * fill * 0.015;
 	}
 
 	// ── 3. OUTER RING — large slow shapes far from center ───────────
@@ -300,8 +300,8 @@ void fragment() {
 		                        wobble * 0.4, t + fi * 4.0);
 
 		vec3 ring_col = warm_palette(fi / 4.0 + t * 0.03 + 0.5);
-		col += ring_col * outline * 0.05;
-		col += ring_col * fill * 0.006;
+		col += ring_col * outline * 0.08;
+		col += ring_col * fill * 0.012;
 	}
 
 	// ── 4. SPIRAL TENDRILS — organic, breathing ─────────────────────
@@ -319,7 +319,7 @@ void fragment() {
 		float fade1 = smoothstep(0.0, 0.1, r) * exp(-r * 2.0) * 0.2;
 
 		vec3 spiral_col1 = teal_palette(t * 0.05) * spiral1 * fade1;
-		col += spiral_col1 * 0.07;
+		col += spiral_col1 * 0.10;
 
 		// Counter-spiral (different arm count)
 		float arms2 = floor(5.0 + mid * 2.0);
@@ -330,14 +330,14 @@ void fragment() {
 		float fade2 = smoothstep(0.0, 0.08, r) * exp(-r * 1.8) * 0.15;
 
 		vec3 spiral_col2 = deep_palette(t * 0.04 + 0.3) * spiral2 * fade2;
-		col += spiral_col2 * 0.06;
+		col += spiral_col2 * 0.09;
 
 		// Tertiary: slow, wide, warm
 		float arms3 = floor(2.0 + warmth * 3.0);
 		float spiral3 = sin(a * arms3 + r * 5.0 - t * 0.6);
 		spiral3 = pow(max(spiral3, 0.0), 4.0);
 		float fade3 = exp(-r * 3.0) * 0.1;
-		col += warm_palette(t * 0.03) * spiral3 * fade3 * 0.05;
+		col += warm_palette(t * 0.03) * spiral3 * fade3 * 0.07;
 	}
 
 	// ── 5. BREATHING RINGS — concentric, pulsing ────────────────────
@@ -364,7 +364,7 @@ void fragment() {
 		// Color shifts per ring
 		float ct = fi / 7.0 + t * 0.025;
 		vec3 ring_col = mix(deep_palette(ct), teal_palette(ct + 0.5), fi / 7.0);
-		col += ring_col * ring * 0.03;
+		col += ring_col * ring * 0.05;
 	}
 
 	// ── 6. ORGANIC MOIRÉ GRID — deep colored, subtle ───────────────
@@ -389,7 +389,7 @@ void fragment() {
 		// Color the grid in deep teal, modulated by warmth
 		vec3 moire_col = teal_palette(t * 0.06 + 0.6);
 		moire_col = mix(moire_col, warm_palette(t * 0.04 + 0.1), warmth * 0.3);
-		col += moire_col * moire * 0.025 * activity;
+		col += moire_col * moire * 0.04 * activity;
 	}
 
 	// ── 7. MORPHING FLOWER — polar shape that blooms ────────────────
@@ -413,8 +413,8 @@ void fragment() {
 		float fill = smoothstep(flower_r + 0.003, flower_r - 0.015, r);
 
 		vec3 flower_col = deep_palette(t * 0.05 + 0.15);
-		col += flower_col * glow * 0.045;
-		col += flower_col * fill * 0.006;
+		col += flower_col * glow * 0.08;
+		col += flower_col * fill * 0.012;
 
 		// Second bloom layer, smaller, counter-rotating
 		float petals2 = 6.0 + 4.0 * sin(t * 0.09 + 2.0);
@@ -425,21 +425,21 @@ void fragment() {
 		float glow2 = exp(-d2 * 40.0);
 
 		vec3 flower_col2 = teal_palette(t * 0.06 + 0.8);
-		col += flower_col2 * glow2 * 0.04;
+		col += flower_col2 * glow2 * 0.07;
 	}
 
 	// ── Percussion accents ──────────────────────────────────────────
 	vec3 kick_col = warm_palette(t * 0.08);
-	col += kick_col * kick * 0.05;
+	col += kick_col * kick * 0.07;
 
 	vec3 snare_col = teal_palette(t * 0.07 + 0.2);
-	col += snare_col * snare * 0.04;
+	col += snare_col * snare * 0.06;
 
 	vec3 hihat_col = deep_palette(t * 0.1 + 0.5);
-	col += hihat_col * hihat * 0.025;
+	col += hihat_col * hihat * 0.04;
 
-	// Onset: deep flash, not white
-	col += deep_palette(t * 0.04) * onset * 0.06;
+	// Onset: deep flash
+	col += deep_palette(t * 0.04) * onset * 0.09;
 
 	// ── Beat-phase pulse ────────────────────────────────────────────
 	float phase_pulse = pow(1.0 - abs(fract(beat_phase) - 0.5) * 2.0, 4.0);
