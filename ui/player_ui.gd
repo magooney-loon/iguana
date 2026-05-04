@@ -19,8 +19,7 @@ var _shader_btns:    Array[Button] = []
 var _shuffle_check:  CheckBox
 var _shuffle_spin:   SpinBox
 var _last_shader_idx := -1
-var _win_dragging := false
-var _win_drag_offset := Vector2.ZERO
+
 
 # Debug: key → { bar: ProgressBar, val: Label }
 var _dbg: Dictionary = {}
