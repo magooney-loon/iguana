@@ -1,15 +1,10 @@
 extends ColorRect
 
 const SHADERS := [
-	{ "path": "res://shaders/signal_scope.gdshader", "name": "Signal Scope" },
-	{ "path": "res://shaders/mandala.gdshader", "name": "Mandala" },
 	{ "path": "res://shaders/starfall.gdshader", "name": "Starfall" },
-	{ "path": "res://shaders/flow_state.gdshader", "name": "Flow State" },
 	{ "path": "res://shaders/afterimage.gdshader", "name": "Afterimage" },
-	{ "path": "res://shaders/overdrive.gdshader", "name": "Overdrive" },
-	{ "path": "res://shaders/lattice.gdshader", "name": "Lattice" },
 	{ "path": "res://shaders/glitch_garden.gdshader", "name": "Glitch Garden" },
-	{ "path": "res://shaders/shadow_fold.gdshader", "name": "Shadow Fold" },
+	{ "path": "res://shaders/signal_scope.gdshader", "name": "Signal Scope" },
 ]
 
 var _analyzer: AudioAnalyzer
