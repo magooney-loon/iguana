@@ -1,56 +1,8 @@
 [gd_scene format=3 uid="uid://dfyeamw4sg2af"]
 
 [ext_resource type="Script" uid="uid://cjx024rn3rvwi" path="res://engine/visualizer.gd" id="1"]
-[ext_resource type="Shader" uid="uid://bngpavr7kjh2w" path="res://shaders/signal_scope.gdshader" id="2"]
 [ext_resource type="AudioStream" uid="uid://dl3ppges2sw77" path="res://default.ogg" id="3"]
 [ext_resource type="Script" uid="uid://nsmlada460xa" path="res://ui/player_ui.gd" id="4"]
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_1"]
-shader = ExtResource("2")
-shader_parameter/sub_bass = 0.0
-shader_parameter/bass = 0.0
-shader_parameter/low_mid = 0.0
-shader_parameter/mid = 0.0
-shader_parameter/presence = 0.0
-shader_parameter/treble = 0.0
-shader_parameter/beat = 0.0
-shader_parameter/kick = 0.0
-shader_parameter/snare = 0.0
-shader_parameter/hihat = 0.0
-shader_parameter/flux_bass = 0.0
-shader_parameter/flux_mid = 0.0
-shader_parameter/flux_treble = 0.0
-shader_parameter/energy = 0.0
-shader_parameter/activity = 0.0
-shader_parameter/onset = 0.0
-shader_parameter/loudness = 0.0
-shader_parameter/warmth = 0.0
-shader_parameter/brightness = 0.0
-shader_parameter/density = 0.0
-shader_parameter/beat_phase = 0.0
-shader_parameter/beat_confidence = 0.0
-shader_parameter/beat_threshold = 0.0
-shader_parameter/kick_threshold = 0.0
-shader_parameter/snare_threshold = 0.0
-shader_parameter/hihat_threshold = 0.0
-shader_parameter/peak_00 = 0.0
-shader_parameter/peak_01 = 0.0
-shader_parameter/peak_02 = 0.0
-shader_parameter/peak_03 = 0.0
-shader_parameter/peak_04 = 0.0
-shader_parameter/peak_05 = 0.0
-shader_parameter/peak_06 = 0.0
-shader_parameter/peak_07 = 0.0
-shader_parameter/peak_08 = 0.0
-shader_parameter/peak_09 = 0.0
-shader_parameter/peak_10 = 0.0
-shader_parameter/peak_11 = 0.0
-shader_parameter/peak_12 = 0.0
-shader_parameter/peak_13 = 0.0
-shader_parameter/peak_14 = 0.0
-shader_parameter/bpm = 120.0
-shader_parameter/time_val = 0.0
-shader_parameter/rect_size = Vector2(1600, 900)
 
 [node name="Main" type="VBoxContainer" unique_id=1057640982]
 anchors_preset = 15
@@ -69,7 +21,6 @@ size = Vector2i(1600, 900)
 render_target_update_mode = 4
 
 [node name="Visualizer" type="ColorRect" parent="VisualizerContainer/FeedbackViewport" unique_id=1787994161]
-material = SubResource("ShaderMaterial_1")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

@@ -1,11 +1,8 @@
 extends ColorRect
 
 const SHADERS := [
-	{ "path": "res://shaders/cosmic_abyss.gdshader",   "name": "Cosmic Abyss" },
 	{ "path": "res://shaders/starfall.gdshader",        "name": "Starfall" },
 	{ "path": "res://shaders/afterimage.gdshader",      "name": "Afterimage" },
-	{ "path": "res://shaders/glitch_garden.gdshader",   "name": "Glitch Garden" },
-	{ "path": "res://shaders/feedback_vortex.gdshader", "name": "Feedback Vortex" },
 ]
 
 var _analyzer: AudioAnalyzer
