@@ -190,8 +190,6 @@ Positive-only change: how much each range just increased this frame. Good for fl
 | Uniform | Type | Description |
 |---|---|---|
 | `prev_frame` | `sampler2D` | Previous frame's completed output. `hint_default_black`. The feedback loop. |
-| `mouse_pos` | `vec2` | Normalized mouse position in the visualizer area [0,1]. |
-| `mouse_down` | 0–1 | Left mouse button held. Use to attract warp toward cursor. |
 | `frame` | `int` | Absolute frame counter. Use for per-frame parity, alternating behaviors, rhythm gating. |
 
 ### Utility
@@ -254,10 +252,8 @@ uniform float beat_confidence : hint_range(0.0, 1.0) = 0.0;
 uniform float bpm             = 120.0;
 uniform float time_val        = 0.0;
 
-// ── Feedback + interaction ────────────────────────────────────────
+// ── Feedback ─────────────────────────────────────────────────────
 uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable;
-uniform vec2  mouse_pos  = vec2(0.5, 0.5);
-uniform float mouse_down : hint_range(0.0, 1.0) = 0.0;
 
 // ── Utility ───────────────────────────────────────────────────────
 uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
@@ -294,12 +290,6 @@ spiral = pow(max(spiral, 0.0), 3.0);
 ```glsl
 float ring_r = 0.15 + energy * 0.08 + sub_bass * 0.06;
 float ring   = exp(-abs(length(uv_c) - ring_r) * 50.0);
-```
-
-### Mouse warp attraction
-```glsl
-vec2 to_mouse = mouse_pos - uv;
-warp += normalize(to_mouse + 0.001) * exp(-length(to_mouse) * 8.0) * 0.04 * mouse_down;
 ```
 
 ### Onset flash
@@ -343,10 +333,10 @@ const SHADERS := [
 | `F` | Toggle fullscreen |
 | `Space` | Play / Pause |
 | `Escape` | Stop |
-| Left click (on visualizer) | Warp attraction toward cursor (feedback shaders) |
+
 
 The player bar has Load, ▶/⏸, ⏹, seek bar, ⛶ fullscreen, and ⚙ settings.  
-The ⚙ settings window has a **Visualization** tab (shader selector, shuffle interval) and a **Debug** tab (live progress bars for all 22+ uniforms).
+The ⚙ settings window has a **General** tab (shuffle interval, keyboard shortcuts), a **Shaders** tab (shader selector), and a **Debug** tab (live progress bars for all 22+ uniforms).
 
 ---
 

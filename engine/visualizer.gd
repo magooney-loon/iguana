@@ -164,12 +164,6 @@ func _push_uniforms(mat: ShaderMaterial) -> void:
 	# The GPU forbids using a viewport's own texture as both framebuffer and sampler.
 	mat.set_shader_parameter("prev_frame", _backbuffer_vp.get_texture())
 
-	# Mouse: normalized [0,1] position within the visualizer area.
-	var container := _feedback_vp.get_parent() as SubViewportContainer
-	var mp := container.get_local_mouse_position() / container.size
-	mat.set_shader_parameter("mouse_pos",  mp.clamp(Vector2.ZERO, Vector2.ONE))
-	mat.set_shader_parameter("mouse_down", 1.0 if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) else 0.0)
-
 	# Frame counter: enables per-frame parity and rhythm effects.
 	mat.set_shader_parameter("frame", _frame_count)
 

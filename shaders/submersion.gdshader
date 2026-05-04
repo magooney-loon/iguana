@@ -31,8 +31,6 @@ uniform float bpm             = 120.0;
 uniform float time_val        = 0.0;
 
 uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable;
-uniform vec2  mouse_pos  = vec2(0.5, 0.5);
-uniform float mouse_down : hint_range(0.0, 1.0) = 0.0;
 
 uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform vec2 rect_size = vec2(1600.0, 900.0);
@@ -171,12 +169,7 @@ void fragment() {
 	// Audio amplitude on warp — more bass/energy → wilder displacement
 	float wamp = 1.0 + bass * 2.8 + energy * 2.1 + beat * 1.6;
 
-	// Mouse warp attraction
-	vec2 to_mouse = (mouse_pos - 0.5) * vec2(aspect, 1.0) - warped;
-	vec2 wmouse   = normalize(to_mouse + 0.0001)
-	              * exp(-length(to_mouse) * 7.0) * 0.036 * mouse_down;
-
-	vec2 total_warp = (w1 + w2 + w3 + wn) * wamp + wmouse;
+	vec2 total_warp = (w1 + w2 + w3 + wn) * wamp;
 
 	// Reconstruct feedback sample UV
 	vec2 fb_center = warped + total_warp;
