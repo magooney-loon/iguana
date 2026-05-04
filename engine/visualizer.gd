@@ -1,12 +1,11 @@
 extends ColorRect
 
 const SHADERS := [
-	{ "path": "res://shaders/cosmic_abyss.gdshader",     "name": "Cosmic Abyss" },
-	{ "path": "res://shaders/starfall.gdshader",          "name": "Starfall" },
-	{ "path": "res://shaders/afterimage.gdshader",        "name": "Afterimage" },
-	{ "path": "res://shaders/glitch_garden.gdshader",     "name": "Glitch Garden" },
-	{ "path": "res://shaders/signal_scope.gdshader",      "name": "Signal Scope" },
-	{ "path": "res://shaders/feedback_vortex.gdshader",   "name": "Feedback Vortex" },
+	{ "path": "res://shaders/cosmic_abyss.gdshader",   "name": "Cosmic Abyss" },
+	{ "path": "res://shaders/starfall.gdshader",        "name": "Starfall" },
+	{ "path": "res://shaders/afterimage.gdshader",      "name": "Afterimage" },
+	{ "path": "res://shaders/glitch_garden.gdshader",   "name": "Glitch Garden" },
+	{ "path": "res://shaders/feedback_vortex.gdshader", "name": "Feedback Vortex" },
 ]
 
 var _analyzer: AudioAnalyzer
@@ -21,9 +20,9 @@ var _feedback_vp:   SubViewport
 var _backbuffer_vp: SubViewport
 
 # Auto-shuffle
-const SHUFFLE_INTERVAL := 45.0
-var _shuffle_timer := 0.0
-var _shuffle_on    := false
+var shuffle_interval := 45.0   # var so the settings window can change it
+var _shuffle_timer   := 0.0
+var _shuffle_on      := false
 
 # Beat-triggered switching cooldown (prevents rapid-fire switches)
 const SWITCH_COOLDOWN_MIN := 4.0
@@ -148,7 +147,7 @@ func _process(delta: float) -> void:
 
 		# Timer-based fallback (fires when beat confidence is too low to trigger above)
 		_shuffle_timer += delta
-		if _shuffle_on and _shuffle_timer >= SHUFFLE_INTERVAL:
+		if _shuffle_on and _shuffle_timer >= shuffle_interval:
 			_shuffle()
 			_switch_cooldown = SWITCH_COOLDOWN_MIN
 
