@@ -3,6 +3,7 @@ extends ColorRect
 const SHADERS := [
 	{ "path": "res://shaders/starfall.gdshader",        "name": "Starfall" },
 	{ "path": "res://shaders/afterimage.gdshader",      "name": "Afterimage" },
+	{ "path": "res://shaders/phosphorescence.gdshader", "name": "Phosphorescence" },
 ]
 
 var _analyzer: AudioAnalyzer
