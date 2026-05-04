@@ -107,6 +107,9 @@ var _shuffle_on    := false
 var _label: Label
 var _label_timer := 0.0
 
+# Right-click context menu for shader switching
+var _context_menu: PopupMenu
+
 # Debug overlay container (shown only for signal scope shader)
 var _debug_overlay: Control
 var _debug_values: Array[Label] = []
@@ -134,6 +137,9 @@ func _ready() -> void:
 	_label.hide()
 	add_child(_label)
 
+	# Build right-click context menu
+	_build_context_menu()
+
 	# Build debug overlay
 	_build_debug_overlay()
 
@@ -147,6 +153,31 @@ func _ready() -> void:
 	_noise_tex.height = 512
 	_noise_tex.noise = fnoise
 	_noise_tex.seamless = true
+
+# ── Right-click context menu ────────────────────────────────────────
+
+func _build_context_menu() -> void:
+	_context_menu = PopupMenu.new()
+	_context_menu.name = "ShaderContextMenu"
+	for i in SHADERS.size():
+		_context_menu.add_radio_check_item(SHADERS[i].name, i)
+	_context_menu.set_item_checked(_shader_index, true)
+	_context_menu.id_pressed.connect(_on_context_menu_id_pressed)
+	add_child(_context_menu)
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+			_context_menu.reset_size()
+			_context_menu.popup(Rect2i(int(mb.global_position.x), int(mb.global_position.y), 0, 0))
+			accept_event()
+
+func _on_context_menu_id_pressed(id: int) -> void:
+	if id >= 0 and id < SHADERS.size():
+		_switch(id)
+		for i in SHADERS.size():
+			_context_menu.set_item_checked(i, i == id)
 
 # ── Debug overlay builder ──────────────────────────────────────────
 # Creates a tree of Label nodes positioned to match the shader's layout.
@@ -268,6 +299,10 @@ func _switch(idx: int) -> void:
 	_shuffle_timer = 0.0
 	(material as ShaderMaterial).shader = _loaded_shaders[idx]
 	_update_debug_overlay_visibility()
+	# Sync context menu radio checkmarks
+	if _context_menu:
+		for i in SHADERS.size():
+			_context_menu.set_item_checked(i, i == idx)
 	_label.text       = "< %s >" % SHADERS[idx].name
 	_label.modulate.a = 1.0
 	_label.show()
