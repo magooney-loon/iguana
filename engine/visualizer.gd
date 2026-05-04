@@ -6,6 +6,7 @@ const SHADERS := [
 	{ "path": "res://shaders/phosphorescence.gdshader", "name": "Phosphorescence" },
 	{ "path": "res://shaders/submersion.gdshader",      "name": "Submersion" },
 	{ "path": "res://shaders/hyperspatial.gdshader",    "name": "Hyperspatial" },
+	{ "path": "res://shaders/chromatic_rift.gdshader", "name": "Chromatic Rift" },
 ]
 
 var _analyzer: AudioAnalyzer
