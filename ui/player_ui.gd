@@ -19,6 +19,8 @@ var _shader_btns:    Array[Button] = []
 var _shuffle_check:  CheckBox
 var _shuffle_spin:   SpinBox
 var _last_shader_idx := -1
+var _win_dragging := false
+var _win_drag_offset := Vector2.ZERO
 
 # Debug: key → { bar: ProgressBar, val: Label }
 var _dbg: Dictionary = {}
@@ -232,32 +234,64 @@ func _build_settings_window() -> void:
 	_settings_win.size     = Vector2i(440, 580)
 	_settings_win.min_size = Vector2i(360, 420)
 	_settings_win.transparent = true
+	_settings_win.borderless = true
 	_settings_win.close_requested.connect(func(): _settings_win.hide())
 	_settings_win.hide()
 	add_child(_settings_win)
 
-	# Glass background panel for the entire window content
-	var win_style := _glass_box(Color(0.06, 0.07, 0.12, 0.82), 14.0, true)
-	win_style.content_margin_left   = 12.0
-	win_style.content_margin_right  = 12.0
-	win_style.content_margin_top    = 10.0
-	win_style.content_margin_bottom = 12.0
-	var bg_panel := PanelContainer.new()
-	bg_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg_panel.add_theme_stylebox_override("panel", win_style)
-	_settings_win.add_child(bg_panel)
+	# ── Glass shell ────────────────────────────────────────────────────
+	var shell := PanelContainer.new()
+	shell.set_anchors_preset(Control.PRESET_FULL_RECT)
+	shell.add_theme_stylebox_override("panel", _glass_box(Color(0.06, 0.07, 0.12, 0.85), 14.0, true))
+	_settings_win.add_child(shell)
 
-	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left",   4)
-	margin.add_theme_constant_override("margin_right",  4)
-	margin.add_theme_constant_override("margin_top",    4)
-	margin.add_theme_constant_override("margin_bottom", 4)
-	bg_panel.add_child(margin)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 0)
+	shell.add_child(col)
+
+	# ── Custom title bar ──────────────────────────────────────────────
+	var title_bar := PanelContainer.new()
+	title_bar.add_theme_stylebox_override("panel", _glass_box(Color(0.10, 0.11, 0.18, 0.60), 14.0, true))
+	col.add_child(title_bar)
+
+	var title_margin := MarginContainer.new()
+	title_margin.add_theme_constant_override("margin_left", 12)
+	title_margin.add_theme_constant_override("margin_right", 8)
+	title_margin.add_theme_constant_override("margin_top", 8)
+	title_margin.add_theme_constant_override("margin_bottom", 6)
+	title_bar.add_child(title_margin)
+
+	var title_row := HBoxContainer.new()
+	title_row.add_theme_constant_override("separation", 6)
+	title_margin.add_child(title_row)
+
+	var title_lbl := Label.new()
+	title_lbl.text = "Settings"
+	title_lbl.add_theme_font_size_override("font_size", 14)
+	title_lbl.modulate = Color(0.7, 0.82, 1.0)
+	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.add_child(title_lbl)
+
+	var close_btn := Button.new()
+	close_btn.text = "✕"
+	close_btn.custom_minimum_size = Vector2(28, 28)
+	close_btn.add_theme_font_size_override("font_size", 14)
+	close_btn.focus_mode = Control.FOCUS_NONE
+	close_btn.pressed.connect(func(): _settings_win.hide())
+	_apply_glass_btn(close_btn)
+	title_row.add_child(close_btn)
+
+	# ── Content area ──────────────────────────────────────────────────
+	var content_margin := MarginContainer.new()
+	content_margin.add_theme_constant_override("margin_left",   8)
+	content_margin.add_theme_constant_override("margin_right",  8)
+	content_margin.add_theme_constant_override("margin_top",    4)
+	content_margin.add_theme_constant_override("margin_bottom", 8)
+	content_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.add_child(content_margin)
 
 	var tabs := TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	# Tab bar glass style
 	tabs.add_theme_stylebox_override("tab_fg", _glass_box(_C_BTN_H, 8.0, true))
 	tabs.add_theme_stylebox_override("tab_bg", _glass_box(_C_BTN, 8.0, true))
 	tabs.add_theme_stylebox_override("tab_hover", _glass_box(_C_ACCENT, 8.0, true))
@@ -267,7 +301,7 @@ func _build_settings_window() -> void:
 	tab_panel.content_margin_top    = 10.0
 	tab_panel.content_margin_bottom = 10.0
 	tabs.add_theme_stylebox_override("panel", tab_panel)
-	margin.add_child(tabs)
+	content_margin.add_child(tabs)
 
 	tabs.add_child(_build_general_tab())
 	tabs.add_child(_build_shaders_tab())
@@ -583,6 +617,8 @@ func _toggle_settings() -> void:
 
 func _on_shader_btn(idx: int) -> void:
 	_visualizer._switch(idx)
+
+
 
 
 func _on_load() -> void:
