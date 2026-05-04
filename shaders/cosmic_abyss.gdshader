@@ -53,57 +53,81 @@ void fragment() {
 	vec2 uv0 = uv;
 	
 	float t = time_val;
-	float tb = t * 0.35;
 	
-	float arms = 3.0 + floor(bass * 4.0);
-	float scale = 0.75 + energy * 0.3;
+	float s_bass = bass;
+	float s_mid = mid;
+	float s_treble = treble;
+	float s_energy = energy;
+	float s_beat = beat;
+	float s_kick = kick;
+	float s_beat_phase = beat_phase;
+	
+	float arms = 3.0 + s_bass * 2.5;
 	
 	vec3 col = vec3(0.0);
 	float amp = 1.0;
 	
-	for(int i = 0; i < 5; i++) {
+	for(int i = 0; i < 7; i++) {
 		float fi = float(i);
+		float phase = t * (0.4 + fi * 0.08);
 		
-		float r = length(uv) * scale;
+		float r = length(uv) * (0.5 + s_energy * 0.2);
 		float a = atan(uv.y, uv.x);
 		
-		r *= 1.0 + bass * 0.25 * sin(a * arms + fi * 0.5 + tb);
-		a += r * (0.2 + mid * 0.4);
+		float swing = sin(phase);
+		float swing2 = cos(phase * 0.7);
+		float swing3 = sin(phase * 1.3 + fi * 0.5);
 		
-		float wave = sin(r * 4.5 - t * 1.2 + a * 2.5) * 0.03 * (1.0 + mid * 0.5);
-		uv = vec2(cos(a + wave) * r, sin(a + wave) * r);
+		a += swing * 0.1 * (0.3 + s_mid * 0.4);
+		a += swing2 * 0.05 * fi;
 		
-		for(int j = 0; j < 2; j++) {
-			uv = abs(uv) - 0.1 * (1.0 + bass * 0.15);
-			uv = rot2d(uv, PI / arms * 0.7);
+		r *= 1.0 + swing3 * 0.06 * s_bass;
+		
+		uv = vec2(cos(a) * r, sin(a) * r);
+		
+		uv = rot2d(uv, swing * 0.3 * (0.2 + s_treble * 0.3) + s_beat_phase * PI * 0.2 * beat_confidence);
+		
+		float fold_amount = 0.04 + fi * 0.006;
+		for(float f = 0.0; f < 2.0; f += 1.0) {
+			uv = abs(uv) - fold_amount * (1.0 + s_bass * 0.2);
+			uv = rot2d(uv, PI / arms * 0.3 + swing2 * 0.08);
 		}
 		
-		uv = rot2d(uv, bass * PI * 0.1 * sin(tb * 0.5));
+		uv = rot2d(uv, s_bass * 0.08 * swing);
 		
-		float d = length(uv) - 0.22 - bass * 0.12;
-		d = abs(d) - 0.012 * (1.0 + treble * 0.3);
+		float d = length(uv) - 0.12 - s_bass * 0.05;
+		d = abs(d) - 0.004;
 		
-		float glow = 0.012 / (0.006 + abs(d));
-		glow *= 0.7 + energy * 0.3;
+		float glow = 0.004 / (0.0015 + abs(d));
+		glow *= 0.45 + s_energy * 0.35;
 		
-		vec3 shift = vec3(warmth * 0.2 + fi * 0.07, 0.33 + warmth * 0.2 + fi * 0.07, 0.67 + brightness * 0.2 + fi * 0.07);
-		vec3 layer_col = palette(r * 1.6 - t * 0.2 + fi * 0.1, shift);
+		vec3 shift = vec3(
+			warmth * 0.08 + fi * 0.03 + swing * 0.02,
+			0.33 + warmth * 0.08 + fi * 0.03 + swing2 * 0.02,
+			0.67 + brightness * 0.08 + fi * 0.03
+		);
+		vec3 layer_col = palette(r * 0.8 - t * 0.08 + fi * 0.04, shift);
 		
-		layer_col *= 1.0 + (beat * 0.3 + kick * 0.2) * (1.0 - fi * 0.1);
+		float beat_boost = 1.0 + s_beat * 0.6 + s_kick * 0.4;
+		layer_col *= beat_boost;
 		
 		col += layer_col * glow * amp;
-		amp *= 0.6;
+		amp *= 0.45;
 		
-		uv *= 1.05 + energy * 0.01;
-		uv = rot2d(uv, beat_phase * TAU * 0.04 * beat_confidence);
+		uv *= 1.02 + s_energy * 0.004;
+		uv = rot2d(uv, s_beat_phase * 0.008 * beat_confidence);
 	}
 	
-	col *= 0.55 + brightness * 0.4;
-	col.r *= 1.0 + warmth * 0.12;
-	col.b *= 1.0 + brightness * 0.08;
+	float ring = length(uv0);
+	float ring_glow = exp(-ring * 8.0 / (0.3 + s_energy * 0.3));
+	col += vec3(0.3, 0.5, 0.9) * ring_glow * (0.15 + s_treble * 0.2);
+	
+	col *= 0.45 + brightness * 0.5;
+	col.r *= 1.0 + warmth * 0.05;
+	col.b *= 1.0 + brightness * 0.03;
 	
 	col = col / (1.0 + col);
-	col = pow(col, vec3(0.88));
+	col = pow(col, vec3(0.8));
 	col = pow(max(col, vec3(0.0)), vec3(0.4545));
 	
 	COLOR = vec4(col, 1.0);
