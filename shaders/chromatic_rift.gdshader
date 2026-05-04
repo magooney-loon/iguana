@@ -325,9 +325,9 @@ void fragment() {
 		cloud *= smoothstep(0.45, 0.0, length(uv - neb_pos));
 		nebula += cloud;
 	}
-	nebula *= 0.4 + energy * 0.8;
-	overlay += palette(t * 0.03, vec3(0.1 + warmth * 0.2, 0.4, 0.6)) * nebula * 1.2;
-	overlay += vec3(0.05, 0.6, 0.9) * nebula * 0.6;
+	nebula *= 0.2 + energy * 0.4;
+	overlay += palette(t * 0.03, vec3(0.1 + warmth * 0.2, 0.4, 0.6)) * nebula * 0.6;
+	overlay += vec3(0.05, 0.6, 0.9) * nebula * 0.3;
 
 	// ══════════════════════════════════════════════════════════════════
 	//  PHASE 4: COMPOSITE
@@ -337,13 +337,8 @@ void fragment() {
 
 	vec3 col = trail + new_col;
 
-	// ══════════════════════════════════════════════════════════════════
-	//  PHASE 5: POST-PROCESSING
-	// ══════════════════════════════════════════════════════════════════
-	col = col / (1.0 + col * 0.35);
-	col = pow(max(col, vec3(0.0)), vec3(0.93));
+	// Vignette
 	col *= mix(0.3, 1.0, 1.0 - smoothstep(0.22, 1.25, length(uv - 0.5) * 1.8));
-	col += (texture(noise_tex, uv * 300.0 + fract(t * 0.07)).r - 0.5) * 0.012;
 
 	COLOR = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

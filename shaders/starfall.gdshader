@@ -327,10 +327,11 @@ void fragment() {
 	overlay += vec3(0.45, 0.0, 1.0) * silk * 1.0;
 
 	// ── 3g. Organic cellular texture ─────────────────────────────────
-	float n1 = texture(noise_tex, uv * 4.0 + t * 0.03).r;
-	float n2 = texture(noise_tex, uv * 8.0 - t * 0.02 + 3.7).r;
-	float cellular = abs(n1 - n2) * 0.10;
-	overlay += vec3(0.0, 0.9, 0.8) * cellular * (0.4 + energy * 0.8);
+	// Organic cellular texture (disabled — was causing uniform fog through feedback)
+	// float n1 = texture(noise_tex, uv * 4.0 + t * 0.03).r;
+	// float n2 = texture(noise_tex, uv * 8.0 - t * 0.02 + 3.7).r;
+	// float cellular = abs(n1 - n2) * 0.10;
+	// overlay += vec3(0.0, 0.9, 0.8) * cellular * (0.4 + energy * 0.8);
 
 	// ══════════════════════════════════════════════════════════════════
 	//  PHASE 4: COMPOSITE — trail + new geometry
@@ -340,22 +341,12 @@ void fragment() {
 	// Subtle deep-space background (very dim — feedback handles persistence now)
 	new_col += mix(vec3(0.0, 0.0, 0.02), vec3(0.0, 0.003, 0.04), uv.y);
 
-	vec3 col = trail + new_col;
+	// Trail boosts current frame's brightness without shifting its color
+	float trail_lum = dot(trail, vec3(0.299, 0.587, 0.114));
+	vec3 col = new_col * (1.0 + trail_lum) + trail * 0.1;
 
-	// ══════════════════════════════════════════════════════════════════
-	//  PHASE 5: POST-PROCESSING (mild — lives inside the feedback loop)
-	// ══════════════════════════════════════════════════════════════════
-	// Reinhard with soft knee — prevents runaway without flattening color
-	col = col / (1.0 + col * 0.35);
-
-	// Mild gamma lift (0.93 not 0.4545 — heavy gamma in feedback causes drift)
-	col = pow(max(col, vec3(0.0)), vec3(0.93));
-
-	// Vignette — safe in feedback, only darkens edges
+	// Vignette
 	col *= mix(0.35, 1.0, 1.0 - smoothstep(0.25, 1.3, length(uv - 0.5) * 1.8));
-
-	// Film grain — tiny dither prevents banding in feedback accumulation
-	col += (texture(noise_tex, uv * 300.0 + fract(t * 0.07)).r - 0.5) * 0.012;
 
 	COLOR = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
