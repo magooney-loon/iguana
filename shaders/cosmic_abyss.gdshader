@@ -69,41 +69,47 @@ void fragment() {
 	float s_onset = onset;
 	float s_warmth = warmth;
 	float s_brightness = brightness;
+	float s_activity = activity;
+	float s_hihat = hihat;
+	float s_snare = snare;
+	float s_flux_bass = flux_bass;
+	float s_flux_mid = flux_mid;
 	
 	vec3 col = vec3(0.0);
 	
 	float arms = 3.0 + s_bass * 2.5;
 	
-	vec2 feed_uv = uv;
+	// ── Layer 1: Large-scale fractal backbone (fills screen) ──
+	vec2 feed_uv = uv * 1.6;
 	float amp = 1.0;
 	
-	for(int i = 0; i < 5; i++) {
+	for(int i = 0; i < 8; i++) {
 		float fi = float(i);
 		float phase = t * (0.3 + fi * 0.05);
 		
-		float r = length(feed_uv) * (0.4 + s_energy * 0.15);
+		float r = length(feed_uv) * (0.5 + s_energy * 0.2);
 		float a = atan(feed_uv.y, feed_uv.x);
 		
 		float swing = sin(phase);
 		float swing2 = cos(phase * 0.6);
 		
-		float warp = sin(r * 5.0 - t * 0.4 + fi) * 0.08 * (0.3 + s_mid * 0.4);
-		a += swing * 0.1 * (0.2 + s_mid * 0.3) + warp;
-		r *= 1.0 + swing2 * 0.04 * s_bass;
+		float warp = sin(r * 4.0 - t * 0.35 + fi) * 0.1 * (0.3 + s_mid * 0.4);
+		a += swing * 0.12 * (0.2 + s_mid * 0.3) + warp;
+		r *= 1.0 + swing2 * 0.05 * s_bass;
 		
 		feed_uv = vec2(cos(a) * r, sin(a) * r);
 		
-		feed_uv = rot2d(feed_uv, swing * 0.25 * (0.15 + s_treble * 0.25) + s_beat * 0.15);
+		feed_uv = rot2d(feed_uv, swing * 0.25 * (0.15 + s_treble * 0.25) + s_beat * 0.12);
 		
-		float fold = 0.025 + fi * 0.004;
-		feed_uv = abs(feed_uv) - fold * (1.0 + s_bass * 0.1);
+		float fold = 0.03 + fi * 0.005;
+		feed_uv = abs(feed_uv) - fold * (1.0 + s_bass * 0.12);
 		feed_uv = rot2d(feed_uv, PI / arms * (0.2 + fi * 0.05) + swing2 * 0.04);
 		
-		float d = length(feed_uv) - 0.08 - s_bass * 0.03;
-		d = abs(d) - 0.002;
+		float d = length(feed_uv) - 0.1 - s_bass * 0.04;
+		d = abs(d) - 0.0025;
 		
-		float glow = 0.002 / (0.0008 + abs(d));
-		glow *= 0.35 + s_energy * 0.25;
+		float glow = 0.003 / (0.001 + abs(d));
+		glow *= 0.4 + s_energy * 0.3;
 		glow = smootherstep(glow);
 		
 		vec3 shift = vec3(
@@ -111,14 +117,110 @@ void fragment() {
 			0.33 + s_warmth * 0.05 + fi * 0.02 + swing2 * 0.01,
 			0.67 + s_brightness * 0.05 + fi * 0.02
 		);
-		vec3 layer_col = palette(r * 0.6 - t * 0.05 + fi * 0.03, shift);
-		layer_col *= 1.0 + s_beat * 0.35 + s_kick * 0.25;
+		vec3 layer_col = palette(r * 0.5 - t * 0.04 + fi * 0.03, shift);
+		layer_col *= 1.0 + s_beat * 0.3 + s_kick * 0.2;
 		
 		col += layer_col * glow * amp;
-		amp *= 0.4;
+		amp *= 0.42;
 		
-		feed_uv *= 1.02 + s_energy * 0.003;
+		feed_uv *= 1.015 + s_energy * 0.003;
 		feed_uv = rot2d(feed_uv, beat_phase * 0.004 * beat_confidence);
+	}
+	
+	// ── Layer 2: Deep detail pass (nested inside, higher frequency) ──
+	vec2 deep_uv = uv * 1.8;
+	float deep_amp = 0.7;
+	float deep_arms = 5.0 + s_mid * 3.0;
+	
+	for(int i = 0; i < 6; i++) {
+		float fi = float(i);
+		float phase = t * (0.25 + fi * 0.04) + 1.0;
+		
+		float r = length(deep_uv) * (0.55 + s_energy * 0.15);
+		float a = atan(deep_uv.y, deep_uv.x);
+		
+		float swing = sin(phase);
+		float swing2 = cos(phase * 0.7);
+		
+		float warp = sin(r * 6.0 - t * 0.5 + fi * 0.5) * 0.06 * (0.4 + s_presence * 0.3);
+		a += swing * 0.08 * (0.3 + s_mid * 0.3) + warp;
+		r *= 1.0 + swing2 * 0.03 * s_mid;
+		
+		deep_uv = vec2(cos(a) * r, sin(a) * r);
+		
+		deep_uv = rot2d(deep_uv, swing * 0.2 * (0.2 + s_presence * 0.2) + s_beat * 0.08);
+		
+		float fold = 0.02 + fi * 0.003;
+		deep_uv = abs(deep_uv) - fold * (1.0 + s_mid * 0.08);
+		deep_uv = rot2d(deep_uv, PI / deep_arms * (0.15 + fi * 0.04) + swing2 * 0.03);
+		
+		float d = length(deep_uv) - 0.06 - s_mid * 0.02;
+		d = abs(d) - 0.0015;
+		
+		float glow = 0.002 / (0.0006 + abs(d));
+		glow *= 0.3 + s_energy * 0.2;
+		glow = smootherstep(glow);
+		
+		vec3 shift = vec3(
+			s_warmth * 0.1 + fi * 0.03 + swing * 0.015,
+			0.4 + s_warmth * 0.08 + fi * 0.025 + swing2 * 0.01,
+			0.75 + s_brightness * 0.08 + fi * 0.03
+		);
+		vec3 layer_col = palette(r * 0.7 - t * 0.06 + fi * 0.04 + 0.2, shift);
+		layer_col *= 1.0 + s_snare * 0.25 + s_flux_mid * 0.2;
+		
+		col += layer_col * glow * deep_amp;
+		deep_amp *= 0.38;
+		
+		deep_uv *= 1.02 + s_mid * 0.004;
+		deep_uv = rot2d(deep_uv, -beat_phase * 0.003 * beat_confidence);
+	}
+	
+	// ── Layer 3: Outer halo (wide, soft, bass-reactive) ──
+	vec2 halo_uv = uv * 1.2;
+	float halo_amp = 0.5;
+	
+	for(int i = 0; i < 4; i++) {
+		float fi = float(i);
+		float phase = t * (0.15 + fi * 0.03) + 2.0;
+		
+		float r = length(halo_uv) * (0.6 + s_bass * 0.15);
+		float a = atan(halo_uv.y, halo_uv.x);
+		
+		float swing = sin(phase);
+		float swing2 = cos(phase * 0.5);
+		
+		a += swing * 0.06;
+		r *= 1.0 + swing2 * 0.04 * s_bass;
+		
+		halo_uv = vec2(cos(a) * r, sin(a) * r);
+		
+		halo_uv = rot2d(halo_uv, swing * 0.15 + s_beat * 0.06);
+		
+		float fold = 0.05 + fi * 0.008;
+		halo_uv = abs(halo_uv) - fold * (1.0 + s_bass * 0.15);
+		halo_uv = rot2d(halo_uv, PI / (2.0 + s_bass) * (0.3 + fi * 0.06) + swing2 * 0.02);
+		
+		float d = length(halo_uv) - 0.15 - s_bass * 0.06;
+		d = abs(d) - 0.004;
+		
+		float glow = 0.005 / (0.002 + abs(d));
+		glow *= 0.35 + s_energy * 0.25;
+		glow = smootherstep(glow) * 0.5;
+		
+		vec3 shift = vec3(
+			s_warmth * 0.15 + fi * 0.04,
+			0.25 + s_warmth * 0.1 + fi * 0.03,
+			0.5 + s_brightness * 0.1 + fi * 0.04
+		);
+		vec3 layer_col = palette(r * 0.4 - t * 0.03 + fi * 0.05 + 0.4, shift);
+		layer_col *= 1.0 + s_kick * 0.3;
+		
+		col += layer_col * glow * halo_amp;
+		halo_amp *= 0.45;
+		
+		halo_uv *= 1.03;
+		halo_uv = rot2d(halo_uv, beat_phase * 0.002);
 	}
 	
 	float ring = length(uv0);
@@ -205,6 +307,97 @@ void fragment() {
 	float outer = abs(ring - 0.32 - s_treble * 0.08);
 	outer = smoothstep(0.02, 0.0, outer);
 	col += vec3(0.3, 0.25, 0.7) * outer * s_treble * 0.3;
+	
+	// ── Floating particles (noise-driven, asymmetrical) ──
+	float noise_val = texture(noise_tex, UV * 3.0 + vec2(t * 0.02, t * 0.015)).r;
+	float noise_val2 = texture(noise_tex, UV * 5.0 - vec2(t * 0.03, t * 0.025)).r;
+	
+	vec3 particles = vec3(0.0);
+	for(int i = 0; i < 8; i++) {
+		float fi = float(i);
+		vec2 offset = vec2(
+			sin(fi * 2.39 + t * 0.1),
+			cos(fi * 3.17 + t * 0.08)
+		) * (0.2 + s_energy * 0.15);
+		
+		vec2 p_pos = uv0 + offset;
+		float p_noise = texture(noise_tex, p_pos * 4.0 + t * 0.02).r;
+		
+		float p_size = 0.003 + p_noise * 0.006 * (1.0 + s_treble * 0.5);
+		float p_dist = length(p_pos - vec2(
+			sin(fi * 1.7 + t * (0.05 + fi * 0.01)),
+			cos(fi * 2.3 + t * (0.04 + fi * 0.012))
+		) * (0.15 + s_mid * 0.1));
+		
+		float p = smoothstep(p_size, 0.0, p_dist);
+		p *= p_noise * (0.3 + s_activity * 0.5);
+		
+		vec3 p_col = palette(fi * 0.15 + t * 0.1, vec3(s_warmth * 0.2, 0.33, 0.67 + s_brightness * 0.2));
+		particles += p_col * p;
+	}
+	col += particles * (0.12 + s_hihat * 0.08);
+	
+	// ── Organic blobs (noise-thresholded, irregular shapes) ──
+	vec3 blobs = vec3(0.0);
+	float blob_noise = texture(noise_tex, uv0 * 2.0 + vec2(sin(t * 0.07) * 0.1, cos(t * 0.05) * 0.08)).r;
+	float blob_noise2 = texture(noise_tex, uv0 * 3.0 - vec2(cos(t * 0.06) * 0.12, sin(t * 0.09) * 0.06)).r;
+	
+	float blob = smoothstep(0.55 - s_bass * 0.15, 0.65 + s_bass * 0.1, blob_noise);
+	blob *= smoothstep(0.5, 0.7, blob_noise2);
+	blob = blob * 0.5 + blob * blob * 0.5;
+	
+	vec3 blob_col = palette(t * 0.08 + s_warmth * 0.3, vec3(0.1 + s_warmth * 0.15, 0.4, 0.7));
+	blobs += blob_col * blob * (0.06 + s_energy * 0.08);
+	
+	float blob2 = smoothstep(0.45, 0.65, blob_noise * blob_noise2);
+	blob2 *= smoothstep(0.3, 0.5, texture(noise_tex, uv0 * 1.5 + t * 0.01).r);
+	vec3 blob2_col = palette(t * 0.12 + s_brightness * 0.2, vec3(0.5, 0.6 + s_brightness * 0.1, 0.3 + s_warmth * 0.2));
+	blobs += blob2_col * blob2 * (0.04 + s_mid * 0.06);
+	
+	col += blobs;
+	
+	// ── Light streaks (horizontal/vertical, beat-reactive) ──
+	vec3 streaks = vec3(0.0);
+	
+	float h_stripe = abs(sin(uv.y * 50.0 + t * 0.5 + sin(uv.x * 3.0) * 2.0));
+	h_stripe = pow(h_stripe, 8.0 + s_bass * 12.0);
+	h_stripe *= smoothstep(0.5, 0.0, abs(uv.y - 0.3 - sin(t * 0.2) * 0.1));
+	
+	vec3 h_col = palette(t * 0.15, vec3(s_warmth * 0.2, 0.25, 0.55 + s_brightness * 0.15));
+	streaks += h_col * h_stripe * (0.05 + s_beat * 0.12);
+	
+	float v_stripe = abs(cos(uv.x * 40.0 - t * 0.3 + cos(uv.y * 2.5) * 1.5));
+	v_stripe = pow(v_stripe, 10.0 + s_mid * 8.0);
+	v_stripe *= smoothstep(0.4, 0.0, abs(uv.x + 0.2 + cos(t * 0.15) * 0.08));
+	
+	vec3 v_col = palette(t * 0.2 + 0.33, vec3(0.2 + s_warmth * 0.1, 0.35, 0.6 + s_brightness * 0.1));
+	streaks += v_col * v_stripe * (0.04 + s_snare * 0.1);
+	
+	col += streaks;
+	
+	// ── Light leak (asymmetrical corner glow) ──
+	vec3 leak = vec3(0.0);
+	float leak_mask = smoothstep(0.6, 0.0, length(UV - vec2(0.85, 0.15)));
+	leak_mask *= smoothstep(0.3, 0.0, texture(noise_tex, vec2(t * 0.03, 0.5)).r - 0.4);
+	vec3 leak_col = palette(t * 0.2, vec3(s_warmth * 0.3, 0.15, 0.45 + s_brightness * 0.2));
+	leak += leak_col * leak_mask * (0.2 + s_energy * 0.3);
+	
+	float leak_mask2 = smoothstep(0.5, 0.0, length(UV - vec2(0.1, 0.8)));
+	leak_mask2 *= smoothstep(0.35, 0.0, texture(noise_tex, vec2(0.5, t * 0.025)).r - 0.35);
+	vec3 leak_col2 = palette(t * 0.15 + 0.5, vec3(0.5 + s_warmth * 0.2, 0.25, 0.15 + s_brightness * 0.1));
+	leak += leak_col2 * leak_mask2 * (0.15 + s_flux_bass * 0.3);
+	
+	col += leak * 0.1;
+	
+	// ── Film grain ──
+	float grain = texture(noise_tex, UV * 200.0 + fract(t * 0.1)).r;
+	grain = (grain - 0.5) * 0.04 * (1.0 + s_energy * 0.5);
+	col += grain;
+	
+	// ── Subtle vignette ──
+	float vignette = 1.0 - smoothstep(0.3, 1.2, length(UV - 0.5) * 1.8);
+	vignette = mix(0.6, 1.0, vignette);
+	col *= vignette;
 	
 	col *= 0.38 + s_brightness * 0.45;
 	col.r *= 1.0 + s_warmth * 0.03;
