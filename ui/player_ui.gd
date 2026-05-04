@@ -521,4 +521,4 @@ func _refresh_play_btn() -> void:
 
 func _fmt(secs: float) -> String:
 	var s := int(secs)
-	return "%d:%02d" % [s / 60, s % 60]
+	return "%d:%02d" % [int(s / 60.0), s % 60]
