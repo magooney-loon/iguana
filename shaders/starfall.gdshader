@@ -118,6 +118,9 @@ void fragment() {
 	vec3 col = vec3(0.0);
 	float ac = 0.0;
 
+	// Soft depth of field — focal plane drifts slowly
+	float focal_dist = 5.0 + sin(t * 0.1) * 2.0;
+
 	// Raymarching loop – step count modulated by density for richer detail
 	int steps = 60 + int(density * 39.0);
 	for (int i = 0; i < 99; i++) {
@@ -132,7 +135,8 @@ void fragment() {
 
 		// Glow accumulation – beat pulses the glow radius, onset adds flashes
 		float glow_strength = 23.0 + beat * 25.0 + onset * 15.0;
-		ac += exp(-d * glow_strength);
+		float dof = exp(-pow((dist - focal_dist) * 0.12, 2.0));
+		ac += exp(-d * glow_strength) * mix(0.3, 1.0, dof);
 
 		dist += d * (0.55 - beat * 0.03);
 	}
@@ -143,10 +147,11 @@ void fragment() {
 	// Audio-reactive color palette:
 	// Each frequency band drives its own color channel
 	float hue_shift = beat_phase * 6.28318;
+	// Pastel palette — rose / lavender / mint
 	vec3 band_color = vec3(
-		0.5 + 0.5 * sin(hue_shift + 0.0),          // red channel cycles with beat
-		0.5 + 0.5 * sin(hue_shift + 2.094),        // green channel offset by 120°
-		0.5 + 0.5 * sin(hue_shift + 4.189)         // blue channel offset by 240°
+		0.72 + 0.28 * sin(hue_shift + 0.3),
+		0.72 + 0.28 * sin(hue_shift + 2.4),
+		0.72 + 0.28 * sin(hue_shift + 4.5)
 	);
 
 	// Bass warms the reds, treble cools the blues, mid boosts greens
@@ -155,14 +160,14 @@ void fragment() {
 	band_color.b += (treble + presence) * 0.3;
 
 	// Warmth/brightness bias the overall palette
-	vec3 warm_tint = vec3(0.0, 0.2 * abs(sin(t)), 0.5 + sin(t) * 0.2);
-	vec3 cool_tint = vec3(0.1 * abs(cos(t * 0.7)), 0.35, 0.65 + cos(t * 0.5) * 0.15);
+	vec3 warm_tint = vec3(0.22, 0.08, 0.28 + sin(t) * 0.1);
+	vec3 cool_tint = vec3(0.06, 0.18, 0.42 + cos(t * 0.5) * 0.1);
 	vec3 mood_tint = mix(cool_tint, warm_tint, warmth);
 
 	col += mix(mood_tint, band_color, 0.5 + energy * 0.5);
 
-	// Onset flash: white-hot burst on transients
-	col += vec3(0.5, 0.45, 0.4) * onset * 0.35;
+	// Onset flash — soft pastel burst
+	col += vec3(0.55, 0.45, 0.65) * onset * 0.25;
 
 	// Beat-phase brightness pulse
 	float phase_pulse = pow(1.0 - abs(fract(beat_phase * 2.0) - 0.5) * 2.0, 3.0);
@@ -173,6 +178,49 @@ void fragment() {
 	alpha = clamp(alpha, 0.0, 1.0);
 	alpha += beat * 0.15;
 	alpha = clamp(alpha, 0.0, 1.0);
+
+	// ── Bioluminescent plankton ────────────────────────────
+	float plankton = 0.0;
+	for (int i = 0; i < 14; i++) {
+		float fi = float(i);
+		vec2 pos = vec2(
+			0.5 + sin(t * 0.07 + fi * 2.391) * 0.42 + cos(t * 0.05 + fi * 0.7) * 0.08,
+			0.5 + cos(t * 0.06 + fi * 1.731) * 0.42 + sin(t * 0.04 + fi * 1.1) * 0.08
+		);
+		float d_p = length(UV - pos);
+		float pulse = 0.3 + 0.7 * pow(sin(t * (0.25 + fi * 0.07) + fi * 0.9) * 0.5 + 0.5, 2.0);
+		plankton += exp(-d_p * (90.0 + energy * 50.0)) * pulse * 0.03;
+	}
+	col += vec3(0.45, 0.75, 1.0) * plankton;
+	col += vec3(0.65, 1.0, 0.82) * plankton * 0.4;
+
+	// ── Flowing silk ribbons ───────────────────────────────
+	float silk = 0.0;
+	for (int i = 0; i < 5; i++) {
+		float fi = float(i);
+		float phase = fi * 1.618 + t * (0.06 + fi * 0.015);
+		float y = 0.5
+			+ sin(UV.x * (2.0 + fi * 0.7) + phase) * (0.06 + fi * 0.015)
+			+ cos(UV.x * (3.5 + fi * 0.4) - phase * 0.6) * 0.03;
+		float s_d = abs(UV.y - y);
+		silk += exp(-s_d * (220.0 + energy * 100.0)) * (0.007 + energy * 0.004);
+	}
+	col += vec3(1.0, 0.82, 0.88) * silk;
+	col += vec3(0.82, 0.72, 1.0) * silk * 0.5;
+
+	// ── Organic cellular texture ───────────────────────────
+	float n1 = texture(noise_tex, UV * 4.0 + t * 0.03).r;
+	float n2 = texture(noise_tex, UV * 8.0 - t * 0.02 + 3.7).r;
+	float cellular = abs(n1 - n2) * 0.12;
+	col += vec3(0.85, 0.95, 0.9) * cellular * (0.3 + energy * 0.7);
+
+	// ── Pastel gradient underlay ───────────────────────────
+	vec3 pastel_bg = mix(
+		vec3(0.1, 0.05, 0.14),
+		vec3(0.05, 0.08, 0.14),
+		UV.y
+	);
+	col += pastel_bg * 0.12;
 
 	COLOR = vec4(clamp(col, 0.0, 1.0), alpha);
 }

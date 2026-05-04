@@ -91,6 +91,9 @@ void fragment() {
 	float acc2 = 0.0;
 	float t = 0.0;
 
+	// Soft depth of field
+	float focal_dist = 4.0 + sin(time_val * 0.08) * 1.5;
+
 	// Glow falloff: energy tightens the glow, beat/onset punch it
 	float glow_falloff = 3.0 + energy * 4.0;
 
@@ -99,7 +102,8 @@ void fragment() {
 		float dist = map(pos);
 		dist = max(abs(dist), 0.02);
 
-		float a = exp(-dist * glow_falloff);
+		float dof = exp(-pow((t - focal_dist) * 0.15, 2.0));
+		float a = exp(-dist * glow_falloff) * mix(0.35, 1.0, dof);
 
 		// Phantom pulse – synced to beat_phase for musical timing
 		float phantom_phase = mod(length(pos) + 24.0 * time_val, 30.0);
@@ -112,27 +116,24 @@ void fragment() {
 		t += dist * 0.5;
 	}
 
-	// Audio-reactive color palette:
-	// Base: warm amber/gold tones (no pink!)
-	// acc2 (phantom glow) shifts toward emerald/green
-	float base_r = acc * 0.011;
-	float base_g = acc * 0.013 + acc2 * 0.004;
-	float base_b = acc * 0.008 + acc2 * 0.002;
+	// Pastel palette — rose / lavender / mint shifting with audio
+	float base_r = acc * 0.012;
+	float base_g = acc * 0.01 + acc2 * 0.005;
+	float base_b = acc * 0.016 + acc2 * 0.005;
 
-	// Kick adds amber intensity, hihat adds emerald shimmer
-	base_r += kick * acc * 0.008;
-	base_g += hihat * acc2 * 0.004;
-	base_b += flux_treble * acc2 * 0.002;
+	base_r += kick * acc * 0.005;
+	base_g += hihat * acc2 * 0.003;
+	base_b += flux_treble * acc2 * 0.004;
 
-	// Mood tint: warmth boosts amber, brightness boosts emerald highlights
+	// Mood tint — warmth shifts rose, brightness shifts lavender
 	vec3 col = vec3(
-		base_r * (1.0 + warmth * 0.6),
-		base_g * (1.0 + warmth * 0.3 + brightness * 0.3),
-		base_b * (1.0 + brightness * 0.4)
+		base_r * (1.0 + warmth * 0.5),
+		base_g * (1.0 + warmth * 0.2 + brightness * 0.4),
+		base_b * (1.0 + brightness * 0.5)
 	);
 
-	// Onset flash – neutral white punch
-	col += vec3(0.08 * onset);
+	// Onset flash — soft pastel
+	col += vec3(0.04, 0.03, 0.06) * onset;
 
 	// Beat-phase brightness swell
 	float phase_pulse = pow(1.0 - abs(fract(beat_phase * 2.0) - 0.5) * 2.0, 3.0);
@@ -142,6 +143,75 @@ void fragment() {
 	alpha = clamp(alpha, 0.0, 1.0);
 	alpha += beat * 0.1;
 	alpha = clamp(alpha, 0.0, 1.0);
+
+	// ── Microscopic organisms ──────────────────────────────
+	float organisms = 0.0;
+	for (int i = 0; i < 10; i++) {
+		float fi = float(i);
+		vec2 pos = vec2(
+			0.5 + sin(time_val * 0.05 + fi * 2.7) * 0.38,
+			0.5 + cos(time_val * 0.04 + fi * 1.9) * 0.38
+		);
+		vec2 to_org = UV - pos;
+		float r_org = length(to_org);
+		float angle = atan(to_org.y, to_org.x);
+		float blob_r = 0.018 + 0.006 * sin(angle * 3.0 + time_val * 0.4 + fi)
+				   + 0.004 * sin(angle * 5.0 - time_val * 0.25 + fi * 2.0);
+		blob_r *= 1.0 + energy * 0.5;
+		float blob = smoothstep(blob_r + 0.005, blob_r * 0.2, r_org);
+		organisms += blob * (0.15 + 0.2 * (sin(time_val * 0.2 + fi * 1.3) * 0.5 + 0.5));
+	}
+	col += vec3(0.55, 0.85, 0.7) * organisms * 0.15;
+	col += vec3(0.4, 0.6, 0.9) * organisms * 0.08;
+
+	// ── Cellular division — voronoi membranes ──────────────
+	vec2 cell_uv = UV * 5.0;
+	vec2 cell_id = floor(cell_uv);
+	vec2 cell_fract = fract(cell_uv) - 0.5;
+	float min_cell = 1.0;
+	float sec_cell = 1.0;
+	for (int cy = -1; cy <= 1; cy++) {
+		for (int cx = -1; cx <= 1; cx++) {
+			vec2 nb = vec2(float(cx), float(cy));
+			vec2 pt = vec2(
+				sin(time_val * 0.15 + dot(cell_id + nb, vec2(127.1, 311.7))) * 0.25,
+				cos(time_val * 0.12 + dot(cell_id + nb, vec2(269.5, 183.3))) * 0.25
+			);
+			float cd = length(nb + pt - cell_fract);
+			if (cd < min_cell) {
+				sec_cell = min_cell;
+				min_cell = cd;
+			} else if (cd < sec_cell) {
+				sec_cell = cd;
+			}
+		}
+	}
+	float membrane = sec_cell - min_cell;
+	float cell_edge = exp(-membrane * 18.0) * 0.04;
+	col += vec3(0.7, 0.85, 0.75) * cell_edge;
+	col += vec3(0.6, 0.7, 0.9) * cell_edge * 0.4;
+
+	// ── Liquid mercury highlights ──────────────────────────
+	float mercury = 0.0;
+	for (int i = 0; i < 4; i++) {
+		float fi = float(i);
+		vec2 mc = vec2(
+			0.5 + sin(time_val * 0.03 + fi * 3.14) * 0.28,
+			0.5 + cos(time_val * 0.025 + fi * 2.72) * 0.28
+		);
+		float mr = length(UV - mc);
+		float mb = exp(-mr * mr * (35.0 + energy * 25.0));
+		mercury += pow(max(mb, 0.0), 3.0);
+	}
+	col += vec3(0.78, 0.82, 0.88) * mercury * 0.06;
+
+	// ── Pastel gradient underlay ───────────────────────────
+	vec3 pastel_bg = mix(
+		vec3(0.08, 0.04, 0.12),
+		vec3(0.04, 0.08, 0.12),
+		UV.y
+	);
+	col += pastel_bg * 0.1;
 
 	COLOR = vec4(clamp(col, 0.0, 1.0), alpha);
 }
