@@ -35,6 +35,12 @@ var _ui: VisualizerUI
 
 var _noise_tex: NoiseTexture2D
 
+# Shader transition
+var _transition_overlay: TextureRect
+var _transitioning := false
+var _transition_time := 0.0
+const TRANSITION_DURATION := 1.5
+
 
 func _ready() -> void:
 	_analyzer = AudioAnalyzer.new()
@@ -85,6 +91,15 @@ func _ready() -> void:
 	container.add_child.call_deferred(_ui)
 	container.get_parent().add_child.call_deferred(_backbuffer_vp)
 
+	# Transition overlay: sits on top of the visualizer, fades out during switch
+	_transition_overlay = TextureRect.new()
+	_transition_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_transition_overlay.expand_mode  = TextureRect.EXPAND_IGNORE_SIZE
+	_transition_overlay.stretch_mode = TextureRect.STRETCH_SCALE
+	_transition_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_transition_overlay.hide()
+	container.add_child.call_deferred(_transition_overlay)
+
 	var fnoise := FastNoiseLite.new()
 	fnoise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 	fnoise.frequency = 0.04
@@ -108,6 +123,14 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _switch(idx: int) -> void:
+	# Capture a STATIC snapshot of the current frame for cross-fade
+	var img: Image = _backbuffer_vp.get_texture().get_image()
+	_transition_overlay.texture = ImageTexture.create_from_image(img)
+	_transition_overlay.modulate.a = 1.0
+	_transition_overlay.show()
+	_transitioning = true
+	_transition_time = 0.0
+
 	_shader_index  = idx
 	_shuffle_timer = 0.0
 	(material as ShaderMaterial).shader = _loaded_shaders[idx]
@@ -151,6 +174,17 @@ func _process(delta: float) -> void:
 			_switch_cooldown = SWITCH_COOLDOWN_MIN
 
 	_ui.process_ui(delta)
+
+	# Fade the transition overlay out
+	if _transitioning:
+		_transition_time += delta
+		var t := clampf(_transition_time / TRANSITION_DURATION, 0.0, 1.0)
+		# Smooth ease-out curve
+		_transition_overlay.modulate.a = 1.0 - t * t
+		if t >= 1.0:
+			_transitioning = false
+			_transition_overlay.hide()
+
 	_push_uniforms(material as ShaderMaterial)
 
 
