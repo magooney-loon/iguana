@@ -30,6 +30,10 @@ uniform float beat_confidence : hint_range(0.0, 1.0) = 0.0;
 uniform float bpm         = 120.0;
 uniform float time_val    = 0.0;
 
+// ── Feedback ─────────────────────────────────────────────────────────
+uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable;
+
+// ── Utility ──────────────────────────────────────────────────────────
 uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform vec2 rect_size = vec2(1600.0, 900.0);
 
@@ -43,22 +47,17 @@ mat2 rot(float a) {
 	return mat2(vec2(c, s), vec2(-s, c));
 }
 
-// Smooth minimum — organic merging
 float smin(float a, float b, float k) {
 	float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
 	return mix(b, a, h) - k * h * (1.0 - h);
 }
 
-// ── Organic field ────────────────────────────────────────────────────
-// Five shapes, each a different geometry, each morphing based on
-// its own slow-changing audio driver. No two look alike.
-//
-//   blob 0  →  sphere ↔ octahedron   driven by brightness
-//   blob 1  →  box ↔ sphere           driven by warmth
-//   blob 2  →  torus ↔ box            driven by energy
-//   blob 3  →  sphere ↔ capsule       driven by bass
-//   blob 4  →  sphere ↔ diamond-spike driven by treble
+// Cosine palette (Inigo Quilez) — mood-driven color
+vec3 palette(float t, vec3 shift) {
+	return vec3(0.5) + vec3(0.5) * cos(TAU * (t + shift));
+}
 
+// ── Organic field ────────────────────────────────────────────────────
 float organic_field(vec3 p, float t_offset) {
 	float d = 1e10;
 	float t = t_offset;
@@ -77,47 +76,38 @@ float organic_field(vec3 p, float t_offset) {
 		float r = 0.45 + 0.12 * sin(t * 0.35 + fi * 0.8) + sub_bass * 0.1;
 		vec3 rel = p - center;
 
-		// ── Per-blob shape selection ───────────────────────────
-		// Sphere (shared baseline)
 		float s_sphere = length(rel) - r;
 
-		// Rounded box
 		vec3 bq = abs(rel) - vec3(r * 0.72);
 		float s_box = length(max(bq, 0.0)) + min(max(bq.x, max(bq.y, bq.z)), 0.0);
 
-		// Octahedron
 		float s_oct = (abs(rel.x) + abs(rel.y) + abs(rel.z) - r * 0.92) / 1.73;
 
-		// Torus
 		vec2 tq = vec2(length(rel.xz) - r * 0.55, rel.y);
 		float s_torus = length(tq) - r * 0.22;
 
-		// Capsule (elongated sphere along Y)
 		float cap_h = r * 0.7;
 		vec3 cap_sw = rel;
 		cap_sw.y -= clamp(cap_sw.y, -cap_h, cap_h);
 		float s_capsule = length(cap_sw) - r * 0.5;
 
-		// Diamond spike (flattened octahedron)
 		vec3 d_rel = rel;
 		d_rel.y *= 0.55;
 		float s_diamond = (abs(d_rel.x) + abs(d_rel.y) + abs(d_rel.z) - r * 0.85) / 1.73;
 
-		// ── Pick morph pair per blob ──────────────────────────
 		float shape;
 		if (i == 0) {
-			shape = mix(s_sphere, s_oct, brightness);       // round → spiky
+			shape = mix(s_sphere, s_oct, brightness);
 		} else if (i == 1) {
-			shape = mix(s_box, s_sphere, warmth);            // boxy → round
+			shape = mix(s_box, s_sphere, warmth);
 		} else if (i == 2) {
-			shape = mix(s_torus, s_box, energy);             // donut → cube
+			shape = mix(s_torus, s_box, energy);
 		} else if (i == 3) {
-			shape = mix(s_sphere, s_capsule, bass);          // ball → capsule
+			shape = mix(s_sphere, s_capsule, bass);
 		} else {
-			shape = mix(s_sphere, s_diamond, treble * 0.8);  // ball → diamond
+			shape = mix(s_sphere, s_diamond, treble * 0.8);
 		}
 
-		// Surface displacement — organic texture
 		float disp = sin(p.x * 2.5 + t * 0.45 + fi)
 		           * cos(p.y * 2.5 - t * 0.3 + fi * 0.7)
 		           * sin(p.z * 2.0 + t * 0.35 + fi * 1.1);
@@ -131,8 +121,6 @@ float organic_field(vec3 p, float t_offset) {
 }
 
 // ── Abstract rings ───────────────────────────────────────────────────
-// Three geometric rings, each with a unique cross-section shape.
-// Ring 0: circle   Ring 1: square   Ring 2: trefoil-lobe
 float abstract_rings(vec3 p, float t_offset) {
 	float d = 1e10;
 	float t = t_offset;
@@ -155,15 +143,12 @@ float abstract_rings(vec3 p, float t_offset) {
 
 		float cross_section;
 		if (i == 0) {
-			// Perfect circle — the baseline
 			cross_section = length(q) - thickness;
 		} else if (i == 1) {
-			// Square cross-section that softens to circle with warmth
 			float sq = max(abs(q.x), abs(q.y)) - thickness;
 			float ci = length(q) - thickness;
 			cross_section = mix(ci, sq, 0.7 - warmth * 0.4);
 		} else {
-			// Trefoil-lobed cross-section
 			float a = atan(q.y, q.x);
 			float lobe = sin(a * 3.0 + t * 0.25) * thickness * 0.5;
 			cross_section = length(q) - thickness + lobe;
@@ -185,7 +170,6 @@ float caustics(vec2 uv, float t) {
 }
 
 // ── Interference fringes ─────────────────────────────────────────────
-// Two wave sources creating overlapping ripple patterns
 float interference(vec2 uv, float t) {
 	vec2 src1 = vec2(0.35 + sin(t * 0.08) * 0.08, 0.5 + cos(t * 0.06) * 0.05);
 	vec2 src2 = vec2(0.65 + cos(t * 0.07) * 0.08, 0.5 + sin(t * 0.05) * 0.05);
@@ -196,7 +180,6 @@ float interference(vec2 uv, float t) {
 }
 
 // ── Lissajous curve trace ────────────────────────────────────────────
-// Parametric curve drawn as a string of glowing dots
 float lissajous(vec2 uv, float t) {
 	float curve = 0.0;
 	for (int i = 0; i < 25; i++) {
@@ -213,12 +196,54 @@ float lissajous(vec2 uv, float t) {
 }
 
 void fragment() {
-	float min_dim = min(rect_size.x, rect_size.y);
-	vec2 p = (UV * 2.0 - 1.0) * (rect_size / min_dim);
+	vec2 uv = UV;
 	float t = time_val;
 
-	// ── Camera — wandering curve, not a straight line ─────────────
-	// Two-frequency sine composition creates a non-repeating drift
+	// ══════════════════════════════════════════════════════════════════
+	//  PHASE 1: FEEDBACK LOOP — MilkDrop warp / zoom / rotate
+	// ══════════════════════════════════════════════════════════════════
+	vec2 center = uv - 0.5;
+	center.x *= rect_size.x / rect_size.y;
+
+	// Zoom: gentle for the meditative ocean vibe
+	float zoom = 0.978 - sub_bass * 0.010 + onset * 0.006;
+	center *= zoom;
+
+	// Rotate: slow, hypnotic spiral
+	float rot_a = 0.003 + energy * 0.005 + beat * 0.002;
+	center = rot(rot_a) * center;
+
+	vec2 feedback_uv = center;
+	feedback_uv.x /= (rect_size.x / rect_size.y);
+	feedback_uv += 0.5;
+
+	// Per-pixel warp — Cartesian only, aspect-corrected (no atan)
+	vec2 warp = vec2(
+		sin(center.y * 7.0 + t * 1.0) * 0.008,
+		cos(center.x * 5.0 + t * 0.8) * 0.008
+	);
+	warp *= 1.0 + bass * 2.0 + energy * 1.2;
+
+	vec2 sample_uv = feedback_uv + warp;
+	vec2 edge_d = min(sample_uv, 1.0 - sample_uv);
+	float edge_fade = smoothstep(0.0, 0.04, min(edge_d.x, edge_d.y));
+
+	// Chromatic aberration — underwater light dispersion
+	float ca = 0.0010 + energy * 0.0010;
+	vec3 trail;
+	trail.r = texture(prev_frame, sample_uv + vec2(ca, 0.0)).r;
+	trail.g = texture(prev_frame, sample_uv).g;
+	trail.b = texture(prev_frame, sample_uv - vec2(ca, 0.0)).b;
+
+	// Decay
+	trail *= (0.92 + energy * 0.04) * edge_fade;
+
+	// ══════════════════════════════════════════════════════════════════
+	//  PHASE 2: RAYMARCHING CORE — organic blobs + abstract rings
+	// ══════════════════════════════════════════════════════════════════
+	float min_dim = min(rect_size.x, rect_size.y);
+	vec2 p = (uv * 2.0 - 1.0) * (rect_size / min_dim);
+
 	vec3 ro = vec3(
 		sin(t * 0.07) * 1.8 + sin(t * 0.03) * 0.6,
 		cos(t * 0.05) * 1.0 + cos(t * 0.02) * 0.3,
@@ -231,7 +256,6 @@ void fragment() {
 	ray.xy *= rot(sway_xy);
 	ray.yz *= rot(sway_yz);
 
-	// ── Raymarch ─────────────────────────────────────────────────
 	float march_t = 0.0;
 	float acc = 0.0;
 	float acc_ring = 0.0;
@@ -246,10 +270,6 @@ void fragment() {
 
 		vec3 raw_pos = ro + ray * march_t;
 
-		// ── Per-cell identity ─────────────────────────────────
-		// Each repetition cell gets a unique hash from its grid
-		// position. This drives rotation, time offset, and scale
-		// so cells behave as individuals, not clones.
 		vec3 cell_id = floor((raw_pos + 3.0) / 6.0);
 		float ch  = fract(sin(dot(cell_id, vec3(127.1, 311.7, 74.7))) * 43758.5);
 		float ch2 = fract(sin(dot(cell_id, vec3(269.5, 183.3, 41.1))) * 43758.5);
@@ -257,18 +277,14 @@ void fragment() {
 
 		vec3 pos = mod(raw_pos - 3.0, 6.0) - 3.0;
 
-		// Each cell rotated to a unique orientation
 		pos.xz *= rot(ch * TAU);
 		pos.yz *= rot(ch2 * PI);
 
-		// Gentle per-cell scale breathing
 		float cell_scale = 1.0 + (ch3 - 0.5) * 0.15 + sin(t * 0.1 + ch3 * 5.0) * 0.05;
 		pos *= cell_scale;
 
-		// Time offset per cell — every cell is at a different moment
 		float t_cell = t + ch * 5.0;
 
-		// Whole-scene breath
 		float breath = 1.0 + sin(t * 0.15) * 0.015 + sub_bass * 0.02;
 		pos *= breath;
 
@@ -277,17 +293,14 @@ void fragment() {
 		float d = smin(d_blobs, d_rings, 0.25);
 		d = max(abs(d), 0.01);
 
-		// DOF
 		float dof = exp(-pow((march_t - focal_dist) * 0.12, 2.0));
 		float glow = exp(-d * glow_falloff) * mix(0.25, 1.0, dof);
 		acc += glow;
 
-		// Separate ring accumulation — they get their own color channel
 		float ring_glow = exp(-max(abs(d_rings), 0.01) * glow_falloff * 1.3)
 		                * mix(0.3, 1.0, dof);
 		acc_ring += ring_glow;
 
-		// Phantom pulse wave
 		float pulse = sin(march_t * 1.5 - t * 3.0 + beat_phase * TAU);
 		pulse = pow(max(pulse, 0.0), 4.0);
 		acc_pulse += glow * pulse;
@@ -295,69 +308,125 @@ void fragment() {
 		march_t += d * 0.5;
 	}
 
-	// ── Color — deep ocean bioluminescence: electric teal, hot pink, acid green ──
-	// Full-range cosine palette: 0–1, vivid saturated neons
+	// ── Raymarching color — deep ocean bioluminescence ──
 	float hue = beat_phase * TAU + t * 0.07;
 	vec3 band_color = vec3(
 		0.5 + 0.5 * sin(hue + 0.0),
 		0.5 + 0.5 * sin(hue + 2.09),
 		0.5 + 0.5 * sin(hue + 4.19)
 	);
-
-	// Bass suppresses red (blobs read blue-green), treble boosts blue
 	band_color.r = mix(band_color.r, 0.05 + mid * 0.35, (bass + sub_bass) * 0.5);
 	band_color.g += low_mid * 0.25 + mid * 0.2;
 	band_color.b += (treble + presence) * 0.35;
 
-	// Vivid mood tints: electric teal (cool) ↔ hot pink (warm)
 	vec3 warm_tint = vec3(1.0, 0.04 + sin(t * 0.3) * 0.04, 0.65);
 	vec3 cool_tint = vec3(0.0, 0.85 + cos(t * 0.4) * 0.1, 0.85);
 	vec3 mood_tint = mix(cool_tint, warm_tint, warmth);
 
-	vec3 col = vec3(0.0);
+	vec3 rm_col = vec3(0.0);
 
-	// Organic blob glow — vivid teal/cyan base, richer multiplier
-	col += mix(mood_tint, band_color, 0.4 + energy * 0.6) * acc * 0.024;
+	// Organic blob glow
+	rm_col += mix(mood_tint, band_color, 0.4 + energy * 0.6) * acc * 0.020;
 
-	// Abstract rings — neon magenta/hot pink, vivid contrast against teal blobs
-	col += vec3(1.0, 0.05, 0.75) * acc_ring * 0.022;
-	col += vec3(0.7, 0.0, 1.0)   * acc_ring * kick * 0.018;
+	// Abstract rings — neon magenta/hot pink
+	rm_col += vec3(1.0, 0.05, 0.75) * acc_ring * 0.018;
+	rm_col += vec3(0.7, 0.0, 1.0)   * acc_ring * kick * 0.015;
 
 	// Phantom pulse — acid green / electric gold
 	vec3 pulse_col = mix(vec3(0.1, 1.0, 0.3), vec3(1.0, 0.9, 0.0), warmth);
-	col += pulse_col * acc_pulse * 0.028;
+	rm_col += pulse_col * acc_pulse * 0.022;
 
-	// Percussion: sharp vivid strikes
-	col += vec3(0.2, 0.65, 1.0) * acc * kick  * 0.022;  // electric blue kick bloom
-	col += vec3(1.0, 0.4, 0.9)  * acc * snare * 0.018;  // pink-white snare
-	col += vec3(0.2, 1.0, 0.45) * acc * hihat * 0.014;  // lime hihat shimmer
+	// Percussion strikes
+	rm_col += vec3(0.2, 0.65, 1.0) * acc * kick  * 0.018;
+	rm_col += vec3(1.0, 0.4, 0.9)  * acc * snare * 0.015;
+	rm_col += vec3(0.2, 1.0, 0.45) * acc * hihat * 0.012;
 
-	// Onset: electric cyan burst, hot pink at peak
-	col += vec3(0.0, 1.0, 0.9) * onset * 0.4;
-	col += vec3(1.0, 0.0, 0.5) * onset * onset * 0.25;
+	// Onset flash
+	rm_col += vec3(0.0, 1.0, 0.9) * onset * 0.30;
+	rm_col += vec3(1.0, 0.0, 0.5) * onset * onset * 0.18;
 
 	// Beat-phase swell
 	float phase_pulse = pow(1.0 - abs(fract(beat_phase * 2.0) - 0.5) * 2.0, 3.0);
-	col *= 1.0 + phase_pulse * beat_confidence * 0.28;
+	rm_col *= 1.0 + phase_pulse * beat_confidence * 0.25;
 
-	// ── 2D Overlays (unique to this shader) ──────────────────────
+	// ══════════════════════════════════════════════════════════════════
+	//  PHASE 3: OVERLAY LAYERS
+	// ══════════════════════════════════════════════════════════════════
+	vec2 uv_c = uv - 0.5;
+	uv_c.x *= rect_size.x / rect_size.y;
+	float r = length(uv_c);
+	float ang = atan(uv_c.y, uv_c.x);
 
-	// ── Caustics ──────────────────────────────────────────────
-	float caust = caustics(UV * 3.0, t);
-	col += vec3(0.0, 0.7, 1.0)  * caust * (0.3 + energy * 0.45);
-	col += vec3(0.6, 0.0, 1.0)  * caust * warmth * 0.22;
+	vec3 overlay = vec3(0.0);
 
-	// ── Interference fringes ──────────────────────────────────
-	float fringes = interference(UV, t);
-	col += vec3(0.0, 1.0, 0.9)  * fringes * (1.1 + energy * 1.3);
-	col += vec3(1.0, 0.15, 0.8) * fringes * warmth * 0.7;
+	// ── 3a. Bioluminescent shockwave ring ─────────────────────────────
+	// Expanding pressure wave on onset — like a deep-sea creature pulsing
+	float shock_phase = fract(beat_phase);
+	float shock_r = shock_phase * 0.5;
+	float shock_w = 0.02 + (1.0 - shock_phase) * 0.025;
+	float shock = exp(-pow((r - shock_r) / shock_w, 2.0)) * onset * 0.04;
+	overlay += vec3(0.0, 1.0, 0.85) * shock;
+	overlay += vec3(0.3, 0.0, 1.0)  * shock * kick * 1.2;
 
-	// ── Lissajous curves (3:2 figure) ────────────────────────
-	float liss = lissajous(UV, t);
-	col += vec3(0.1, 0.5, 1.0) * liss * 2.5;
-	col += vec3(1.0, 0.35, 0.2) * liss * warmth * 1.2;
+	// ── 3b. Abyssal whirlpool spiral ──────────────────────────────────
+	// Integer arm count — no atan2 seam
+	float arms = floor(6.0 + bass * 2.0);
+	float spiral = sin(ang * arms + r * 12.0 - t * 2.5 + beat_phase * TAU);
+	spiral = pow(max(spiral, 0.0), 3.0);
+	spiral *= 0.010 * (0.3 + energy);
+	spiral *= smoothstep(0.0, 0.12, r) * smoothstep(0.85, 0.2, r);
+	overlay += vec3(0.0, 0.8, 1.0) * spiral * 1.2;
+	overlay += vec3(0.5, 0.0, 1.0) * spiral * 0.6;
 
-	// ── Second Lissajous (5:4 figure — different shape) ──────
+	// ── 3c. Kelp forest strands ───────────────────────────────────────
+	// Vertical flowing ribbons — underwater plant motion
+	float kelp = 0.0;
+	for (int i = 0; i < 7; i++) {
+		float fi = float(i);
+		float x_base = 0.08 + fi * 0.13 + sin(t * 0.02 + fi * 0.8) * 0.03;
+		float wave = sin(uv.y * (2.0 + fi * 0.3) + t * (0.3 + fi * 0.05) + fi * 1.5) * (0.03 + fi * 0.008);
+		float x = x_base + wave;
+		float d = abs(uv.x - x);
+		float strand = exp(-d * (300.0 + energy * 100.0)) * 0.007;
+		strand *= smoothstep(0.0, 0.15, uv.y) * smoothstep(1.0, 0.6, uv.y);
+		kelp += strand;
+	}
+	kelp *= activity;
+	overlay += vec3(0.0, 0.6, 0.3) * kelp * 2.0;
+	overlay += vec3(0.1, 0.9, 0.4) * kelp * 0.8;
+
+	// ── 3d. Photon sparkles — drifting point lights ───────────────────
+	float sparkles = 0.0;
+	for (int i = 0; i < 12; i++) {
+		float fi = float(i);
+		vec2 spos = vec2(
+			fract(sin(fi * 127.1 + t * 0.01) * 43758.5),
+			fract(cos(fi * 311.7 + t * 0.008) * 43758.5)
+		);
+		float sd = length(uv - spos);
+		float twinkle = pow(sin(t * (1.5 + fi * 0.3) + fi * 2.7) * 0.5 + 0.5, 4.0);
+		sparkles += exp(-sd * (400.0 + energy * 200.0)) * twinkle * 0.012;
+	}
+	sparkles *= activity;
+	overlay += vec3(0.5, 0.9, 1.0) * sparkles * 1.5;
+	overlay += vec3(0.2, 1.0, 0.7) * sparkles * 0.6;
+
+	// ── 3e. Caustics ──────────────────────────────────────────────────
+	float caust = caustics(uv * 3.0, t);
+	overlay += vec3(0.0, 0.7, 1.0)  * caust * (0.15 + energy * 0.20);
+	overlay += vec3(0.6, 0.0, 1.0)  * caust * warmth * 0.12;
+
+	// ── 3f. Interference fringes ──────────────────────────────────────
+	float fringes = interference(uv, t);
+	overlay += vec3(0.0, 1.0, 0.9)  * fringes * (0.5 + energy * 0.5);
+	overlay += vec3(1.0, 0.15, 0.8) * fringes * warmth * 0.4;
+
+	// ── 3g. Lissajous curves (3:2 figure) ─────────────────────────────
+	float liss = lissajous(uv, t);
+	overlay += vec3(0.1, 0.5, 1.0) * liss * 2.0;
+	overlay += vec3(1.0, 0.35, 0.2) * liss * warmth * 1.0;
+
+	// ── 3h. Second Lissajous (5:4 figure) ─────────────────────────────
 	float liss2 = 0.0;
 	for (int i = 0; i < 25; i++) {
 		float fi = float(i) * 0.14;
@@ -366,13 +435,13 @@ void fragment() {
 			0.5 + sin(5.0 * s + 1.2) * 0.22,
 			0.5 + sin(4.0 * s + 0.3) * 0.22
 		);
-		float d = length(UV - pt);
+		float d = length(uv - pt);
 		liss2 += exp(-d * 280.0) * 0.007;
 	}
-	col += vec3(0.9, 0.1, 1.0) * liss2 * 2.5;
-	col += vec3(0.1, 1.0, 0.5) * liss2 * brightness * 1.2;
+	overlay += vec3(0.9, 0.1, 1.0) * liss2 * 2.0;
+	overlay += vec3(0.1, 1.0, 0.5) * liss2 * brightness * 1.0;
 
-	// ── Bioluminescent plankton ───────────────────────────────
+	// ── 3i. Bioluminescent plankton ───────────────────────────────────
 	float plankton = 0.0;
 	for (int i = 0; i < 14; i++) {
 		float fi = float(i);
@@ -380,14 +449,14 @@ void fragment() {
 			0.5 + sin(t * 0.06 + fi * 2.391) * 0.44,
 			0.5 + cos(t * 0.05 + fi * 1.731) * 0.44
 		);
-		float d_p = length(UV - pos);
+		float d_p = length(uv - pos);
 		float pulse = 0.3 + 0.7 * pow(sin(t * (0.2 + fi * 0.06) + fi * 0.9) * 0.5 + 0.5, 2.0);
-		plankton += exp(-d_p * (80.0 + energy * 40.0)) * pulse * 0.022;
+		plankton += exp(-d_p * (80.0 + energy * 40.0)) * pulse * 0.018;
 	}
-	col += vec3(0.0, 0.75, 1.0) * plankton * 2.8;
-	col += vec3(0.1, 1.0, 0.45) * plankton * 1.0;
+	overlay += vec3(0.0, 0.75, 1.0) * plankton * 2.2;
+	overlay += vec3(0.1, 1.0, 0.45) * plankton * 0.8;
 
-	// ── Liquid mercury highlights ─────────────────────────────
+	// ── 3j. Liquid mercury highlights ─────────────────────────────────
 	float mercury = 0.0;
 	for (int i = 0; i < 4; i++) {
 		float fi = float(i);
@@ -395,27 +464,42 @@ void fragment() {
 			0.5 + sin(t * 0.025 + fi * 3.14) * 0.28,
 			0.5 + cos(t * 0.02 + fi * 2.72) * 0.28
 		);
-		float mr = length(UV - mc);
+		float mr = length(uv - mc);
 		float mb = exp(-mr * mr * (30.0 + energy * 20.0));
 		mercury += pow(max(mb, 0.0), 3.0);
 	}
-	col += vec3(0.35, 1.0, 0.9) * mercury * 0.18;
+	overlay += vec3(0.35, 1.0, 0.9) * mercury * 0.15;
 
-	// ── Organic texture ───────────────────────────────────────
-	float n1 = texture(noise_tex, UV * 4.0 + t * 0.025).r;
-	float n2 = texture(noise_tex, UV * 8.0 - t * 0.015 + 3.7).r;
-	float cellular_tex = abs(n1 - n2) * 0.1;
-	col += vec3(0.0, 0.9, 0.75) * cellular_tex * (0.5 + energy * 1.0);
+	// ── 3k. Organic texture ───────────────────────────────────────────
+	float n1 = texture(noise_tex, uv * 4.0 + t * 0.025).r;
+	float n2 = texture(noise_tex, uv * 8.0 - t * 0.015 + 3.7).r;
+	float cellular_tex = abs(n1 - n2) * 0.08;
+	overlay += vec3(0.0, 0.9, 0.75) * cellular_tex * (0.4 + energy * 0.7);
 
-	// ── Deep ocean void background ────────────────────────────
-	vec3 pastel_bg = mix(vec3(0.0, 0.01, 0.05), vec3(0.0, 0.015, 0.04), UV.y);
-	col += pastel_bg * 0.06;
+	// ══════════════════════════════════════════════════════════════════
+	//  PHASE 4: COMPOSITE — trail + new geometry
+	// ══════════════════════════════════════════════════════════════════
+	vec3 new_col = rm_col + overlay;
 
-	// ── Alpha ─────────────────────────────────────────────────
-	float alpha = 1.0 - march_t * 0.02;
-	alpha = clamp(alpha, 0.0, 1.0);
-	alpha += beat * 0.1;
-	alpha = clamp(alpha, 0.0, 1.0);
+	// Deep ocean void background (very dim — feedback handles persistence)
+	new_col += mix(vec3(0.0, 0.005, 0.03), vec3(0.0, 0.008, 0.025), uv.y) * 0.04;
 
-	COLOR = vec4(clamp(col, 0.0, 1.0), alpha);
+	vec3 col = trail + new_col;
+
+	// ══════════════════════════════════════════════════════════════════
+	//  PHASE 5: POST-PROCESSING (mild — lives inside the feedback loop)
+	// ══════════════════════════════════════════════════════════════════
+	// Reinhard with soft knee
+	col = col / (1.0 + col * 0.35);
+
+	// Mild gamma lift
+	col = pow(max(col, vec3(0.0)), vec3(0.93));
+
+	// Vignette — ocean depth fades to darkness at edges
+	col *= mix(0.3, 1.0, 1.0 - smoothstep(0.2, 1.3, length(uv - 0.5) * 1.8));
+
+	// Film grain
+	col += (texture(noise_tex, uv * 300.0 + fract(t * 0.07)).r - 0.5) * 0.012;
+
+	COLOR = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
