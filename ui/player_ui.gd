@@ -164,33 +164,18 @@ func _build_settings_window() -> void:
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	margin.add_child(tabs)
 
-	tabs.add_child(_build_visualization_tab())
+	tabs.add_child(_build_general_tab())
+	tabs.add_child(_build_shaders_tab())
 	tabs.add_child(_build_debug_tab())
 
 
-# ── Visualization tab ─────────────────────────────────────────────────────────
+# ── General tab ──────────────────────────────────────────────────────────────
 
-func _build_visualization_tab() -> Control:
+func _build_general_tab() -> Control:
 	var vbox := VBoxContainer.new()
-	vbox.name = "Visualization"
+	vbox.name = "General"
 	vbox.add_theme_constant_override("separation", 5)
 
-	_win_section(vbox, "SHADERS")
-
-	var group := ButtonGroup.new()
-	var shaders: Array = _visualizer.SHADERS
-	_shader_btns.clear()
-	for i in shaders.size():
-		var btn := Button.new()
-		btn.text         = shaders[i].name
-		btn.toggle_mode  = true
-		btn.button_group = group
-		btn.alignment    = HORIZONTAL_ALIGNMENT_LEFT
-		btn.pressed.connect(_on_shader_btn.bind(i))
-		vbox.add_child(btn)
-		_shader_btns.append(btn)
-
-	_win_sep(vbox)
 	_win_section(vbox, "AUTO-SHUFFLE")
 
 	_shuffle_check = CheckBox.new()
@@ -229,6 +214,35 @@ func _build_visualization_tab() -> Control:
 	keys.add_theme_font_size_override("font_size", 12)
 	keys.modulate.a = 0.55
 	vbox.add_child(keys)
+
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(spacer)
+
+	return vbox
+
+
+# ── Shaders tab ───────────────────────────────────────────────────────────────
+
+func _build_shaders_tab() -> Control:
+	var vbox := VBoxContainer.new()
+	vbox.name = "Shaders"
+	vbox.add_theme_constant_override("separation", 5)
+
+	_win_section(vbox, "ACTIVE SHADERS")
+
+	var group := ButtonGroup.new()
+	var shaders: Array = _visualizer.SHADERS
+	_shader_btns.clear()
+	for i in shaders.size():
+		var btn := Button.new()
+		btn.text         = shaders[i].name
+		btn.toggle_mode  = true
+		btn.button_group = group
+		btn.alignment    = HORIZONTAL_ALIGNMENT_LEFT
+		btn.pressed.connect(_on_shader_btn.bind(i))
+		vbox.add_child(btn)
+		_shader_btns.append(btn)
 
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
