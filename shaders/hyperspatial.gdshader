@@ -366,7 +366,7 @@ void fragment() {
 		// Color shifts per ring
 		float ct = fi / 7.0 + t * 0.025;
 		vec3 ring_col = mix(deep_palette(ct), teal_palette(ct + 0.5), fi / 7.0);
-		col += ring_col * ring * 0.05;
+		col += ring_col * ring * 0.03;
 	}
 
 	// ── 6. ORGANIC MOIRÉ GRID — deep colored, subtle ───────────────
@@ -439,7 +439,7 @@ void fragment() {
 		col += warm_palette(t * 0.05) * shock * kick;
 	}
 
-	// ── 9. NOISE TENDRILS — fractal branching from center ───────────
+	// ── 9. NOISE TENDRILS — subtle fractal branching from center ────
 	{
 		float tendrils = 0.0;
 		for (int i = 0; i < 5; i++) {
@@ -449,51 +449,43 @@ void fragment() {
 			float proj = dot(uv_c, dir);
 			float perp = abs(length(uv_c - dir * max(proj, 0.0)));
 			float noise = texture(noise_tex, vec2(proj * 3.0 + t * 0.06 + fi * 0.6, fi * 0.4)).r;
-			perp += (noise - 0.5) * 0.03;
-			float branch = exp(-perp * (150.0 + energy * 60.0)) * noise * 0.010;
-			branch *= smoothstep(0.0, 0.06, proj) * smoothstep(0.5, 0.05, proj);
+			perp += (noise - 0.5) * 0.02;
+			float branch = exp(-perp * (200.0 + energy * 80.0)) * noise * 0.005;
+			branch *= smoothstep(0.0, 0.08, proj) * smoothstep(0.45, 0.05, proj);
 			tendrils += branch;
 		}
-		tendrils *= (0.3 + energy * 1.5) * activity;
-		col += deep_palette(t * 0.05 + 0.7) * tendrils * 1.0;
-		col += teal_palette(t * 0.06 + 0.3) * tendrils * 0.5;
-	}
-
-	// ── 10. ORGANIC NOISE TEXTURE ────────────────────────────────────
-	{
-		float n1 = texture(noise_tex, uv * 3.0 + t * 0.02).r;
-		float n2 = texture(noise_tex, uv * 6.0 - t * 0.015 + 2.5).r;
-		float cell = abs(n1 - n2) * 0.05;
-		col += teal_palette(t * 0.04 + 0.5) * cell * (0.3 + energy * 0.5);
+		tendrils *= (0.2 + energy * 0.6) * activity;
+		col += deep_palette(t * 0.05 + 0.7) * tendrils * 0.4;
+		col += teal_palette(t * 0.06 + 0.3) * tendrils * 0.2;
 	}
 
 	// ── Percussion accents ──────────────────────────────────────────
 	vec3 kick_col = warm_palette(t * 0.08);
-	col += kick_col * kick * 0.07;
+	col += kick_col * kick * 0.04;
 
 	vec3 snare_col = teal_palette(t * 0.07 + 0.2);
-	col += snare_col * snare * 0.06;
+	col += snare_col * snare * 0.035;
 
 	vec3 hihat_col = deep_palette(t * 0.1 + 0.5);
-	col += hihat_col * hihat * 0.04;
+	col += hihat_col * hihat * 0.025;
 
-	// Onset: deep flash
-	col += deep_palette(t * 0.04) * onset * 0.09;
+	// Onset: deep flash — keep it sharp, not foggy
+	col += deep_palette(t * 0.04) * onset * 0.05;
 
 	// ── Beat-phase pulse ────────────────────────────────────────────
 	float phase_pulse = pow(1.0 - abs(fract(beat_phase) - 0.5) * 2.0, 4.0);
 	col *= 1.0 + phase_pulse * beat_confidence * 0.2;
 
 	// ── Warmth / brightness color shift ─────────────────────────────
-	// Warm music → push everything slightly warmer
-	col.r += warmth * 0.012 * energy;
-	col.g += brightness * 0.006 * energy;
+	// Warm music → subtle warmth tint (kept very low to avoid fog)
+	col.r += warmth * 0.005 * energy;
+	col.g += brightness * 0.003 * energy;
 
 	// ── COMPOSITE with feedback ─────────────────────────────────────
 	vec3 final_col = trail + col;
 
-	// Harder tonemap — crush the fog, let shapes punch through
-	final_col = final_col / (1.0 + final_col * 1.2);
+	// Aggressive tonemap — crush fog midtones, let shape outlines punch through
+	final_col = final_col / (1.0 + final_col * 1.8);
 
 	// Mild gamma lift — brightens without causing feedback drift
 	final_col = pow(max(final_col, vec3(0.0)), vec3(0.94));
