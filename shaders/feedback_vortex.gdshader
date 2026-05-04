@@ -80,11 +80,18 @@ void fragment() {
 	vec2 to_mouse = mouse_pos - uv;
 	warp += normalize(to_mouse + 0.001) * exp(-length(to_mouse) * 8.0) * 0.04 * mouse_down;
 
-	// Sample previous frame at the warped position and decay it
-	vec3 trail = texture(prev_frame, clamp(feedback_uv + warp, 0.0, 1.0)).rgb;
+	// Sample previous frame at the warped position.
+	// Don't clamp — that snaps to the edge pixel and leaves a hard seam.
+	// Instead, let repeat_disable return black for out-of-bounds UVs,
+	// and fade smoothly to black near the edges so trails dissolve instead of cut.
+	vec2 sample_uv = feedback_uv + warp;
+	vec2 edge_d    = min(sample_uv, 1.0 - sample_uv);
+	float edge_fade = smoothstep(0.0, 0.04, min(edge_d.x, edge_d.y));
+
+	vec3 trail = texture(prev_frame, sample_uv).rgb;
 	// Higher energy = longer trails (decay closer to 1.0)
 	float decay = 0.92 + energy * 0.05;
-	trail *= decay;
+	trail *= decay * edge_fade;
 
 	// ══════════════════════════════════════════════════════════════
 	//  PART 2: NEW GEOMETRY — fresh audio-reactive shapes each frame
@@ -95,8 +102,10 @@ void fragment() {
 	float radius = length(uv_c);
 	float angle  = atan(uv_c.y, uv_c.x);
 
-	// Spiral arms that pulse with bass; beat_phase shifts their phase every beat
-	float arms   = 4.0 + bass * 3.0;
+	// Spiral arms. arms MUST be an integer: sin(angle * N) for integer N is
+	// seamless across the atan2 branch cut (y=0, x<0). A non-integer arms
+	// value leaves a visible hard seam along the left-center horizontal line.
+	float arms   = floor(4.0 + bass * 3.0);
 	float spiral = sin(angle * arms + radius * 12.0 - t * 3.0 + beat_phase * TAU);
 	spiral = pow(max(spiral, 0.0), 3.0);
 
