@@ -154,6 +154,8 @@ uniform sampler2D prev_frame : hint_default_white, filter_linear, repeat_disable
 
 **UI consideration:** The VisualizerUI overlay must be a child of the `SubViewportContainer` (not the SubViewport) so it renders above the feedback viewport but is NOT captured in the feedback texture. If the UI is inside the viewport, debug text and the shader name label will appear as trails.
 
+**Silence handling:** When `_analyzer.is_sounding == false`, the feedback loop keeps running. With a slow decay (e.g. 0.97), the last frame will sit there indefinitely — which can look nice, but can also mean a bright flash from just before the track stopped burns in for a long time. Two options: push a `uniform float is_sounding` and in the shader ramp decay toward 0.0 faster when it's 0, or clamp the feedback UV sampling to black outside `[0,1]` (already done via `clamp(...)`) and accept the slow natural fade. Either is fine — just don't leave it untested.
+
 ### Gap 2: No Warp-Then-Composite Split
 
 MilkDrop separates the warp/decay pass from the new-geometry pass. In Iguana, everything happens in a single `fragment()` function with no access to the previous frame.
@@ -200,12 +202,18 @@ This two-pass-in-one-shader approach works once `prev_frame` is available. A tru
 
 MilkDrop switches between completely different presets on beat boundaries. Each preset has its own warp equations, decay rate, color palette, and geometry. The switch is typically a brief crossfade.
 
-**What Iguana has:** Manual shader switching with `E`/`Q` keys and auto-shuffle on a timer.
+**What Iguana has:** Manual shader switching with `E`/`Q` keys and auto-shuffle on a 45-second wall-clock timer.
 
 **What's missing:**
 - Automatic switching triggered by beat detection (not a timer)
 - Crossfade blending between the outgoing and incoming shader
 - The presets themselves are just different `.gdshader` files, which is fine
+
+**Implementation approach:**
+1. Track a `_switch_cooldown` float. After any switch, don't allow another for at least ~4 seconds.
+2. In `_process()`, check `_analyzer._kick_envelope > 0.85 and _analyzer._beat_confidence > 0.5` — this fires on a strong confirmed kick, not random loud noise.
+3. Call `_shuffle()` when the condition fires and the cooldown has expired.
+4. For crossfade: hold both `_outgoing_mat` and `_incoming_mat` simultaneously, blend their outputs by driving a `mix_factor` uniform from 0→1 over ~0.3 seconds. The simplest approach uses a third "crossfade" ColorRect that reads both textures via SubViewports and outputs the blend.
 
 **Why this matters for the MilkDrop feel:** The sudden transformation on a beat drop is part of the experience. It's not just visual variety — it's the surprise of a new visual world opening up exactly when the music shifts.
 
@@ -286,11 +294,12 @@ Once the feedback buffer is implemented, this is the minimum viable MilkDrop-sty
 shader_type canvas_item;
 
 // ── Audio uniforms (same as always) ──
+uniform float sub_bass    : hint_range(0.0, 1.0) = 0.0;  // 20-60Hz — use this for kick-drum zoom, not bass
 uniform float bass        : hint_range(0.0, 1.0) = 0.0;
 uniform float mid         : hint_range(0.0, 1.0) = 0.0;
 uniform float treble      : hint_range(0.0, 1.0) = 0.0;
 uniform float beat        : hint_range(0.0, 1.0) = 0.0;
-uniform float kick        : hint_range(0.0, 1.0) = 0.0;
+uniform float kick        : hint_range(0.0, 1.0) = 0.0;  // kick envelope driven by sub_bass band
 uniform float snare       : hint_range(0.0, 1.0) = 0.0;
 uniform float hihat       : hint_range(0.0, 1.0) = 0.0;
 uniform float energy      : hint_range(0.0, 1.0) = 0.0;
@@ -342,9 +351,12 @@ void fragment() {
     feedback_uv += 0.5;
 
     // Per-pixel warp displacement (this is what makes trails curve and flow)
+    // Use aspect-corrected 'center' for spatial inputs so the warp field
+    // is isotropic on non-square displays (otherwise horizontal sine waves
+    // appear stretched on 16:9 screens).
     vec2 warp = vec2(
-        sin(uv.y * 10.0 + t * 1.4) * 0.015,
-        cos(uv.x * 8.0  + t * 1.1) * 0.015
+        sin(center.y * 10.0 + t * 1.4) * 0.015,
+        cos(center.x * 8.0  + t * 1.1) * 0.015
     );
     warp.x += sin(length(center) * 6.0 - t * 0.7) * 0.01;
     warp.y += cos(length(center) * 6.0 - t * 0.9) * 0.01;
@@ -427,6 +439,7 @@ Notice how simple the geometry is — a spiral, a ring, and a center glow. Nothi
 | `afterimage` | Despite the name, there are no actual afterimages. The IFS folding regenerates completely each frame. No trails. |
 | `glitch_garden` | Raymarches from scratch. The box geometry is complex but ephemeral — nothing persists between frames. |
 | `starfall` | Iterates a fold pipeline from scratch. The result is a dense crystalline pattern, but it has no visual history. |
+| `signal_scope` | Waveform/scope display rendered fresh each frame from the current audio bands. No persistence, by design — scopes are diagnostic tools, not feedback-loop candidates. |
 
 All four shaders are technically impressive. But they all share the same fundamental limitation: they have amnesia. They cannot remember what happened last frame. Once `prev_frame` exists, we can build shaders that do.
 
