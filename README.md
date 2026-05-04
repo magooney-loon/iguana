@@ -12,15 +12,15 @@ Iguana is a Godot 4 audio-reactive shader visualizer built around a feedback ren
 
 ```
 AudioEffectSpectrumAnalyzer
-        ↓
+		↓
 AudioAnalyzer.process()          — runs every frame in visualizer.gd
-        ↓
+		↓
 _push_uniforms()                 — 30+ values pushed to the active ShaderMaterial
-        ↓
+		↓
 FeedbackViewport (SubViewport)   — shader renders here
-        ↓
+		↓
 BackbufferViewport (SubViewport) — copies FeedbackViewport output each frame
-        ↓
+		↓
 prev_frame uniform               — shader reads last frame from BackbufferViewport
 ```
 
@@ -34,42 +34,42 @@ This is the foundation of the MilkDrop aesthetic. Without it, shaders have no vi
 
 ```glsl
 void fragment() {
-    vec2 uv = UV;
+	vec2 uv = UV;
 
-    // ── 1. WARP + ZOOM + ROTATE previous frame ────────────────────────
-    vec2 center = uv - 0.5;
-    center.x *= rect_size.x / rect_size.y;   // aspect-correct
+	// ── 1. WARP + ZOOM + ROTATE previous frame ────────────────────────
+	vec2 center = uv - 0.5;
+	center.x *= rect_size.x / rect_size.y;   // aspect-correct
 
-    center *= 0.98 - sub_bass * 0.02;        // zoom inward (compounds into tunnel)
+	center *= 0.98 - sub_bass * 0.02;        // zoom inward (compounds into tunnel)
 
-    float rot = 0.007 + energy * 0.008;
-    float c = cos(rot), s = sin(rot);
-    center = mat2(vec2(c, s), vec2(-s, c)) * center;   // rotate (compounds into spiral)
+	float rot = 0.007 + energy * 0.008;
+	float c = cos(rot), s = sin(rot);
+	center = mat2(vec2(c, s), vec2(-s, c)) * center;   // rotate (compounds into spiral)
 
-    vec2 feedback_uv = center;
-    feedback_uv.x /= rect_size.x / rect_size.y;
-    feedback_uv += 0.5;
+	vec2 feedback_uv = center;
+	feedback_uv.x /= rect_size.x / rect_size.y;
+	feedback_uv += 0.5;
 
-    // Per-pixel warp — use aspect-corrected center to avoid seams on 16:9
-    vec2 warp = vec2(
-        sin(center.y * 10.0 + time_val * 1.4) * 0.015,
-        cos(center.x * 8.0  + time_val * 1.1) * 0.015
-    );
-    warp *= 1.0 + bass * 2.5 + energy * 1.5;
+	// Per-pixel warp — use aspect-corrected center to avoid seams on 16:9
+	vec2 warp = vec2(
+		sin(center.y * 10.0 + time_val * 1.4) * 0.015,
+		cos(center.x * 8.0  + time_val * 1.1) * 0.015
+	);
+	warp *= 1.0 + bass * 2.5 + energy * 1.5;
 
-    // Soft edge fade: avoids the hard seam from repeat_disable clamping
-    vec2 sample_uv  = feedback_uv + warp;
-    vec2 edge_d     = min(sample_uv, 1.0 - sample_uv);
-    float edge_fade = smoothstep(0.0, 0.04, min(edge_d.x, edge_d.y));
+	// Soft edge fade: avoids the hard seam from repeat_disable clamping
+	vec2 sample_uv  = feedback_uv + warp;
+	vec2 edge_d     = min(sample_uv, 1.0 - sample_uv);
+	float edge_fade = smoothstep(0.0, 0.04, min(edge_d.x, edge_d.y));
 
-    vec3 trail = texture(prev_frame, sample_uv).rgb;
-    trail *= (0.92 + energy * 0.05) * edge_fade;   // decay
+	vec3 trail = texture(prev_frame, sample_uv).rgb;
+	trail *= (0.92 + energy * 0.05) * edge_fade;   // decay
 
-    // ── 2. DRAW new geometry on top ────────────────────────────────────
-    vec3 new_col = /* your audio-reactive shapes */;
+	// ── 2. DRAW new geometry on top ────────────────────────────────────
+	vec3 new_col = /* your audio-reactive shapes */;
 
-    // ── 3. COMPOSITE ───────────────────────────────────────────────────
-    COLOR = vec4(trail + new_col, 1.0);
+	// ── 3. COMPOSITE ───────────────────────────────────────────────────
+	COLOR = vec4(trail + new_col, 1.0);
 }
 ```
 
@@ -248,7 +248,7 @@ Shaders that don't declare a uniform silently ignore it — only declare what yo
 ```glsl
 #define TAU 6.28318530718
 vec3 palette(float t, vec3 shift) {
-    return vec3(0.5) + vec3(0.5) * cos(TAU * (t + shift));
+	return vec3(0.5) + vec3(0.5) * cos(TAU * (t + shift));
 }
 // Drive shift with mood: vec3(warmth * 0.15, 0.33, 0.67 + brightness * 0.15)
 ```
@@ -298,8 +298,8 @@ col *= mix(0.5, 1.0, 1.0 - smoothstep(0.3, 1.2, length(uv - 0.5) * 1.8));       
 
 ```gdscript
 const SHADERS := [
-    { "path": "res://shaders/cosmic_abyss.gdshader",   "name": "Cosmic Abyss" },
-    { "path": "res://shaders/your_shader.gdshader",    "name": "Your Shader" },
+	{ "path": "res://shaders/cosmic_abyss.gdshader",   "name": "Cosmic Abyss" },
+	{ "path": "res://shaders/your_shader.gdshader",    "name": "Your Shader" },
 ]
 ```
 
