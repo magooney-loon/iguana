@@ -141,37 +141,42 @@ void fragment() {
 		dist += d * (0.55 - beat * 0.03);
 	}
 
-	// Base glow color from accumulated light
-	col = vec3(ac * 0.02);
-
-	// Audio-reactive color palette:
-	// Each frequency band drives its own color channel
-	float hue_shift = beat_phase * 6.28318;
-	// Pastel palette — rose / lavender / mint
+	// ── Deep space color — electric cyan, space violet, hot white stars ──
+	// Full-range palette: 0.5 + 0.5*sin → true 0–1 saturation, no pastel floor
+	float hue = beat_phase * 6.28318 + t * 0.08;
 	vec3 band_color = vec3(
-		0.72 + 0.28 * sin(hue_shift + 0.3),
-		0.72 + 0.28 * sin(hue_shift + 2.4),
-		0.72 + 0.28 * sin(hue_shift + 4.5)
+		0.5 + 0.5 * sin(hue + 0.0),
+		0.5 + 0.5 * sin(hue + 2.09),
+		0.5 + 0.5 * sin(hue + 4.19)
 	);
 
-	// Bass warms the reds, treble cools the blues, mid boosts greens
-	band_color.r += (bass + sub_bass) * 0.35;
-	band_color.g += low_mid * 0.2 + mid * 0.15;
-	band_color.b += (treble + presence) * 0.3;
+	// Band tinting — bands sculpt into distinct hues, not just brightness
+	band_color.r = mix(band_color.r, 0.9 + sub_bass * 0.1, (bass + sub_bass) * 0.5);
+	band_color.g = mix(band_color.g, mid * 0.7,             low_mid * 0.4);
+	band_color.b = mix(band_color.b, 0.8 + treble * 0.2,   (treble + presence) * 0.5);
 
-	// Warmth/brightness bias the overall palette
-	vec3 warm_tint = vec3(0.22, 0.08, 0.28 + sin(t) * 0.1);
-	vec3 cool_tint = vec3(0.06, 0.18, 0.42 + cos(t * 0.5) * 0.1);
+	// Vivid mood tints: space violet (warm) ↔ electric cyan (cool)
+	vec3 warm_tint = vec3(0.65 + sin(t * 0.3) * 0.1, 0.0, 1.0);
+	vec3 cool_tint = vec3(0.0, 0.75 + cos(t * 0.4) * 0.1, 1.0);
 	vec3 mood_tint = mix(cool_tint, warm_tint, warmth);
 
-	col += mix(mood_tint, band_color, 0.5 + energy * 0.5);
+	// Glow: pure black base, vivid color only where geometry glows
+	float lum = ac * 0.018;
+	col  = mix(vec3(0.0), band_color, min(lum * 3.0, 1.0)) * lum;
+	col += mood_tint * lum * (0.3 + energy * 0.5);
 
-	// Onset flash — soft pastel burst
-	col += vec3(0.55, 0.45, 0.65) * onset * 0.25;
+	// Percussion: vivid single-frame color strikes
+	col += vec3(1.0, 0.42, 0.0) * ac * 0.012 * kick;   // orange kick
+	col += vec3(0.2, 1.0, 0.9) * ac * 0.009 * snare;   // cyan snare
+	col += vec3(0.4, 1.0, 0.2) * ac * 0.006 * hihat;   // lime hihat
+
+	// Onset: electric cyan burst with hot pink core at peak onset
+	col += vec3(0.1, 0.8, 1.0) * onset * 0.55;
+	col += vec3(1.0, 0.05, 0.7) * onset * onset * 0.35;
 
 	// Beat-phase brightness pulse
 	float phase_pulse = pow(1.0 - abs(fract(beat_phase * 2.0) - 0.5) * 2.0, 3.0);
-	col *= 1.0 + phase_pulse * beat_confidence * 0.2;
+	col *= 1.0 + phase_pulse * beat_confidence * 0.35;
 
 	// Alpha fades with depth, kick punches it brighter
 	float alpha = 1.0 - dist * (0.02 + 0.02 * sin(t));
@@ -191,8 +196,8 @@ void fragment() {
 		float pulse = 0.3 + 0.7 * pow(sin(t * (0.25 + fi * 0.07) + fi * 0.9) * 0.5 + 0.5, 2.0);
 		plankton += exp(-d_p * (90.0 + energy * 50.0)) * pulse * 0.03;
 	}
-	col += vec3(0.45, 0.75, 1.0) * plankton;
-	col += vec3(0.65, 1.0, 0.82) * plankton * 0.4;
+	col += vec3(0.0, 0.5, 1.0) * plankton * 2.5;
+	col += vec3(0.0, 1.0, 0.55) * plankton * 0.9;
 
 	// ── Flowing silk ribbons ───────────────────────────────
 	float silk = 0.0;
@@ -205,22 +210,18 @@ void fragment() {
 		float s_d = abs(UV.y - y);
 		silk += exp(-s_d * (220.0 + energy * 100.0)) * (0.007 + energy * 0.004);
 	}
-	col += vec3(1.0, 0.82, 0.88) * silk;
-	col += vec3(0.82, 0.72, 1.0) * silk * 0.5;
+	col += vec3(1.0, 0.05, 0.85) * silk * 2.5;
+	col += vec3(0.45, 0.0, 1.0) * silk * 1.2;
 
 	// ── Organic cellular texture ───────────────────────────
 	float n1 = texture(noise_tex, UV * 4.0 + t * 0.03).r;
 	float n2 = texture(noise_tex, UV * 8.0 - t * 0.02 + 3.7).r;
 	float cellular = abs(n1 - n2) * 0.12;
-	col += vec3(0.85, 0.95, 0.9) * cellular * (0.3 + energy * 0.7);
+	col += vec3(0.0, 0.9, 0.8) * cellular * (0.5 + energy * 1.1);
 
-	// ── Pastel gradient underlay ───────────────────────────
-	vec3 pastel_bg = mix(
-		vec3(0.1, 0.05, 0.14),
-		vec3(0.05, 0.08, 0.14),
-		UV.y
-	);
-	col += pastel_bg * 0.12;
+	// ── Deep space void background ─────────────────────────
+	vec3 pastel_bg = mix(vec3(0.0, 0.0, 0.04), vec3(0.0, 0.005, 0.07), UV.y);
+	col += pastel_bg;
 
 	COLOR = vec4(clamp(col, 0.0, 1.0), alpha);
 }

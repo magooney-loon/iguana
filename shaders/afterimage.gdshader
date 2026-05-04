@@ -116,28 +116,42 @@ void fragment() {
 		t += dist * 0.5;
 	}
 
-	// Pastel palette — rose / lavender / mint shifting with audio
-	float base_r = acc * 0.012;
-	float base_g = acc * 0.01 + acc2 * 0.005;
-	float base_b = acc * 0.016 + acc2 * 0.005;
+	// ── Acid chrome — neon green phantoms, violet IFS, magenta strikes ──
+	// IFS base: deep indigo, each channel driven by a different band
+	float lum  = acc  * 0.016;
+	float ghost = acc2 * 0.026;
 
-	base_r += kick * acc * 0.005;
-	base_g += hihat * acc2 * 0.003;
-	base_b += flux_treble * acc2 * 0.004;
-
-	// Mood tint — warmth shifts rose, brightness shifts lavender
 	vec3 col = vec3(
-		base_r * (1.0 + warmth * 0.5),
-		base_g * (1.0 + warmth * 0.2 + brightness * 0.4),
-		base_b * (1.0 + brightness * 0.5)
+		lum * (0.25 + bass * 0.9  + kick * 1.4),
+		lum * (0.04 + mid  * 0.35) + ghost * (0.0 + energy * 0.6),
+		lum * (0.75 + treble * 0.7) + ghost * 0.15
 	);
 
-	// Onset flash — soft pastel
-	col += vec3(0.04, 0.03, 0.06) * onset;
+	// Phantom pulses → vivid acid green / gold
+	col += vec3(0.05, 1.0, 0.2) * ghost * (0.9 + energy * 0.7);
+	col += vec3(0.9, 1.0, 0.0) * ghost * warmth * 0.5;
+
+	// Hue rotation layered over IFS glow
+	float hue = beat_phase * 6.28318 + time_val * 0.06;
+	vec3 hue_col = vec3(
+		0.5 + 0.5 * sin(hue),
+		0.5 + 0.5 * sin(hue + 2.09),
+		0.5 + 0.5 * sin(hue + 4.19)
+	);
+	col += hue_col * lum * (0.4 + energy * 0.5);
+
+	// Percussion: sharp, distinct hue per drum
+	col += vec3(1.0, 0.4, 0.0)  * acc  * 0.014 * kick;   // orange kick
+	col += vec3(1.0, 0.0, 0.75) * acc2 * 0.016 * snare;  // magenta snare
+	col += vec3(0.4, 1.0, 0.0)  * acc  * 0.008 * hihat;  // lime hihat
+
+	// Onset: vivid hot pink / deep violet core
+	col += vec3(1.0, 0.0, 0.65) * onset * 0.5;
+	col += vec3(0.15, 0.0, 0.9) * onset * onset * 0.35;
 
 	// Beat-phase brightness swell
 	float phase_pulse = pow(1.0 - abs(fract(beat_phase * 2.0) - 0.5) * 2.0, 3.0);
-	col *= 1.0 + phase_pulse * beat_confidence * 0.2;
+	col *= 1.0 + phase_pulse * beat_confidence * 0.35;
 
 	float alpha = 1.0 - t * 0.03;
 	alpha = clamp(alpha, 0.0, 1.0);
@@ -161,8 +175,8 @@ void fragment() {
 		float blob = smoothstep(blob_r + 0.005, blob_r * 0.2, r_org);
 		organisms += blob * (0.15 + 0.2 * (sin(time_val * 0.2 + fi * 1.3) * 0.5 + 0.5));
 	}
-	col += vec3(0.55, 0.85, 0.7) * organisms * 0.15;
-	col += vec3(0.4, 0.6, 0.9) * organisms * 0.08;
+	col += vec3(0.0, 1.0, 0.5) * organisms * 0.55;
+	col += vec3(0.0, 0.5, 1.0) * organisms * 0.25;
 
 	// ── Cellular division — voronoi membranes ──────────────
 	vec2 cell_uv = UV * 5.0;
@@ -188,8 +202,8 @@ void fragment() {
 	}
 	float membrane = sec_cell - min_cell;
 	float cell_edge = exp(-membrane * 18.0) * 0.04;
-	col += vec3(0.7, 0.85, 0.75) * cell_edge;
-	col += vec3(0.6, 0.7, 0.9) * cell_edge * 0.4;
+	col += vec3(0.8, 0.0, 1.0) * cell_edge * 2.5;
+	col += vec3(0.3, 0.0, 0.9) * cell_edge * 1.0;
 
 	// ── Liquid mercury highlights ──────────────────────────
 	float mercury = 0.0;
@@ -203,15 +217,11 @@ void fragment() {
 		float mb = exp(-mr * mr * (35.0 + energy * 25.0));
 		mercury += pow(max(mb, 0.0), 3.0);
 	}
-	col += vec3(0.78, 0.82, 0.88) * mercury * 0.06;
+	col += vec3(0.3, 1.0, 0.85) * mercury * 0.25;
 
-	// ── Pastel gradient underlay ───────────────────────────
-	vec3 pastel_bg = mix(
-		vec3(0.08, 0.04, 0.12),
-		vec3(0.04, 0.08, 0.12),
-		UV.y
-	);
-	col += pastel_bg * 0.1;
+	// ── Deep void background ───────────────────────────────
+	vec3 pastel_bg = mix(vec3(0.0, 0.0, 0.04), vec3(0.0, 0.01, 0.06), UV.y);
+	col += pastel_bg;
 
 	COLOR = vec4(clamp(col, 0.0, 1.0), alpha);
 }

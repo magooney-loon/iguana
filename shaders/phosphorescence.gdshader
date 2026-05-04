@@ -295,62 +295,67 @@ void fragment() {
 		march_t += d * 0.5;
 	}
 
-	// ── Color ────────────────────────────────────────────────────
-	float hue = beat_phase * TAU;
+	// ── Color — deep ocean bioluminescence: electric teal, hot pink, acid green ──
+	// Full-range cosine palette: 0–1, vivid saturated neons
+	float hue = beat_phase * TAU + t * 0.07;
 	vec3 band_color = vec3(
-		0.72 + 0.28 * sin(hue + 0.3),
-		0.72 + 0.28 * sin(hue + 2.4),
-		0.72 + 0.28 * sin(hue + 4.5)
+		0.5 + 0.5 * sin(hue + 0.0),
+		0.5 + 0.5 * sin(hue + 2.09),
+		0.5 + 0.5 * sin(hue + 4.19)
 	);
-	band_color.r += (bass + sub_bass) * 0.3;
-	band_color.g += low_mid * 0.18 + mid * 0.12;
-	band_color.b += (treble + presence) * 0.25;
 
-	vec3 warm_tint = vec3(0.22, 0.08, 0.28 + sin(t) * 0.1);
-	vec3 cool_tint = vec3(0.06, 0.18, 0.42 + cos(t * 0.5) * 0.1);
+	// Bass suppresses red (blobs read blue-green), treble boosts blue
+	band_color.r = mix(band_color.r, 0.05 + mid * 0.35, (bass + sub_bass) * 0.5);
+	band_color.g += low_mid * 0.25 + mid * 0.2;
+	band_color.b += (treble + presence) * 0.35;
+
+	// Vivid mood tints: electric teal (cool) ↔ hot pink (warm)
+	vec3 warm_tint = vec3(1.0, 0.04 + sin(t * 0.3) * 0.04, 0.65);
+	vec3 cool_tint = vec3(0.0, 0.85 + cos(t * 0.4) * 0.1, 0.85);
 	vec3 mood_tint = mix(cool_tint, warm_tint, warmth);
 
 	vec3 col = vec3(0.0);
 
-	// Organic blob glow
-	col += mix(mood_tint, band_color, 0.5 + energy * 0.5) * acc * 0.012;
+	// Organic blob glow — vivid teal/cyan base, richer multiplier
+	col += mix(mood_tint, band_color, 0.4 + energy * 0.6) * acc * 0.024;
 
-	// Abstract ring glow — teal/aqua, distinct from the blob color
-	col += vec3(0.35, 0.8, 0.75) * acc_ring * 0.005;
-	col += vec3(0.25, 0.55, 0.9) * acc_ring * kick * 0.004;
+	// Abstract rings — neon magenta/hot pink, vivid contrast against teal blobs
+	col += vec3(1.0, 0.05, 0.75) * acc_ring * 0.022;
+	col += vec3(0.7, 0.0, 1.0)   * acc_ring * kick * 0.018;
 
-	// Phantom pulse — peach / lavender
-	vec3 pulse_col = mix(vec3(0.8, 0.6, 0.85), vec3(0.9, 0.7, 0.6), warmth);
-	col += pulse_col * acc_pulse * 0.013;
+	// Phantom pulse — acid green / electric gold
+	vec3 pulse_col = mix(vec3(0.1, 1.0, 0.3), vec3(1.0, 0.9, 0.0), warmth);
+	col += pulse_col * acc_pulse * 0.028;
 
-	// Kick rose bloom
-	col += vec3(0.55, 0.28, 0.45) * acc * kick * 0.007;
-	// Hihat mint shimmer
-	col += vec3(0.28, 0.65, 0.5) * acc * hihat * 0.004;
+	// Percussion: sharp vivid strikes
+	col += vec3(0.2, 0.65, 1.0) * acc * kick  * 0.022;  // electric blue kick bloom
+	col += vec3(1.0, 0.4, 0.9)  * acc * snare * 0.018;  // pink-white snare
+	col += vec3(0.2, 1.0, 0.45) * acc * hihat * 0.014;  // lime hihat shimmer
 
-	// Onset flash
-	col += vec3(0.4, 0.32, 0.5) * onset * 0.12;
+	// Onset: electric cyan burst, hot pink at peak
+	col += vec3(0.0, 1.0, 0.9) * onset * 0.4;
+	col += vec3(1.0, 0.0, 0.5) * onset * onset * 0.25;
 
 	// Beat-phase swell
 	float phase_pulse = pow(1.0 - abs(fract(beat_phase * 2.0) - 0.5) * 2.0, 3.0);
-	col *= 1.0 + phase_pulse * beat_confidence * 0.12;
+	col *= 1.0 + phase_pulse * beat_confidence * 0.28;
 
 	// ── 2D Overlays (unique to this shader) ──────────────────────
 
 	// ── Caustics ──────────────────────────────────────────────
 	float caust = caustics(UV * 3.0, t);
-	col += vec3(0.55, 0.78, 0.9) * caust * (0.1 + energy * 0.12);
-	col += vec3(0.75, 0.65, 0.9) * caust * warmth * 0.06;
+	col += vec3(0.0, 0.7, 1.0)  * caust * (0.3 + energy * 0.45);
+	col += vec3(0.6, 0.0, 1.0)  * caust * warmth * 0.22;
 
 	// ── Interference fringes ──────────────────────────────────
 	float fringes = interference(UV, t);
-	col += vec3(0.55, 0.82, 0.88) * fringes * (0.4 + energy * 0.5);
-	col += vec3(0.82, 0.68, 0.92) * fringes * warmth * 0.25;
+	col += vec3(0.0, 1.0, 0.9)  * fringes * (1.1 + energy * 1.3);
+	col += vec3(1.0, 0.15, 0.8) * fringes * warmth * 0.7;
 
 	// ── Lissajous curves (3:2 figure) ────────────────────────
 	float liss = lissajous(UV, t);
-	col += vec3(0.65, 0.82, 1.0) * liss;
-	col += vec3(1.0, 0.78, 0.7) * liss * warmth * 0.45;
+	col += vec3(0.1, 0.5, 1.0) * liss * 2.5;
+	col += vec3(1.0, 0.35, 0.2) * liss * warmth * 1.2;
 
 	// ── Second Lissajous (5:4 figure — different shape) ──────
 	float liss2 = 0.0;
@@ -364,8 +369,8 @@ void fragment() {
 		float d = length(UV - pt);
 		liss2 += exp(-d * 280.0) * 0.007;
 	}
-	col += vec3(0.8, 0.7, 1.0) * liss2;
-	col += vec3(0.6, 1.0, 0.8) * liss2 * brightness * 0.4;
+	col += vec3(0.9, 0.1, 1.0) * liss2 * 2.5;
+	col += vec3(0.1, 1.0, 0.5) * liss2 * brightness * 1.2;
 
 	// ── Bioluminescent plankton ───────────────────────────────
 	float plankton = 0.0;
@@ -379,8 +384,8 @@ void fragment() {
 		float pulse = 0.3 + 0.7 * pow(sin(t * (0.2 + fi * 0.06) + fi * 0.9) * 0.5 + 0.5, 2.0);
 		plankton += exp(-d_p * (80.0 + energy * 40.0)) * pulse * 0.022;
 	}
-	col += vec3(0.5, 0.78, 1.0) * plankton;
-	col += vec3(0.68, 1.0, 0.75) * plankton * 0.35;
+	col += vec3(0.0, 0.75, 1.0) * plankton * 2.8;
+	col += vec3(0.1, 1.0, 0.45) * plankton * 1.0;
 
 	// ── Liquid mercury highlights ─────────────────────────────
 	float mercury = 0.0;
@@ -394,21 +399,17 @@ void fragment() {
 		float mb = exp(-mr * mr * (30.0 + energy * 20.0));
 		mercury += pow(max(mb, 0.0), 3.0);
 	}
-	col += vec3(0.75, 0.82, 0.88) * mercury * 0.04;
+	col += vec3(0.35, 1.0, 0.9) * mercury * 0.18;
 
 	// ── Organic texture ───────────────────────────────────────
 	float n1 = texture(noise_tex, UV * 4.0 + t * 0.025).r;
 	float n2 = texture(noise_tex, UV * 8.0 - t * 0.015 + 3.7).r;
 	float cellular_tex = abs(n1 - n2) * 0.1;
-	col += vec3(0.85, 0.92, 0.9) * cellular_tex * (0.25 + energy * 0.5);
+	col += vec3(0.0, 0.9, 0.75) * cellular_tex * (0.5 + energy * 1.0);
 
-	// ── Pastel underlay ───────────────────────────────────────
-	vec3 pastel_bg = mix(
-		vec3(0.08, 0.04, 0.12),
-		vec3(0.04, 0.07, 0.12),
-		UV.y
-	);
-	col += pastel_bg * 0.08;
+	// ── Deep ocean void background ────────────────────────────
+	vec3 pastel_bg = mix(vec3(0.0, 0.01, 0.05), vec3(0.0, 0.015, 0.04), UV.y);
+	col += pastel_bg * 0.06;
 
 	// ── Alpha ─────────────────────────────────────────────────
 	float alpha = 1.0 - march_t * 0.02;
