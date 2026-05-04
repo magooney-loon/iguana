@@ -15,6 +15,7 @@ var _label_timer := 0.0
 # Right-click context menu
 var _context_menu: PopupMenu
 var _player_toggle_idx := 0
+var _fullscreen_idx := 0
 
 # Debug overlay (shown only for signal scope shader)
 var _debug_overlay: Control
@@ -66,6 +67,9 @@ func _build_context_menu() -> void:
 	_context_menu.add_check_item("Show Player")
 	_player_toggle_idx = _context_menu.item_count - 1
 	_context_menu.set_item_checked(_player_toggle_idx, true)
+	_context_menu.add_separator()
+	_context_menu.add_check_item("Fullscreen")
+	_fullscreen_idx = _context_menu.item_count - 1
 	_context_menu.index_pressed.connect(_on_context_menu_index_pressed)
 	add_child(_context_menu)
 
@@ -84,6 +88,14 @@ func _on_context_menu_index_pressed(index: int) -> void:
 		var player_bar := get_parent().owner.get_node("PlayerBar") as Control
 		player_bar.visible = !player_bar.visible
 		_context_menu.set_item_checked(index, player_bar.visible)
+	elif index == _fullscreen_idx:
+		var mode := DisplayServer.window_get_mode()
+		if mode == DisplayServer.WINDOW_MODE_FULLSCREEN:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+			_context_menu.set_item_checked(index, false)
+		else:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+			_context_menu.set_item_checked(index, true)
 	elif index < _shaders.size():
 		var id := _context_menu.get_item_id(index)
 		get_parent()._switch(id)
