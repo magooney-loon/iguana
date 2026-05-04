@@ -50,8 +50,15 @@ float smin(float a, float b, float k) {
 }
 
 // ── Organic field ────────────────────────────────────────────────────
-// Five metaballs in a spiral, noise-displaced, smooth-merged.
-// t_offset lets each repetition cell animate at its own phase.
+// Five shapes, each a different geometry, each morphing based on
+// its own slow-changing audio driver. No two look alike.
+//
+//   blob 0  →  sphere ↔ octahedron   driven by brightness
+//   blob 1  →  box ↔ sphere           driven by warmth
+//   blob 2  →  torus ↔ box            driven by energy
+//   blob 3  →  sphere ↔ capsule       driven by bass
+//   blob 4  →  sphere ↔ diamond-spike driven by treble
+
 float organic_field(vec3 p, float t_offset) {
 	float d = 1e10;
 	float t = t_offset;
@@ -68,13 +75,55 @@ float organic_field(vec3 p, float t_offset) {
 		);
 
 		float r = 0.45 + 0.12 * sin(t * 0.35 + fi * 0.8) + sub_bass * 0.1;
+		vec3 rel = p - center;
 
+		// ── Per-blob shape selection ───────────────────────────
+		// Sphere (shared baseline)
+		float s_sphere = length(rel) - r;
+
+		// Rounded box
+		vec3 bq = abs(rel) - vec3(r * 0.72);
+		float s_box = length(max(bq, 0.0)) + min(max(bq.x, max(bq.y, bq.z)), 0.0);
+
+		// Octahedron
+		float s_oct = (abs(rel.x) + abs(rel.y) + abs(rel.z) - r * 0.92) / 1.73;
+
+		// Torus
+		vec2 tq = vec2(length(rel.xz) - r * 0.55, rel.y);
+		float s_torus = length(tq) - r * 0.22;
+
+		// Capsule (elongated sphere along Y)
+		float cap_h = r * 0.7;
+		vec3 cap_sw = rel;
+		cap_sw.y -= clamp(cap_sw.y, -cap_h, cap_h);
+		float s_capsule = length(cap_sw) - r * 0.5;
+
+		// Diamond spike (flattened octahedron)
+		vec3 d_rel = rel;
+		d_rel.y *= 0.55;
+		float s_diamond = (abs(d_rel.x) + abs(d_rel.y) + abs(d_rel.z) - r * 0.85) / 1.73;
+
+		// ── Pick morph pair per blob ──────────────────────────
+		float shape;
+		if (i == 0) {
+			shape = mix(s_sphere, s_oct, brightness);       // round → spiky
+		} else if (i == 1) {
+			shape = mix(s_box, s_sphere, warmth);            // boxy → round
+		} else if (i == 2) {
+			shape = mix(s_torus, s_box, energy);             // donut → cube
+		} else if (i == 3) {
+			shape = mix(s_sphere, s_capsule, bass);          // ball → capsule
+		} else {
+			shape = mix(s_sphere, s_diamond, treble * 0.8);  // ball → diamond
+		}
+
+		// Surface displacement — organic texture
 		float disp = sin(p.x * 2.5 + t * 0.45 + fi)
 		           * cos(p.y * 2.5 - t * 0.3 + fi * 0.7)
 		           * sin(p.z * 2.0 + t * 0.35 + fi * 1.1);
 		disp *= 0.1 + energy * 0.08;
 
-		float blob = length(p - center) - r + disp;
+		float blob = shape + disp;
 		d = smin(d, blob, 0.45 + beat * 0.25);
 	}
 
@@ -82,8 +131,8 @@ float organic_field(vec3 p, float t_offset) {
 }
 
 // ── Abstract rings ───────────────────────────────────────────────────
-// Thin torus rings orbiting through the organic field.
-// Geometric contrast against the soft blobs.
+// Three geometric rings, each with a unique cross-section shape.
+// Ring 0: circle   Ring 1: square   Ring 2: trefoil-lobe
 float abstract_rings(vec3 p, float t_offset) {
 	float d = 1e10;
 	float t = t_offset;
@@ -91,20 +140,36 @@ float abstract_rings(vec3 p, float t_offset) {
 	for (int i = 0; i < 3; i++) {
 		float fi = float(i);
 		vec3 rp = p;
-		// Ring centers orbit on their own paths
+
 		rp -= vec3(
 			sin(t * 0.15 + fi * 2.1) * 1.3,
 			cos(t * 0.12 + fi * 1.7) * 0.8,
 			cos(t * 0.1 + fi * 2.8) * 1.3
 		);
-		// Each ring tumbles differently
 		rp.xz *= rot(t * 0.2 + fi * 1.0);
 		rp.yz *= rot(t * 0.15 + fi * 0.7);
 
-		// Torus SDF
-		vec2 q = vec2(length(rp.xz) - 0.45, rp.y);
-		float ring = length(q) - 0.018;
-		d = min(d, ring);
+		float ring_R = 0.45;
+		float thickness = 0.018 + energy * 0.006;
+		vec2 q = vec2(length(rp.xz) - ring_R, rp.y);
+
+		float cross_section;
+		if (i == 0) {
+			// Perfect circle — the baseline
+			cross_section = length(q) - thickness;
+		} else if (i == 1) {
+			// Square cross-section that softens to circle with warmth
+			float sq = max(abs(q.x), abs(q.y)) - thickness;
+			float ci = length(q) - thickness;
+			cross_section = mix(ci, sq, 0.7 - warmth * 0.4);
+		} else {
+			// Trefoil-lobed cross-section
+			float a = atan(q.y, q.x);
+			float lobe = sin(a * 3.0 + t * 0.25) * thickness * 0.5;
+			cross_section = length(q) - thickness + lobe;
+		}
+
+		d = min(d, cross_section);
 	}
 
 	return d;
