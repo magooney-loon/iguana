@@ -23,6 +23,8 @@ var play_mode         := 1  # Playlist.PlayMode.LOOP_ALL
 var volume            := 1.0  # 0.0 – 1.0
 var crossfade_duration  := 2.0  # seconds
 var auto_hide_player   := false
+var vsync_enabled      := true
+var max_fps            := 60
 
 # Per-shader post-processing: Dictionary keyed by filename stem
 # e.g. { "solstice": { "exposure": 1.4, ... }, "mars": { ... } }
@@ -59,6 +61,8 @@ func save() -> void:
 	cfg.set_value("general", "volume", volume)
 	cfg.set_value("general", "crossfade_duration", crossfade_duration)
 	cfg.set_value("general", "auto_hide_player",  auto_hide_player)
+	cfg.set_value("general", "vsync_enabled", vsync_enabled)
+	cfg.set_value("general", "max_fps", max_fps)
 
 	# Per-shader PP configs — keyed by filename stem
 	for key in shader_pp_configs:
@@ -105,6 +109,10 @@ func load_settings() -> void:
 		crossfade_duration = cfg.get_value("general", "crossfade_duration")
 	if cfg.has_section_key("general", "auto_hide_player"):
 		auto_hide_player = cfg.get_value("general", "auto_hide_player")
+	if cfg.has_section_key("general", "vsync_enabled"):
+		vsync_enabled = cfg.get_value("general", "vsync_enabled")
+	if cfg.has_section_key("general", "max_fps"):
+		max_fps = cfg.get_value("general", "max_fps")
 
 	# Resolve shader_name → shader_index
 	shader_index = 0  # default

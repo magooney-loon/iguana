@@ -76,6 +76,14 @@ func _ready() -> void:
 	if Config.fullscreen:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 
+	# Restore display settings
+	if Config.vsync_enabled:
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
+		Engine.max_fps = 0
+	else:
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+		Engine.max_fps = Config.max_fps
+
 	# Restore volume (bar already built)
 	AudioSource.set_volume(Config.volume)
 	_refresh_vol_ui()

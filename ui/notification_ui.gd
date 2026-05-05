@@ -42,3 +42,4 @@ func process_ui(delta: float) -> void:
 		_label.modulate.a = clampf(_label_timer, 0.0, 1.0)
 		if _label_timer <= 0.0:
 			_label.hide()
+

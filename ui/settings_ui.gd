@@ -236,6 +236,47 @@ func _build_general_tab() -> Control:
 	vbox.add_child(auto_hide_check)
 
 	StylesUI.win_sep(vbox)
+	StylesUI.win_section(vbox, "DISPLAY")
+
+	var vsync_check := CheckBox.new()
+	vsync_check.text = "VSync"
+	vsync_check.button_pressed = Config.vsync_enabled
+	vbox.add_child(vsync_check)
+
+	var fps_cap_row := HBoxContainer.new()
+	fps_cap_row.add_theme_constant_override("separation", 4)
+	fps_cap_row.visible = not Config.vsync_enabled
+	var fps_cap_pre := Label.new()
+	fps_cap_pre.text = "Max FPS"
+	fps_cap_row.add_child(fps_cap_pre)
+	var fps_cap_spin := SpinBox.new()
+	fps_cap_spin.min_value = 15.0
+	fps_cap_spin.max_value = 960.0
+	fps_cap_spin.step = 1.0
+	fps_cap_spin.value = Config.max_fps
+	fps_cap_spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fps_cap_spin.focus_mode = Control.FOCUS_NONE
+	fps_cap_spin.value_changed.connect(func(v: float) -> void:
+		Config.max_fps = int(v)
+		Engine.max_fps = Config.max_fps
+		Config.save()
+	)
+	fps_cap_row.add_child(fps_cap_spin)
+	vbox.add_child(fps_cap_row)
+
+	vsync_check.toggled.connect(func(on: bool) -> void:
+		Config.vsync_enabled = on
+		if on:
+			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
+			Engine.max_fps = 0
+		else:
+			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+			Engine.max_fps = Config.max_fps
+		fps_cap_row.visible = not on
+		Config.save()
+	)
+
+	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "SHADER SHUFFLE")
 
 	_shuffle_check = CheckBox.new()
@@ -586,6 +627,10 @@ func _build_debug_tab() -> Control:
 
 	_dbg.clear()
 
+	StylesUI.win_section(vbox, "PERFORMANCE")
+	_dbg_row(vbox, "FPS", "fps", 360.0)
+
+	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "FREQUENCY BANDS")
 	_dbg_row(vbox, "Sub Bass   20–60 Hz",   "sub_bass")
 	_dbg_row(vbox, "Bass   60–250 Hz",      "bass")
@@ -680,6 +725,7 @@ func _update_debug() -> void:
 		return
 	var a   := _analyzer
 	var vals := {
+		"fps": float(Engine.get_frames_per_second()),
 		"sub_bass": a._sub_bass,   "bass":       a._bass,
 		"low_mid":  a._low_mid,    "mid":         a._mid,
 		"presence": a._presence,   "treble":      a._treble,
@@ -700,7 +746,7 @@ func _update_debug() -> void:
 			var entry: Dictionary = _dbg[key]
 			var v: float = float(vals[key])
 			(entry.bar as ProgressBar).value = v
-			var fmt := "%.0f" if key == "bpm" else "%.3f"
+			var fmt := "%.0f" if key in ["bpm", "fps"] else "%.3f"
 			(entry.val as Label).text = fmt % v
 
 
@@ -760,6 +806,17 @@ func _build_about_tab() -> Control:
 	gh_row.add_child(gh_lbl)
 	gh_row.add_child(StylesUI.make_link_label("magooney-loon/iguana", "https://github.com/magooney-loon/iguana"))
 	vbox.add_child(gh_row)
+
+	var x_row := HBoxContainer.new()
+	x_row.add_theme_constant_override("separation", 8)
+	var x_lbl := Label.new()
+	x_lbl.text = "X / Twitter"
+	x_lbl.add_theme_font_size_override("font_size", 12)
+	x_lbl.modulate.a = 0.55
+	x_lbl.custom_minimum_size.x = 80
+	x_row.add_child(x_lbl)
+	x_row.add_child(StylesUI.make_link_label("@MyMoonEnt", "https://x.com/MyMoonEnt"))
+	vbox.add_child(x_row)
 
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
