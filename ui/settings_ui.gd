@@ -11,8 +11,8 @@ var _content:      Control
 var _tween:        Tween
 
 # Tabs
-var _tabs:         TabContainer
-var _shader_btns:  Array[Button] = []
+var _tabs:            TabContainer
+var _shader_dropdown: OptionButton
 var _last_shader_idx := -1
 
 # General tab
@@ -163,7 +163,6 @@ func _build() -> void:
 	content_margin.add_child(_tabs)
 
 	_tabs.add_child(_build_general_tab())
-	_tabs.add_child(_build_post_tab())
 	_tabs.add_child(_build_shaders_tab())
 	_tabs.add_child(_build_debug_tab())
 
@@ -237,26 +236,36 @@ func _build_general_tab() -> Control:
 	return vbox
 
 
-# ── Post-Process tab ─────────────────────────────────────────────────────────
+# ── Shaders tab ───────────────────────────────────────────────────────────────
 
-func _build_post_tab() -> Control:
+func _build_shaders_tab() -> Control:
 	var vbox := VBoxContainer.new()
-	vbox.name = "Post-Process"
+	vbox.name = "Shaders"
 	vbox.add_theme_constant_override("separation", 6)
 
-	StylesUI.win_section(vbox, "PER-SHADER POST-PROCESSING")
+	StylesUI.win_section(vbox, "ACTIVE SHADER")
+
+	_shader_dropdown = OptionButton.new()
+	var shaders: Array = _visualizer.SHADERS
+	for i in shaders.size():
+		_shader_dropdown.add_item(shaders[i].name, i)
+	_shader_dropdown.selected = _visualizer._shader_index
+	_shader_dropdown.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_shader_dropdown.focus_mode = Control.FOCUS_NONE
+	_shader_dropdown.item_selected.connect(func(idx: int):
+		_visualizer._switch(idx)
+		_update_pp_sliders()
+	)
+	vbox.add_child(_shader_dropdown)
+
+	StylesUI.win_sep(vbox)
+	StylesUI.win_section(vbox, "POST-PROCESSING")
 
 	_pp_shader_label = Label.new()
 	_pp_shader_label.text = "Editing: %s" % _visualizer.SHADERS[_visualizer._shader_index].name
 	_pp_shader_label.add_theme_font_size_override("font_size", 13)
 	_pp_shader_label.modulate.a = 0.80
 	vbox.add_child(_pp_shader_label)
-
-	var note := Label.new()
-	note.text = "Each shader stores its own post-processing preset.\nSettings are per-shader and saved to disk."
-	note.add_theme_font_size_override("font_size", 11)
-	note.modulate.a = 0.50
-	vbox.add_child(note)
 
 	var pp_toggle := CheckBox.new()
 	pp_toggle.text = "Post-process enabled"
@@ -367,40 +376,6 @@ func _reset_post_defaults() -> void:
 	_update_pp_sliders()
 
 
-# ── Shaders tab ───────────────────────────────────────────────────────────────
-
-func _build_shaders_tab() -> Control:
-	var vbox := VBoxContainer.new()
-	vbox.name = "Shaders"
-	vbox.add_theme_constant_override("separation", 5)
-
-	StylesUI.win_section(vbox, "ACTIVE SHADERS")
-
-	var group := ButtonGroup.new()
-	var shaders: Array = _visualizer.SHADERS
-	_shader_btns.clear()
-	for i in shaders.size():
-		var btn := Button.new()
-		btn.text         = shaders[i].name
-		btn.toggle_mode  = true
-		btn.button_group = group
-		btn.alignment    = HORIZONTAL_ALIGNMENT_LEFT
-		btn.pressed.connect(_on_shader_btn.bind(i))
-		StylesUI.apply_glass_btn(btn)
-		vbox.add_child(btn)
-		_shader_btns.append(btn)
-
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vbox.add_child(spacer)
-
-	return vbox
-
-
-func _on_shader_btn(idx: int) -> void:
-	_visualizer._switch(idx)
-
-
 # ── Debug tab ─────────────────────────────────────────────────────────────────
 
 func _build_debug_tab() -> Control:
@@ -497,12 +472,12 @@ func _dbg_row(parent: VBoxContainer, display: String, key: String, max_val: floa
 # ── Sync ──────────────────────────────────────────────────────────────────────
 
 func _sync() -> void:
-	# Keep shader radio buttons in sync when Q/E are pressed outside the window
+	# Keep shader dropdown in sync when Q/E are pressed outside the window
 	var idx: int = _visualizer._shader_index
 	if idx != _last_shader_idx:
 		_last_shader_idx = idx
-		for i in _shader_btns.size():
-			_shader_btns[i].set_pressed_no_signal(i == idx)
+		if _shader_dropdown:
+			_shader_dropdown.selected = idx
 		_update_pp_sliders()
 	# Shuffle state
 	_shuffle_check.set_block_signals(true)
