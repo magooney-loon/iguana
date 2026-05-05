@@ -14,15 +14,15 @@ var _vol_slider: HSlider
 var _seeking := false
 
 # ── Logo ──────────────────────────────────────────────────────────────────────
-var _logo: TextureRect
+var _logo_panel: PanelContainer
 
 # ── Auto-hide ─────────────────────────────────────────────────────────────────
 var _hide_timer    := 0.0
 var _hidden        := false
 var _mouse_inside  := false
 var _hide_tween:   Tween
-var _origin_y      := 0.0
-var _logo_origin_y := 0.0
+var _origin_y       := 0.0
+var _logo_origin_y  := 0.0
 var _origin_y_set  := false
 const AUTO_HIDE_DELAY := 2.0
 const AUTO_HIDE_SLIDE := 0.35
@@ -226,24 +226,56 @@ func _setup_logo() -> void:
 	var tex := load("res://icon.webp") as Texture2D
 	if tex == null:
 		return
-	_logo = TextureRect.new()
-	_logo.texture = tex
-	_logo.expand_mode = TextureRect.EXPAND_KEEP_SIZE
-	_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_logo.custom_minimum_size = Vector2(80, 80)
-	_logo.size = Vector2(80, 80)
-	_logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_logo.z_index = 99
-	get_parent().add_child(_logo)
-	# Centre horizontally, sit just above the player bar
-	_logo.position = Vector2(
-		(get_parent().size.x - _logo.size.x) * 0.5,
-		position.y - _logo.size.y - 4.0
+
+	# Glassy pill panel
+	var panel := PanelContainer.new()
+	var style := StylesUI.glass_box(Color(0.06, 0.07, 0.12, 0.88), 18.0, true)
+	style.corner_radius_top_left     = 18
+	style.corner_radius_top_right    = 18
+	style.corner_radius_bottom_left  = 0
+	style.corner_radius_bottom_right = 0
+	style.set_border_width_all(1)
+	style.border_width_bottom   = 0
+	style.content_margin_left   = 14.0
+	style.content_margin_right  = 14.0
+	style.content_margin_top    = 8.0
+	style.content_margin_bottom = 8.0
+	panel.add_theme_stylebox_override("panel", style)
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.z_index = 99
+
+	var img := TextureRect.new()
+	img.texture      = tex
+	img.expand_mode  = TextureRect.EXPAND_IGNORE_SIZE
+	img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	img.custom_minimum_size = Vector2(40, 40)
+	img.size         = Vector2(40, 40)
+	img.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(img)
+
+	_logo_panel = panel
+	get_parent().add_child(_logo_panel)
+
+	await get_tree().process_frame
+	_logo_panel.position = Vector2(
+		(get_parent().size.x - _logo_panel.size.x) * 0.5,
+		position.y - _logo_panel.size.y
 	)
-	# Keep centred on window resize
+
+	_logo_panel.mouse_entered.connect(func():
+		_mouse_inside = true
+		_hide_timer = 0.0
+		if _hidden:
+			_show_player()
+	)
+	_logo_panel.mouse_exited.connect(func():
+		_mouse_inside = false
+		_hide_timer = 0.0
+	)
+
 	get_parent().resized.connect(func():
-		if is_instance_valid(_logo):
-			_logo.position.x = (get_parent().size.x - _logo.size.x) * 0.5
+		if is_instance_valid(_logo_panel):
+			_logo_panel.position.x = (get_parent().size.x - _logo_panel.size.x) * 0.5
 	)
 
 
@@ -276,7 +308,7 @@ func _tick_auto_hide(delta: float) -> void:
 func _hide_player() -> void:
 	if not _origin_y_set:
 		_origin_y = position.y
-		_logo_origin_y = _logo.position.y if is_instance_valid(_logo) else 0.0
+		_logo_origin_y = _logo_panel.position.y if is_instance_valid(_logo_panel) else 0.0
 		_origin_y_set = true
 	_hidden = true
 	if _hide_tween and _hide_tween.is_valid():
@@ -285,8 +317,8 @@ func _hide_player() -> void:
 	_hide_tween = create_tween().set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 	_hide_tween.set_parallel(true)
 	_hide_tween.tween_property(self, "position:y", _origin_y + slide, AUTO_HIDE_SLIDE)
-	if is_instance_valid(_logo):
-		_hide_tween.tween_property(_logo, "position:y", _logo_origin_y + slide, AUTO_HIDE_SLIDE)
+	if is_instance_valid(_logo_panel):
+		_hide_tween.tween_property(_logo_panel, "position:y", _logo_origin_y + slide, AUTO_HIDE_SLIDE)
 
 
 func _show_player() -> void:
@@ -297,8 +329,8 @@ func _show_player() -> void:
 	_hide_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	_hide_tween.set_parallel(true)
 	_hide_tween.tween_property(self, "position:y", _origin_y, AUTO_HIDE_SLIDE)
-	if is_instance_valid(_logo):
-		_hide_tween.tween_property(_logo, "position:y", _logo_origin_y, AUTO_HIDE_SLIDE)
+	if is_instance_valid(_logo_panel):
+		_hide_tween.tween_property(_logo_panel, "position:y", _logo_origin_y, AUTO_HIDE_SLIDE)
 
 
 func _process(delta: float) -> void:
