@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://dq0kylfpr07nv"
+path="res://.godot/imported/Chill & Organic.mp3-c72c0254919fe43b2d3b28cc99f6df4f.mp3str"
+
+[deps]
+
+source_file="res://playlist/Chill & Organic.mp3"
+dest_files=["res://.godot/imported/Chill & Organic.mp3-c72c0254919fe43b2d3b28cc99f6df4f.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

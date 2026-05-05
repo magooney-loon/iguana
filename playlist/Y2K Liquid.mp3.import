@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://csg8t20aylhay"
+path="res://.godot/imported/Y2K Liquid.mp3-6be8f8ad7e102f034c4174749f0034c5.mp3str"
+
+[deps]
+
+source_file="res://playlist/Y2K Liquid.mp3"
+dest_files=["res://.godot/imported/Y2K Liquid.mp3-6be8f8ad7e102f034c4174749f0034c5.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

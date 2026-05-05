@@ -50,9 +50,8 @@ func _ready() -> void:
 	_playlist.track_changed.connect(_on_playlist_track_changed)
 	_playlist.playlist_changed.connect(_on_playlist_changed)
 
-	# Add default track if it exists
-	if ResourceLoader.exists("res://default.ogg"):
-		_playlist.add("res://default.ogg")
+	# Load all tracks from the playlist directory
+	_populate_from_dir("res://playlist/")
 
 	# Restore persisted play mode
 	_playlist.set_play_mode(Config.play_mode as Playlist.PlayMode)
@@ -469,6 +468,24 @@ func _refresh_play_btn() -> void:
 	else:
 		StylesUI.set_icon(_play_btn, "play")
 		_play_btn.tooltip_text = "Play"
+
+
+func _populate_from_dir(dir_path: String) -> void:
+	var extensions := ["mp3", "ogg", "wav"]
+	var paths: PackedStringArray = []
+	var dir := DirAccess.open(dir_path)
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	var file := dir.get_next()
+	while file != "":
+		if not dir.current_is_dir() and file.get_extension().to_lower() in extensions:
+			paths.append(dir_path + file)
+		file = dir.get_next()
+	dir.list_dir_end()
+	paths.sort()
+	for p in paths:
+		_playlist.add(p)
 
 
 func _fmt(secs: float) -> String:
