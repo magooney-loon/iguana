@@ -151,13 +151,7 @@ func _build() -> void:
 	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(title_lbl)
 
-	var close_btn := Button.new()
-	close_btn.text = "✕"
-	close_btn.custom_minimum_size = Vector2(28, 28)
-	close_btn.add_theme_font_size_override("font_size", 14)
-	close_btn.focus_mode = Control.FOCUS_NONE
-	close_btn.pressed.connect(close)
-	StylesUI.apply_glass_btn(close_btn)
+	var close_btn := StylesUI.icon_btn("close", "Close", Vector2(28, 28), close)
 	title_row.add_child(close_btn)
 
 	# ── Track list ────────────────────────────────────────────────────
@@ -201,18 +195,12 @@ func _build() -> void:
 	_footer_stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer_row.add_child(_footer_stats)
 
-	_add_btn = Button.new()
-	_add_btn.text = "+ Add"
-	_add_btn.focus_mode = Control.FOCUS_NONE
+	_add_btn = StylesUI.icon_btn("add", "Add tracks")
 	_add_btn.pressed.connect(_on_add_pressed)
-	StylesUI.apply_glass_btn(_add_btn)
 	footer_row.add_child(_add_btn)
 
-	_clear_btn = Button.new()
-	_clear_btn.text = "Clear"
-	_clear_btn.focus_mode = Control.FOCUS_NONE
+	_clear_btn = StylesUI.icon_btn("clear", "Clear playlist")
 	_clear_btn.pressed.connect(_on_clear_pressed)
-	StylesUI.apply_glass_btn(_clear_btn)
 	footer_row.add_child(_clear_btn)
 
 	_rebuild_list()
@@ -266,8 +254,10 @@ func _rebuild_list() -> void:
 
 		# ── Remove button ─────────────────────────────────────────────
 		var remove_btn := Button.new()
-		remove_btn.text = "✕"
-		remove_btn.add_theme_font_size_override("font_size", 11)
+		var remove_tex := StylesUI.load_icon("remove")
+		if remove_tex:
+			remove_btn.icon = remove_tex
+			remove_btn.expand_icon = true
 		remove_btn.custom_minimum_size = Vector2(22, 22)
 		remove_btn.focus_mode = Control.FOCUS_NONE
 		remove_btn.mouse_filter = Control.MOUSE_FILTER_STOP

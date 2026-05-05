@@ -136,13 +136,7 @@ func _build() -> void:
 	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(title_lbl)
 
-	var close_btn := Button.new()
-	close_btn.text = "✕"
-	close_btn.custom_minimum_size = Vector2(28, 28)
-	close_btn.add_theme_font_size_override("font_size", 14)
-	close_btn.focus_mode = Control.FOCUS_NONE
-	close_btn.pressed.connect(close)
-	StylesUI.apply_glass_btn(close_btn)
+	var close_btn := StylesUI.icon_btn("close", "Close", Vector2(28, 28), close)
 	title_row.add_child(close_btn)
 
 	# ── Content area ──────────────────────────────────────────────────
@@ -287,18 +281,10 @@ func _build_post_tab() -> Control:
 	var btn_row := HBoxContainer.new()
 	btn_row.add_theme_constant_override("separation", 8)
 
-	var reset_btn := Button.new()
-	reset_btn.text = "Reset to defaults"
-	reset_btn.focus_mode = Control.FOCUS_NONE
-	reset_btn.pressed.connect(_reset_post_defaults)
-	StylesUI.apply_glass_btn(reset_btn)
+	var reset_btn := StylesUI.icon_btn("reset", "Reset to defaults", Vector2(32, 28), _reset_post_defaults)
 	btn_row.add_child(reset_btn)
 
-	var save_btn := Button.new()
-	save_btn.text = "Save Settings"
-	save_btn.focus_mode = Control.FOCUS_NONE
-	save_btn.pressed.connect(func(): _visualizer.save_settings())
-	StylesUI.apply_glass_btn(save_btn)
+	var save_btn := StylesUI.icon_btn("save", "Save settings", Vector2(32, 28), func(): _visualizer.save_settings())
 	btn_row.add_child(save_btn)
 
 	vbox.add_child(btn_row)

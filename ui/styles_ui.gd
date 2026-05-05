@@ -64,6 +64,42 @@ static func make_vsep() -> VSeparator:
 	return VSeparator.new()
 
 
+## Load an SVG icon from ui/icons/<name>.svg and return a Texture2D.
+static func load_icon(name: String) -> Texture2D:
+	var path := "res://ui/icons/%s.svg" % name
+	var tex := load(path) as Texture2D
+	if tex == null:
+		push_warning("StylesUI: icon not found: %s" % path)
+	return tex
+
+
+## Create a Button with only an icon (no text) and a tooltip.
+## Connects `callback` to `pressed` if it's valid.
+static func icon_btn(icon_name: String, tooltip: String = "",
+		min_size := Vector2(32, 28), callback: Callable = Callable()) -> Button:
+	var btn := Button.new()
+	var tex := load_icon(icon_name)
+	if tex:
+		btn.icon = tex
+		btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		btn.expand_icon = true
+	btn.tooltip_text = tooltip
+	btn.custom_minimum_size = min_size
+	btn.focus_mode = Control.FOCUS_NONE
+	if callback.is_valid():
+		btn.pressed.connect(callback)
+	apply_glass_btn(btn)
+	return btn
+
+
+## Update the icon on an existing button (for play/pause, loop modes, etc.).
+static func set_icon(btn: Button, icon_name: String) -> void:
+	var tex := load_icon(icon_name)
+	if tex:
+		btn.icon = tex
+	btn.text = ""
+
+
 static func win_section(parent: Control, title: String) -> void:
 	var lbl := Label.new()
 	lbl.text = title

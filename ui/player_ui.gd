@@ -76,42 +76,16 @@ func _build_bar() -> void:
 	top.add_theme_constant_override("separation", 6)
 	vbox.add_child(top)
 
-	var prev_btn := Button.new()
-	prev_btn.text = "⏮"
-	prev_btn.tooltip_text = "Previous"
-	prev_btn.custom_minimum_size.x = 32
-	prev_btn.add_theme_font_size_override("font_size", 16)
-	prev_btn.focus_mode = Control.FOCUS_NONE
-	prev_btn.pressed.connect(_on_prev)
-	StylesUI.apply_glass_btn(prev_btn)
+	var prev_btn := StylesUI.icon_btn("prev", "Previous track", Vector2(32, 28), _on_prev)
 	top.add_child(prev_btn)
 
-	_play_btn = Button.new()
-	_play_btn.custom_minimum_size.x = 36
-	_play_btn.add_theme_font_size_override("font_size", 18)
-	_play_btn.focus_mode = Control.FOCUS_NONE
-	_play_btn.pressed.connect(_on_play_pause)
-	StylesUI.apply_glass_btn(_play_btn)
+	_play_btn = StylesUI.icon_btn("play", "Play", Vector2(36, 28), _on_play_pause)
 	top.add_child(_play_btn)
 
-	var stop_btn := Button.new()
-	stop_btn.text = "⏹"
-	stop_btn.tooltip_text = "Stop"
-	stop_btn.custom_minimum_size.x = 32
-	stop_btn.add_theme_font_size_override("font_size", 16)
-	stop_btn.focus_mode = Control.FOCUS_NONE
-	stop_btn.pressed.connect(_on_stop)
-	StylesUI.apply_glass_btn(stop_btn)
+	var stop_btn := StylesUI.icon_btn("stop", "Stop", Vector2(32, 28), _on_stop)
 	top.add_child(stop_btn)
 
-	var next_btn := Button.new()
-	next_btn.text = "⏭"
-	next_btn.tooltip_text = "Next"
-	next_btn.custom_minimum_size.x = 32
-	next_btn.add_theme_font_size_override("font_size", 16)
-	next_btn.focus_mode = Control.FOCUS_NONE
-	next_btn.pressed.connect(_on_next)
-	StylesUI.apply_glass_btn(next_btn)
+	var next_btn := StylesUI.icon_btn("next", "Next track", Vector2(32, 28), _on_next)
 	top.add_child(next_btn)
 
 	top.add_child(StylesUI.make_vsep())
@@ -132,54 +106,19 @@ func _build_bar() -> void:
 
 	top.add_child(StylesUI.make_vsep())
 
-	_loop_btn = Button.new()
-	_loop_btn.text = "🔁"
-	_loop_btn.tooltip_text = "Loop mode"
-	_loop_btn.custom_minimum_size.x = 32
-	_loop_btn.add_theme_font_size_override("font_size", 16)
-	_loop_btn.focus_mode = Control.FOCUS_NONE
-	_loop_btn.pressed.connect(_on_loop_pressed)
-	StylesUI.apply_glass_btn(_loop_btn)
+	_loop_btn = StylesUI.icon_btn("loop_all", "Loop mode", Vector2(32, 28), _on_loop_pressed)
 	top.add_child(_loop_btn)
 
-	_shuffle_btn = Button.new()
-	_shuffle_btn.text = "Sh"
-	_shuffle_btn.tooltip_text = "Shuffle"
-	_shuffle_btn.custom_minimum_size.x = 32
-	_shuffle_btn.add_theme_font_size_override("font_size", 12)
-	_shuffle_btn.focus_mode = Control.FOCUS_NONE
-	_shuffle_btn.pressed.connect(_on_shuffle_pressed)
-	StylesUI.apply_glass_btn(_shuffle_btn)
+	_shuffle_btn = StylesUI.icon_btn("shuffle", "Shuffle", Vector2(32, 28), _on_shuffle_pressed)
 	top.add_child(_shuffle_btn)
 
-	var pl_btn := Button.new()
-	pl_btn.text = "☰"
-	pl_btn.tooltip_text = "Playlist"
-	pl_btn.custom_minimum_size.x = 32
-	pl_btn.add_theme_font_size_override("font_size", 16)
-	pl_btn.focus_mode = Control.FOCUS_NONE
-	pl_btn.pressed.connect(_playlist_ui.toggle)
-	StylesUI.apply_glass_btn(pl_btn)
+	var pl_btn := StylesUI.icon_btn("playlist", "Playlist", Vector2(32, 28), _playlist_ui.toggle)
 	top.add_child(pl_btn)
 
-	var fs_btn := Button.new()
-	fs_btn.text = "⛶"
-	fs_btn.tooltip_text = "Fullscreen"
-	fs_btn.custom_minimum_size.x = 32
-	fs_btn.add_theme_font_size_override("font_size", 16)
-	fs_btn.focus_mode = Control.FOCUS_NONE
-	fs_btn.pressed.connect(_toggle_fullscreen)
-	StylesUI.apply_glass_btn(fs_btn)
+	var fs_btn := StylesUI.icon_btn("fullscreen", "Fullscreen", Vector2(32, 28), _toggle_fullscreen)
 	top.add_child(fs_btn)
 
-	var set_btn := Button.new()
-	set_btn.text = "⚙"
-	set_btn.tooltip_text = "Settings"
-	set_btn.custom_minimum_size.x = 32
-	set_btn.add_theme_font_size_override("font_size", 16)
-	set_btn.focus_mode = Control.FOCUS_NONE
-	set_btn.pressed.connect(_settings.toggle)
-	StylesUI.apply_glass_btn(set_btn)
+	var set_btn := StylesUI.icon_btn("settings", "Settings", Vector2(32, 28), _settings.toggle)
 	top.add_child(set_btn)
 
 	# ── Bottom row: seek bar ───────────────────────────────────────────
@@ -314,20 +253,20 @@ func _on_shuffle_pressed() -> void:
 func _refresh_mode_buttons() -> void:
 	match _playlist.get_play_mode():
 		Playlist.PlayMode.SEQUENTIAL:
-			_loop_btn.text = "→"
+			StylesUI.set_icon(_loop_btn, "loop_none")
 			_loop_btn.tooltip_text = "Sequential (click to loop all)"
 			_shuffle_btn.modulate.a = 0.5
 		Playlist.PlayMode.LOOP_ALL:
-			_loop_btn.text = "🔁"
+			StylesUI.set_icon(_loop_btn, "loop_all")
 			_loop_btn.tooltip_text = "Loop All (click to loop one)"
 			_shuffle_btn.modulate.a = 0.5
 		Playlist.PlayMode.LOOP_ONE:
-			_loop_btn.text = "🔂"
+			StylesUI.set_icon(_loop_btn, "loop_one")
 			_loop_btn.tooltip_text = "Loop One (click to shuffle)"
 			_shuffle_btn.modulate.a = 0.5
 		Playlist.PlayMode.SHUFFLE:
-			_loop_btn.text = "🔁"
-			_loop_btn.tooltip_text = "Shuffle (click for sequential)"
+			StylesUI.set_icon(_loop_btn, "loop_all")
+			_loop_btn.tooltip_text = "Shuffle active (click for sequential)"
 			_shuffle_btn.modulate.a = 1.0
 
 
@@ -431,7 +370,12 @@ func _load_stream(path: String) -> AudioStream:
 
 
 func _refresh_play_btn() -> void:
-	_play_btn.text = "⏸" if (_player.playing and not _paused) else "▶"
+	if _player.playing and not _paused:
+		StylesUI.set_icon(_play_btn, "pause")
+		_play_btn.tooltip_text = "Pause"
+	else:
+		StylesUI.set_icon(_play_btn, "play")
+		_play_btn.tooltip_text = "Play"
 
 
 func _fmt(secs: float) -> String:
