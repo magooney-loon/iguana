@@ -123,6 +123,8 @@ static func apply_glass_btn(btn: Button) -> void:
 
 static func apply_bar_style(panel: PanelContainer) -> void:
 	var style := glass_box(Color(0.06, 0.07, 0.12, 0.72), 12.0, true)
+	style.corner_radius_bottom_left  = 0
+	style.corner_radius_bottom_right = 0
 	style.content_margin_left   = 14.0
 	style.content_margin_right  = 14.0
 	style.content_margin_top    = 8.0
