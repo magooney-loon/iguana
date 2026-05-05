@@ -120,16 +120,16 @@ func _build_bar() -> void:
 
 	top.add_child(StylesUI.make_vsep())
 
-	var prev_btn := StylesUI.icon_btn("prev", "Previous track", Vector2(32, 28), _on_prev)
+	var prev_btn := StylesUI.icon_btn("prev", "Previous track", Vector2(36, 28), _on_prev)
 	top.add_child(prev_btn)
 
 	_play_btn = StylesUI.icon_btn("play", "Play", Vector2(36, 28), _on_play_pause)
 	top.add_child(_play_btn)
 
-	var stop_btn := StylesUI.icon_btn("stop", "Stop", Vector2(32, 28), _on_stop)
+	var stop_btn := StylesUI.icon_btn("stop", "Stop", Vector2(36, 28), _on_stop)
 	top.add_child(stop_btn)
 
-	var next_btn := StylesUI.icon_btn("next", "Next track", Vector2(32, 28), _on_next)
+	var next_btn := StylesUI.icon_btn("next", "Next track", Vector2(36, 28), _on_next)
 	top.add_child(next_btn)
 
 	top.add_child(StylesUI.make_vsep())
@@ -151,7 +151,7 @@ func _build_bar() -> void:
 	top.add_child(StylesUI.make_vsep())
 
 	# Volume control
-	_vol_btn = StylesUI.icon_btn("volume_high", "Mute / Unmute", Vector2(32, 28), _on_vol_mute_toggle)
+	_vol_btn = StylesUI.icon_btn("volume_high", "Mute / Unmute", Vector2(36, 28), _on_vol_mute_toggle)
 	top.add_child(_vol_btn)
 
 	_vol_slider = HSlider.new()

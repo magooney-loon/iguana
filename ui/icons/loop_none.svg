@@ -1,1 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="14 7 19 12 14 17"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e8ecf4"/>
+      <stop offset="100%" stop-color="#a8b0c0"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="140%">
+      <feDropShadow dx="0.5" dy="1" stdDeviation="0.8" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <polyline points="17 1 21 5 17 9" stroke="url(#steel)" stroke-width="2.5" filter="url(#shadow)"/>
+  <path d="M3 11V9a4 4 0 0 1 4-4h14" stroke="url(#steel)" stroke-width="2.5" filter="url(#shadow)"/>
+  <polyline points="7 23 3 19 7 15" stroke="url(#steel)" stroke-width="2.5" filter="url(#shadow)"/>
+  <path d="M21 13v2a4 4 0 0 1-4 4H3" stroke="url(#steel)" stroke-width="2.5" filter="url(#shadow)"/>
+  <line x1="4" y1="4" x2="20" y2="20" stroke="url(#steel)" stroke-width="2.5" filter="url(#shadow)"/>
+</svg>
