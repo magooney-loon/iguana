@@ -1,8 +1,8 @@
 shader_type canvas_item;
 
 //  @name:          Hyperspatial
-//  @author:        N/A
-//  @website:       N/A
+//  @author:        Test
+//  @website:       Test
 //  @description:   Folded-space IFS kaleidoscope with deep indigo-to-crimson palettes, acid green phantom pulses, morphing polygon constellations, and flowing silk ribbons
 //
 //  @exposure:       1.8

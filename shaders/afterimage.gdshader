@@ -1,8 +1,8 @@
 shader_type canvas_item;
 
 //  @name:          Afterimage
-//  @author:        N/A
-//  @website:       N/A
+//  @author:        Test
+//  @website:       Test
 //  @description:   IFS phantom raymarching with fractal lightning arcs, breathing rings, spiral vortex arms, neon scan lines, and liquid mercury highlights
 //
 //  @exposure:       1.6

@@ -1,8 +1,8 @@
 shader_type canvas_item;
 
 //  @name:          Submersion
-//  @author:        N/A
-//  @website:       N/A
+//  @author:        Test
+//  @website:       Test
 //  @description:   Deep-sea bioluminescent tunnel with organic wall oscillation, neon spiral bands, cosine palettes, and iridescent noise-driven morphing
 //
 //  @exposure:       1.2

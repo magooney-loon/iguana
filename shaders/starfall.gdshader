@@ -1,8 +1,8 @@
 shader_type canvas_item;
 
 //  @name:          Starfall
-//  @author:        N/A
-//  @website:       N/A
+//  @author:        Test
+//  @website:       Test
 //  @description:   Raymarched sacred geometry with bioluminescent overlays, aurora curtains, energy tendrils, plankton, and flowing silk ribbons
 //
 //  @exposure:       1.42

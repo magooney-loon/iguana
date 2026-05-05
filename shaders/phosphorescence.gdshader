@@ -1,8 +1,8 @@
 shader_type canvas_item;
 
 //  @name:          Phosphorescence
-//  @author:        N/A
-//  @website:       N/A
+//  @author:        Test
+//  @website:       Test
 //  @description:   Neon soft-body tunnel with iridescent plasma fill, mercury ring propagation, volumetric center rays, and noise-driven wall iridescence
 //
 //  @exposure:       1.3

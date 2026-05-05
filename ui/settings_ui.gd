@@ -20,8 +20,10 @@ var _shuffle_check: CheckBox
 var _shuffle_spin:  SpinBox
 
 # Post-process tab
-var _pp_sliders:      Dictionary = {}
-var _pp_shader_label: Label
+var _pp_sliders:          Dictionary = {}
+var _pp_shader_label:     Label
+var _shader_author_label: Label
+var _shader_website_label: Label
 
 # Debug tab
 var _dbg: Dictionary = {}
@@ -274,8 +276,25 @@ func _build_shaders_tab() -> Control:
 	_shader_dropdown.item_selected.connect(func(idx: int):
 		_visualizer._switch(idx)
 		_update_pp_sliders()
+		_update_shader_info()
 	)
 	vbox.add_child(_shader_dropdown)
+
+	StylesUI.win_sep(vbox)
+	StylesUI.win_section(vbox, "SHADER INFO")
+
+	_shader_author_label = Label.new()
+	_shader_author_label.add_theme_font_size_override("font_size", 12)
+	_shader_author_label.modulate.a = 0.75
+	vbox.add_child(_shader_author_label)
+
+	_shader_website_label = Label.new()
+	_shader_website_label.add_theme_font_size_override("font_size", 12)
+	_shader_website_label.modulate.a = 0.75
+	_shader_website_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(_shader_website_label)
+
+	_update_shader_info()
 
 	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "POST-PROCESSING")
@@ -373,9 +392,20 @@ func _get_pp_value(param: String) -> float:
 	return 0.0
 
 
+func _update_shader_info() -> void:
+	var meta: Dictionary = _visualizer.SHADERS[_visualizer._shader_index]
+	var author: String  = meta.get("author",  "N/A")
+	var website: String = meta.get("website", "N/A")
+	if _shader_author_label:
+		_shader_author_label.text  = "Author:   " + author
+	if _shader_website_label:
+		_shader_website_label.text = "Website:  " + website
+
+
 func _update_pp_sliders() -> void:
 	if _pp_shader_label:
 		_pp_shader_label.text = "Editing: %s" % _visualizer.SHADERS[_visualizer._shader_index].name
+	_update_shader_info()
 	for param in _pp_sliders:
 		var entry: Dictionary = _pp_sliders[param]
 		var value: float = _get_pp_value(param)
