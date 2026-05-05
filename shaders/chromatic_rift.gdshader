@@ -195,11 +195,11 @@ void fragment() {
 	vec3 cool_tint = vec3(0.1, 0.2, 0.9);
 	vec3 mood_tint = mix(cool_tint, warm_tint, warmth);
 
-	float lum = acc * 0.020;
-	float phantom_lum = acc_phantom * 0.030;
+	float lum = acc * 0.005;
+	float phantom_lum = acc_phantom * 0.008;
 
 	vec3 rm_col = mix(mood_tint, band_color, 0.4 + energy * 0.5) * lum;
-	rm_col += mood_tint * lum * (0.3 + energy * 0.4);
+	rm_col += mood_tint * lum * (0.10 + energy * 0.15);
 
 	// Phantom glow — acid green / electric gold (afterimage character)
 	rm_col += vec3(0.05, 0.9, 0.2) * phantom_lum * (0.8 + energy * 0.5);
@@ -336,6 +336,7 @@ void fragment() {
 	new_col += mix(vec3(0.0, 0.0, 0.015), vec3(0.0, 0.003, 0.03), uv.y);
 
 	vec3 col = trail + new_col;
+	col = col / (1.0 + col);   // Reinhard inside loop — prevents white saturation
 
 	COLOR = vec4(col, 1.0);
 }

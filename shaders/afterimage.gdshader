@@ -36,6 +36,7 @@ uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable
 // ── Utility ──────────────────────────────────────────────────────────
 uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform vec2 rect_size = vec2(1600.0, 900.0);
+const float LOOP_REINHARD = 1.0;
 
 #define TAU 6.28318530718
 
@@ -165,8 +166,8 @@ void fragment() {
 	}
 
 	// ── Raymarching color — acid chrome palette ──
-	float lum  = acc  * 0.016;
-	float ghost = acc2 * 0.026;
+	float lum  = acc  * 0.005;
+	float ghost = acc2 * 0.008;
 
 	vec3 rm_col = vec3(
 		lum * (0.25 + bass * 0.9  + kick * 1.4),
@@ -185,7 +186,7 @@ void fragment() {
 		0.5 + 0.5 * sin(hue + 2.09),
 		0.5 + 0.5 * sin(hue + 4.19)
 	);
-	rm_col += hue_col * lum * (0.4 + energy * 0.5);
+	rm_col += hue_col * lum * (0.2 + energy * 0.25);
 
 	// Percussion: sharp, distinct hue per drum
 	rm_col += vec3(1.0, 0.4, 0.0)  * acc  * 0.014 * kick;
@@ -318,9 +319,9 @@ void fragment() {
 		}
 	}
 	float membrane = sec_cell - min_cell;
-	float cell_edge = exp(-membrane * 18.0) * 0.03;
-	overlay += vec3(0.8, 0.0, 1.0) * cell_edge * 2.0;
-	overlay += vec3(0.3, 0.0, 0.9) * cell_edge * 0.8;
+	float cell_edge = exp(-membrane * 18.0) * 0.015;
+	overlay += vec3(0.8, 0.0, 1.0) * cell_edge * 1.5;
+	overlay += vec3(0.3, 0.0, 0.9) * cell_edge * 0.5;
 
 	// ── 3g. Liquid mercury highlights ─────────────────────────────────
 	float mercury = 0.0;
@@ -345,6 +346,7 @@ void fragment() {
 	new_col += mix(vec3(0.0, 0.0, 0.02), vec3(0.0, 0.005, 0.04), uv.y);
 
 	vec3 col = trail + new_col;
+	col = col / (1.0 + col * LOOP_REINHARD);
 
 	COLOR = vec4(col, 1.0);
 }

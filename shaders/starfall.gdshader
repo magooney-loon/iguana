@@ -36,6 +36,7 @@ uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable
 // ── Utility ──────────────────────────────────────────────────────────
 uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform vec2 rect_size = vec2(1600.0, 900.0);
+const float LOOP_REINHARD = 1.0;
 
 #define TAU 6.28318530718
 #define PI  3.14159265359
@@ -200,9 +201,9 @@ void fragment() {
 	vec3 cool_tint = vec3(0.0, 0.75 + cos(t * 0.4) * 0.1, 1.0);
 	vec3 mood_tint = mix(cool_tint, warm_tint, warmth);
 
-	float lum = ac * 0.018;
+	float lum = ac * 0.010;
 	vec3 rm_col = mix(vec3(0.0), band_color, min(lum * 3.0, 1.0)) * lum;
-	rm_col += mood_tint * lum * (0.3 + energy * 0.5);
+	rm_col += mood_tint * lum * (0.15 + energy * 0.25);
 
 	// Percussion strikes
 	rm_col += vec3(1.0, 0.42, 0.0) * ac * 0.012 * kick;
@@ -344,6 +345,8 @@ void fragment() {
 	// Trail boosts current frame's brightness without shifting its color
 	float trail_lum = dot(trail, vec3(0.299, 0.587, 0.114));
 	vec3 col = new_col * (1.0 + trail_lum) + trail * 0.1;
+
+	col = col / (1.0 + col * LOOP_REINHARD);
 
 	COLOR = vec4(col, 1.0);
 }

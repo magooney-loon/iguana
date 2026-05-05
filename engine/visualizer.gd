@@ -6,7 +6,6 @@ const SHADERS := [
 	{ "path": "res://shaders/phosphorescence.gdshader", "name": "Phosphorescence" },
 	{ "path": "res://shaders/submersion.gdshader",      "name": "Submersion" },
 	{ "path": "res://shaders/hyperspatial.gdshader",    "name": "Hyperspatial" },
-	{ "path": "res://shaders/chromatic_rift.gdshader", "name": "Chromatic Rift" },
 ]
 
 var _analyzer: AudioAnalyzer
@@ -49,11 +48,11 @@ var _post_display: ColorRect
 var _post_mat:     ShaderMaterial
 
 # Post-process params (exposed so the settings window can modify them)
-var pp_exposure       := 1.0
-var pp_tonemap_knee   := 0.35
-var pp_gamma          := 0.93
+var pp_exposure       := 1.42
+var pp_tonemap_knee   := 0.0
+var pp_gamma          := 2.0
 var pp_vignette_dark  := 0.30
-var pp_grain_strength := 0.012
+var pp_grain_strength := 0.01
 
 
 func _ready() -> void:
@@ -146,6 +145,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_E: _switch((_shader_index + 1) % _loaded_shaders.size())
 		KEY_Q: _switch((_shader_index - 1 + _loaded_shaders.size()) % _loaded_shaders.size())
 		KEY_S: _toggle_shuffle()
+		KEY_P: _toggle_post_process()
 
 
 func _switch(idx: int) -> void:
@@ -168,6 +168,11 @@ func _toggle_shuffle() -> void:
 	_shuffle_on    = !_shuffle_on
 	_shuffle_timer = 0.0
 	_ui.show_label("Shuffle %s" % ("ON" if _shuffle_on else "OFF"))
+
+
+func _toggle_post_process() -> void:
+	_post_display.visible = !_post_display.visible
+	_ui.show_label("Post-process %s" % ("ON" if _post_display.visible else "OFF"))
 
 
 func _shuffle() -> void:

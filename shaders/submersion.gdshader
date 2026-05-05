@@ -34,6 +34,7 @@ uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable
 
 uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform vec2 rect_size = vec2(1600.0, 900.0);
+const float LOOP_REINHARD = 1.0;
 
 // ── Constants ─────────────────────────────────────────────────────────
 #define PI  3.14159265359
@@ -272,11 +273,11 @@ void fragment() {
 	// ── Volumetric center rays ────────────────────────────────────
 	float vol = vol_rays(center, t);
 	vec3 core_col = mix(vec3(0.8, 0.95, 1.0), neon_col, clamp(r * 2.8, 0.0, 1.0));
-	new_col += core_col * vol * (0.07 + energy * 0.12);
+	new_col += core_col * vol * (0.03 + energy * 0.05);
 
 	// Convergence point — kept dim, tunnel depth comes from the feedback zoom
 	float core_r = exp(-r * (16.0 - energy * 8.5 - sub_bass * 4.5));
-	new_col += vec3(1.0, 0.93, 0.82) * core_r * (0.10 + beat * 0.06);
+	new_col += vec3(1.0, 0.93, 0.82) * core_r * (0.04 + beat * 0.02);
 
 	// ── Iridescent plasma fill (tunnel interior) ──────────────────
 	float pl = plasma_field(center * 1.95, t) * 0.5 + 0.5;
@@ -285,7 +286,7 @@ void fragment() {
 		vec3(0.5), vec3(0.5), vec3(1.0),
 		vec3(0.1 + warmth * 0.2, 0.35, 0.7 - brightness * 0.2)
 	);
-	new_col += plasma_col * pl * pl * tunnel_interior * (0.04 + energy * 0.07);
+	new_col += plasma_col * pl * pl * tunnel_interior * (0.015 + energy * 0.03);
 
 	// ── Mercury propagating rings ─────────────────────────────────
 	float rings = mercury_rings(center, t);
@@ -320,6 +321,7 @@ void fragment() {
 	// ══════════════════════════════════════════════════════════════
 
 	vec3 col = trail + new_col;
+	col = col / (1.0 + col * LOOP_REINHARD);
 
 	COLOR = vec4(col, 1.0);
 }

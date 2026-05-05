@@ -377,11 +377,19 @@ func _build_post_tab() -> Control:
 	note.modulate.a = 0.50
 	vbox.add_child(note)
 
+	var pp_toggle := CheckBox.new()
+	pp_toggle.text = "Post-process enabled  [P]"
+	pp_toggle.button_pressed = _visualizer._post_display.visible
+	pp_toggle.toggled.connect(func(on: bool):
+		_visualizer._post_display.visible = on
+	)
+	vbox.add_child(pp_toggle)
+
 	_win_sep(vbox)
 
 	_post_slider(vbox, "Exposure",        0.1,  3.0,  0.01, func(v: float): _visualizer.pp_exposure       = v)
 	_post_slider(vbox, "Tone compression",0.0,  2.0,  0.01, func(v: float): _visualizer.pp_tonemap_knee   = v)
-	_post_slider(vbox, "Gamma",           0.5,  2.0,  0.01, func(v: float): _visualizer.pp_gamma          = v)
+	_post_slider(vbox, "Gamma",           0.5,  3.0,  0.01, func(v: float): _visualizer.pp_gamma          = v)
 	_post_slider(vbox, "Vignette shadow", 0.0,  1.0,  0.01, func(v: float): _visualizer.pp_vignette_dark  = v)
 	_post_slider(vbox, "Film grain",      0.0,  0.08, 0.002,func(v: float): _visualizer.pp_grain_strength = v)
 
@@ -449,11 +457,11 @@ func _get_post_param(label: String) -> float:
 
 
 func _reset_post_defaults() -> void:
-	_visualizer.pp_exposure       = 1.0
-	_visualizer.pp_tonemap_knee   = 0.35
-	_visualizer.pp_gamma          = 0.93
+	_visualizer.pp_exposure       = 1.42
+	_visualizer.pp_tonemap_knee   = 0.0
+	_visualizer.pp_gamma          = 2.0
 	_visualizer.pp_vignette_dark  = 0.30
-	_visualizer.pp_grain_strength = 0.012
+	_visualizer.pp_grain_strength = 0.01
 	# Rebuild the tab to reflect reset values
 	var old_tab: int = _settings_tabs.current_tab
 	_settings_tabs.remove_child(_settings_tabs.get_child(1))   # index 1 = Post-Process tab

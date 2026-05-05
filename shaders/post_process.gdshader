@@ -3,8 +3,8 @@ shader_type canvas_item;
 uniform sampler2D screen_tex : hint_default_black, filter_linear, repeat_disable;
 uniform sampler2D noise_tex  : hint_default_white, filter_linear_mipmap, repeat_enable;
 
-uniform float exposure       = 1.0;
-uniform float tonemap_knee   = 0.35;   // 0 = bypass tonemap
+uniform float exposure       = 0.35;
+uniform float tonemap_knee   = 0.0;   // 0 = bypass tonemap
 uniform float gamma          = 0.93;   // 1.0 = bypass; <1 lifts, >1 darkens
 uniform float vignette_dark  = 0.30;   // 0 = no vignette, 1 = black edges
 uniform float grain_strength = 0.012;  // 0 = off

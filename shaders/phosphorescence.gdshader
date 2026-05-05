@@ -36,6 +36,7 @@ uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable
 // ── Utility ──────────────────────────────────────────────────────────
 uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform vec2 rect_size = vec2(1600.0, 900.0);
+const float LOOP_REINHARD = 1.0;
 
 // ── Constants ────────────────────────────────────────────────────────
 #define PI  3.14159265359
@@ -326,15 +327,15 @@ void fragment() {
 	vec3 rm_col = vec3(0.0);
 
 	// Organic blob glow
-	rm_col += mix(mood_tint, band_color, 0.4 + energy * 0.6) * acc * 0.020;
+	rm_col += mix(mood_tint, band_color, 0.4 + energy * 0.6) * acc * 0.004;
 
 	// Abstract rings — neon magenta/hot pink
-	rm_col += vec3(1.0, 0.05, 0.75) * acc_ring * 0.018;
-	rm_col += vec3(0.7, 0.0, 1.0)   * acc_ring * kick * 0.015;
+	rm_col += vec3(1.0, 0.05, 0.75) * acc_ring * 0.004;
+	rm_col += vec3(0.7, 0.0, 1.0)   * acc_ring * kick * 0.003;
 
 	// Phantom pulse — acid green / electric gold
 	vec3 pulse_col = mix(vec3(0.1, 1.0, 0.3), vec3(1.0, 0.9, 0.0), warmth);
-	rm_col += pulse_col * acc_pulse * 0.022;
+	rm_col += pulse_col * acc_pulse * 0.005;
 
 	// Percussion strikes
 	rm_col += vec3(0.2, 0.65, 1.0) * acc * kick  * 0.018;
@@ -418,13 +419,13 @@ void fragment() {
 
 	// ── 3f. Interference fringes ──────────────────────────────────────
 	float fringes = interference(uv, t);
-	overlay += vec3(0.0, 1.0, 0.9)  * fringes * (0.5 + energy * 0.5);
-	overlay += vec3(1.0, 0.15, 0.8) * fringes * warmth * 0.4;
+	overlay += vec3(0.0, 1.0, 0.9)  * fringes * (0.2 + energy * 0.25);
+	overlay += vec3(1.0, 0.15, 0.8) * fringes * warmth * 0.2;
 
 	// ── 3g. Lissajous curves (3:2 figure) ─────────────────────────────
 	float liss = lissajous(uv, t);
-	overlay += vec3(0.1, 0.5, 1.0) * liss * 2.0;
-	overlay += vec3(1.0, 0.35, 0.2) * liss * warmth * 1.0;
+	overlay += vec3(0.1, 0.5, 1.0) * liss * 0.8;
+	overlay += vec3(1.0, 0.35, 0.2) * liss * warmth * 0.4;
 
 	// ── 3h. Second Lissajous (5:4 figure) ─────────────────────────────
 	float liss2 = 0.0;
@@ -438,8 +439,8 @@ void fragment() {
 		float d = length(uv - pt);
 		liss2 += exp(-d * 280.0) * 0.007;
 	}
-	overlay += vec3(0.9, 0.1, 1.0) * liss2 * 2.0;
-	overlay += vec3(0.1, 1.0, 0.5) * liss2 * brightness * 1.0;
+	overlay += vec3(0.9, 0.1, 1.0) * liss2 * 0.8;
+	overlay += vec3(0.1, 1.0, 0.5) * liss2 * brightness * 0.4;
 
 	// ── 3i. Bioluminescent plankton ───────────────────────────────────
 	float plankton = 0.0;
@@ -470,11 +471,8 @@ void fragment() {
 	}
 	overlay += vec3(0.35, 1.0, 0.9) * mercury * 0.15;
 
-	// ── 3k. Organic texture ───────────────────────────────────────────
-	float n1 = texture(noise_tex, uv * 4.0 + t * 0.025).r;
-	float n2 = texture(noise_tex, uv * 8.0 - t * 0.015 + 3.7).r;
-	float cellular_tex = abs(n1 - n2) * 0.08;
-	overlay += vec3(0.0, 0.9, 0.75) * cellular_tex * (0.4 + energy * 0.7);
+	// Cellular texture disabled — per-pixel broadband emission causes uniform fog
+	// through the feedback loop (same reason as starfall).
 
 	// ══════════════════════════════════════════════════════════════════
 	//  PHASE 4: COMPOSITE — trail + new geometry
@@ -485,6 +483,7 @@ void fragment() {
 	new_col += mix(vec3(0.0, 0.005, 0.03), vec3(0.0, 0.008, 0.025), uv.y) * 0.04;
 
 	vec3 col = trail + new_col;
+	col = col / (1.0 + col * LOOP_REINHARD);
 
 	COLOR = vec4(col, 1.0);
 }
