@@ -103,7 +103,7 @@ func _init_styles() -> void:
 func _build() -> void:
 	_win = Window.new()
 	_win.title    = "Playlist"
-	_win.size     = Vector2i(400, 520)
+	_win.size     = Vector2i(400, 580)
 	_win.min_size = Vector2i(320, 300)
 	_win.transparent = true
 	_win.borderless = true
