@@ -420,14 +420,17 @@ func _update_shader_info() -> void:
 func _restart_desc_marquee() -> void:
 	if _shader_desc_tween and _shader_desc_tween.is_valid():
 		_shader_desc_tween.kill()
-	_setup_desc_marquee.call_deferred()
+	if not _shader_desc_label or not _shader_desc_clip:
+		return
+	if _shader_desc_clip.size.x > 0.0:
+		_setup_desc_marquee()
+	else:
+		_shader_desc_clip.resized.connect(_setup_desc_marquee, CONNECT_ONE_SHOT)
 
 
 func _setup_desc_marquee() -> void:
 	if not _shader_desc_label or not _shader_desc_clip:
 		return
-	await get_tree().process_frame
-	await get_tree().process_frame
 
 	var natural_w := _shader_desc_label.get_combined_minimum_size().x
 	var clip_w    := _shader_desc_clip.size.x
