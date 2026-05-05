@@ -1,6 +1,8 @@
 # Iguana — MilkDrop-Style Audio Visualizer
 `It really licks the eyeball... yeah.`
 
+<img src="icon.webp" width="128" align="right" />
+
 Godot 4 audio-reactive shader visualizer with a feedback rendering pipeline. Analyzes audio in real time, extracts frequency, transient, and mood uniforms, and feeds them into a feedback loop that accumulates visual history across frames — the core technique behind MilkDrop.
 
 **Language:** GDScript/GDShader  
