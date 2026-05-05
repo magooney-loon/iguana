@@ -363,7 +363,6 @@ func _setup_marquees() -> void:
 
 		var natural_w := label.get_combined_minimum_size().x
 		var clip_w := clip.size.x
-		var clip_h := clip.size.y
 
 		# Size the label width to natural width (anchors handle height)
 		label.size.x = max(natural_w, clip_w)
@@ -474,10 +473,10 @@ func _on_clear_pressed() -> void:
 static func _fmt_duration(secs: float) -> String:
 	if secs <= 0.0:
 		return "0:00"
-	var total: int = int(secs)
-	var h: int = total / 3600
-	var m: int = (total % 3600) / 60
-	var s: int = total % 60
+	var total := int(secs)
+	var h := int(total / 3600.0)
+	var m := int((total % 3600) / 60.0)
+	var s := total % 60
 	if h > 0:
 		return "%d:%02d:%02d" % [h, m, s]
 	return "%d:%02d" % [m, s]
