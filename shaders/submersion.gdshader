@@ -34,7 +34,7 @@ uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable
 
 uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform vec2 rect_size = vec2(1600.0, 900.0);
-const float LOOP_REINHARD = 1.0;
+const float LOOP_REINHARD = 0.69;
 
 // ── Constants ─────────────────────────────────────────────────────────
 #define PI  3.14159265359
