@@ -88,7 +88,7 @@ func _ready() -> void:
 	mouse_exited.connect(_on_player_mouse_exited)
 
 	# Apply industrial noise texture to the player bar
-	StylesUI.apply_noise(self, true)
+	StylesUI.apply_noise(self, false)
 
 	_setup_logo.call_deferred()
 
