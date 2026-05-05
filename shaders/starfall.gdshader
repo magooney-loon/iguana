@@ -345,8 +345,5 @@ void fragment() {
 	float trail_lum = dot(trail, vec3(0.299, 0.587, 0.114));
 	vec3 col = new_col * (1.0 + trail_lum) + trail * 0.1;
 
-	// Vignette
-	col *= mix(0.35, 1.0, 1.0 - smoothstep(0.25, 1.3, length(uv - 0.5) * 1.8));
-
-	COLOR = vec4(clamp(col, 0.0, 1.0), 1.0);
+	COLOR = vec4(col, 1.0);
 }

@@ -346,20 +346,5 @@ void fragment() {
 
 	vec3 col = trail + new_col;
 
-	// ══════════════════════════════════════════════════════════════════
-	//  PHASE 5: POST-PROCESSING (mild — lives inside the feedback loop)
-	// ══════════════════════════════════════════════════════════════════
-	// Reinhard with soft knee
-	col = col / (1.0 + col * 0.35);
-
-	// Mild gamma lift
-	col = pow(max(col, vec3(0.0)), vec3(0.93));
-
-	// Vignette — acid aesthetic wants a slightly tighter vignette
-	col *= mix(0.3, 1.0, 1.0 - smoothstep(0.2, 1.2, length(uv - 0.5) * 1.8));
-
-	// Film grain
-	col += (texture(noise_tex, uv * 300.0 + fract(t * 0.07)).r - 0.5) * 0.012;
-
-	COLOR = vec4(clamp(col, 0.0, 1.0), 1.0);
+	COLOR = vec4(col, 1.0);
 }

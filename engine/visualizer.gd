@@ -43,6 +43,18 @@ var _transitioning := false
 var _transition_time := 0.0
 const TRANSITION_DURATION := 1.5
 
+# Post-processing display layer — reads raw FeedbackViewport texture,
+# applies tonemap/gamma/vignette/grain without feeding back into prev_frame.
+var _post_display: ColorRect
+var _post_mat:     ShaderMaterial
+
+# Post-process params (exposed so the settings window can modify them)
+var pp_exposure       := 1.0
+var pp_tonemap_knee   := 0.35
+var pp_gamma          := 0.93
+var pp_vignette_dark  := 0.30
+var pp_grain_strength := 0.012
+
 
 func _ready() -> void:
 	_analyzer = AudioAnalyzer.new()
@@ -84,12 +96,24 @@ func _ready() -> void:
 			_backbuffer_vp.size = Vector2i(container.size)
 	)
 
+	# Post-processing display layer: covers the raw SubViewportContainer output with
+	# a tone-mapped/gamma-corrected version. It reads _feedback_vp.get_texture() as
+	# a plain uniform — it is NEVER the render target, so nothing feeds back through it.
+	_post_mat = ShaderMaterial.new()
+	_post_mat.shader = load("res://shaders/post_process.gdshader")
+	_post_display = ColorRect.new()
+	_post_display.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_post_display.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_post_display.material = _post_mat
+
 	# UI lives on the container so it is NOT captured in the feedback texture.
 	# If it were inside the SubViewport its labels would trail and spiral forever.
 	_ui = VisualizerUI.new()
 	_ui.setup(_analyzer, SHADERS, self)
 
-	# Defer both add_child calls: parent nodes are still setting up at _ready() time.
+	# Defer add_child calls: parent nodes are still setting up at _ready() time.
+	# post_display goes in before UI/overlay so UI renders above it.
+	container.add_child.call_deferred(_post_display)
 	container.add_child.call_deferred(_ui)
 	container.get_parent().add_child.call_deferred(_backbuffer_vp)
 
@@ -234,3 +258,15 @@ func _push_uniforms(mat: ShaderMaterial) -> void:
 	mat.set_shader_parameter("noise_tex",   _noise_tex)
 	for i in range(a._row_peaks.size()):
 		mat.set_shader_parameter("peak_%02d" % i, a._row_peaks[i])
+
+	# Push post-process uniforms to the display layer each frame.
+	# screen_tex is set once here because get_texture() returns a stable object,
+	# but we re-set it to avoid any edge cases on first frame.
+	_post_mat.set_shader_parameter("screen_tex",     _feedback_vp.get_texture())
+	_post_mat.set_shader_parameter("noise_tex",      _noise_tex)
+	_post_mat.set_shader_parameter("time_val",       a._time)
+	_post_mat.set_shader_parameter("exposure",       pp_exposure)
+	_post_mat.set_shader_parameter("tonemap_knee",   pp_tonemap_knee)
+	_post_mat.set_shader_parameter("gamma",          pp_gamma)
+	_post_mat.set_shader_parameter("vignette_dark",  pp_vignette_dark)
+	_post_mat.set_shader_parameter("grain_strength", pp_grain_strength)

@@ -15,6 +15,7 @@ var _seeking := false
 
 # ── Settings window ───────────────────────────────────────────────────────────
 var _settings_win:   Window
+var _settings_tabs:  TabContainer
 var _shader_btns:    Array[Button] = []
 var _shuffle_check:  CheckBox
 var _shuffle_spin:   SpinBox
@@ -289,22 +290,23 @@ func _build_settings_window() -> void:
 	content_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(content_margin)
 
-	var tabs := TabContainer.new()
-	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	tabs.add_theme_stylebox_override("tab_fg", _glass_box(_C_BTN_H, 8.0, true))
-	tabs.add_theme_stylebox_override("tab_bg", _glass_box(_C_BTN, 8.0, true))
-	tabs.add_theme_stylebox_override("tab_hover", _glass_box(_C_ACCENT, 8.0, true))
+	_settings_tabs = TabContainer.new()
+	_settings_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_settings_tabs.add_theme_stylebox_override("tab_fg", _glass_box(_C_BTN_H, 8.0, true))
+	_settings_tabs.add_theme_stylebox_override("tab_bg", _glass_box(_C_BTN, 8.0, true))
+	_settings_tabs.add_theme_stylebox_override("tab_hover", _glass_box(_C_ACCENT, 8.0, true))
 	var tab_panel := _glass_box(Color(0.04, 0.05, 0.09, 0.60), 10.0, false)
 	tab_panel.content_margin_left   = 10.0
 	tab_panel.content_margin_right  = 10.0
 	tab_panel.content_margin_top    = 10.0
 	tab_panel.content_margin_bottom = 10.0
-	tabs.add_theme_stylebox_override("panel", tab_panel)
-	content_margin.add_child(tabs)
+	_settings_tabs.add_theme_stylebox_override("panel", tab_panel)
+	content_margin.add_child(_settings_tabs)
 
-	tabs.add_child(_build_general_tab())
-	tabs.add_child(_build_shaders_tab())
-	tabs.add_child(_build_debug_tab())
+	_settings_tabs.add_child(_build_general_tab())
+	_settings_tabs.add_child(_build_post_tab())
+	_settings_tabs.add_child(_build_shaders_tab())
+	_settings_tabs.add_child(_build_debug_tab())
 
 
 # ── General tab ──────────────────────────────────────────────────────────────
@@ -358,6 +360,106 @@ func _build_general_tab() -> Control:
 	vbox.add_child(spacer)
 
 	return vbox
+
+
+# ── Post-Process tab ─────────────────────────────────────────────────────────
+
+func _build_post_tab() -> Control:
+	var vbox := VBoxContainer.new()
+	vbox.name = "Post-Process"
+	vbox.add_theme_constant_override("separation", 6)
+
+	_win_section(vbox, "DISPLAY POST-PROCESSING")
+
+	var note := Label.new()
+	note.text = "Applied after the feedback loop — changes here\nnever feed back into the visualizer."
+	note.add_theme_font_size_override("font_size", 11)
+	note.modulate.a = 0.50
+	vbox.add_child(note)
+
+	_win_sep(vbox)
+
+	_post_slider(vbox, "Exposure",        0.1,  3.0,  0.01, func(v: float): _visualizer.pp_exposure       = v)
+	_post_slider(vbox, "Tone compression",0.0,  2.0,  0.01, func(v: float): _visualizer.pp_tonemap_knee   = v)
+	_post_slider(vbox, "Gamma",           0.5,  2.0,  0.01, func(v: float): _visualizer.pp_gamma          = v)
+	_post_slider(vbox, "Vignette shadow", 0.0,  1.0,  0.01, func(v: float): _visualizer.pp_vignette_dark  = v)
+	_post_slider(vbox, "Film grain",      0.0,  0.08, 0.002,func(v: float): _visualizer.pp_grain_strength = v)
+
+	_win_sep(vbox)
+
+	var reset_btn := Button.new()
+	reset_btn.text = "Reset to defaults"
+	reset_btn.focus_mode = Control.FOCUS_NONE
+	reset_btn.pressed.connect(_reset_post_defaults)
+	_apply_glass_btn(reset_btn)
+	vbox.add_child(reset_btn)
+
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(spacer)
+
+	return vbox
+
+
+func _post_slider(parent: VBoxContainer, label: String,
+		lo: float, hi: float, step: float, cb: Callable) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+
+	var lbl := Label.new()
+	lbl.text = label
+	lbl.add_theme_font_size_override("font_size", 12)
+	lbl.custom_minimum_size.x = 145
+	row.add_child(lbl)
+
+	var slider := HSlider.new()
+	slider.min_value = lo
+	slider.max_value = hi
+	slider.step      = step
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.focus_mode = Control.FOCUS_NONE
+
+	var val_lbl := Label.new()
+	val_lbl.add_theme_font_size_override("font_size", 12)
+	val_lbl.custom_minimum_size.x = 40
+	val_lbl.horizontal_alignment  = HORIZONTAL_ALIGNMENT_RIGHT
+
+	# Wire initial values from visualizer
+	var initial: float = _get_post_param(label)
+	slider.value   = initial
+	val_lbl.text   = "%.2f" % initial
+
+	slider.value_changed.connect(func(v: float):
+		val_lbl.text = "%.2f" % v
+		cb.call(v)
+	)
+	row.add_child(slider)
+	row.add_child(val_lbl)
+	parent.add_child(row)
+
+
+func _get_post_param(label: String) -> float:
+	match label:
+		"Exposure":         return _visualizer.pp_exposure
+		"Tone compression": return _visualizer.pp_tonemap_knee
+		"Gamma":            return _visualizer.pp_gamma
+		"Vignette shadow":  return _visualizer.pp_vignette_dark
+		"Film grain":       return _visualizer.pp_grain_strength
+	return 0.0
+
+
+func _reset_post_defaults() -> void:
+	_visualizer.pp_exposure       = 1.0
+	_visualizer.pp_tonemap_knee   = 0.35
+	_visualizer.pp_gamma          = 0.93
+	_visualizer.pp_vignette_dark  = 0.30
+	_visualizer.pp_grain_strength = 0.012
+	# Rebuild the tab to reflect reset values
+	var old_tab: int = _settings_tabs.current_tab
+	_settings_tabs.remove_child(_settings_tabs.get_child(1))   # index 1 = Post-Process tab
+	_settings_tabs.add_child(_build_post_tab())
+	_settings_tabs.move_child(_settings_tabs.get_child(_settings_tabs.get_child_count() - 1), 1)
+	_settings_tabs.current_tab = old_tab
 
 
 # ── Shaders tab ───────────────────────────────────────────────────────────────

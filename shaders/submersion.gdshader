@@ -321,22 +321,5 @@ void fragment() {
 
 	vec3 col = trail + new_col;
 
-	// ── CRT film grain ────────────────────────────────────────────
-	float grain = texture(noise_tex, fract(uv * 320.0 + fract(t * 0.073))).r;
-	col += (grain - 0.5) * 0.022;
-
-	// ── CRT scanlines ─────────────────────────────────────────────
-	float scan = sin(uv.y * rect_size.y * PI) * 0.5 + 0.5;
-	col *= mix(1.0, scan, 0.05);
-
-	// ── Vignette — pitch-black void frame ─────────────────────────
-	float vign_r = length(uv - 0.5) * 1.78;
-	float vign = 1.0 - smoothstep(0.25, 1.2, vign_r);
-	col *= mix(0.38, 1.0, vign);
-
-	// ── Deep void underlay ────────────────────────────────────────
-	vec3 void_col = vec3(0.0, 0.004, 0.018) * (1.0 - vign * 0.6);
-	col = max(col, void_col);
-
 	COLOR = vec4(col, 1.0);
 }

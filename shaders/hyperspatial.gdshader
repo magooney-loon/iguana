@@ -478,18 +478,5 @@ void fragment() {
 	// ── COMPOSITE with feedback ─────────────────────────────────────
 	vec3 final_col = trail + col;
 
-	// Hard tonemap — crush fog midtones but let shapes breathe
-	final_col = final_col / (1.0 + final_col * 1.4);
-
-	// Mild gamma lift — brightens without causing feedback drift
-	final_col = pow(max(final_col, vec3(0.0)), vec3(0.94));
-
-	// Vignette: deep edges
-	float vig = 1.0 - smoothstep(0.35, 1.05, length(uv - 0.5) * 1.5);
-	final_col *= mix(0.5, 1.0, vig);
-
-	// Film grain — prevents banding in feedback accumulation
-	final_col += (texture(noise_tex, uv * 300.0 + fract(t * 0.07)).r - 0.5) * 0.012;
-
-	COLOR = vec4(clamp(final_col, 0.0, 1.0), 1.0);
+	COLOR = vec4(final_col, 1.0);
 }

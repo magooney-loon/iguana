@@ -337,8 +337,5 @@ void fragment() {
 
 	vec3 col = trail + new_col;
 
-	// Vignette
-	col *= mix(0.3, 1.0, 1.0 - smoothstep(0.22, 1.25, length(uv - 0.5) * 1.8));
-
-	COLOR = vec4(clamp(col, 0.0, 1.0), 1.0);
+	COLOR = vec4(col, 1.0);
 }
