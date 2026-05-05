@@ -172,7 +172,7 @@ func _build_bar() -> void:
 
 	var fs_btn := Button.new()
 	fs_btn.text = "⛶"
-	fs_btn.tooltip_text = "Fullscreen  [F]"
+	fs_btn.tooltip_text = "Fullscreen"
 	fs_btn.custom_minimum_size.x = 36
 	fs_btn.add_theme_font_size_override("font_size", 18)
 	fs_btn.focus_mode = Control.FOCUS_NONE
@@ -328,7 +328,7 @@ func _build_general_tab() -> Control:
 	_win_section(vbox, "AUTO-SHUFFLE")
 
 	_shuffle_check = CheckBox.new()
-	_shuffle_check.text = "Auto-shuffle  [S]"
+	_shuffle_check.text = "Auto-shuffle"
 	_shuffle_check.toggled.connect(func(on: bool):
 		_visualizer._shuffle_on    = on
 		_visualizer._shuffle_timer = 0.0
@@ -359,7 +359,7 @@ func _build_general_tab() -> Control:
 	_win_section(vbox, "KEYBOARD SHORTCUTS")
 
 	var keys := Label.new()
-	keys.text = "Q / E     previous / next shader\nS           toggle auto-shuffle\nF           fullscreen\nSpace    play / pause"
+	keys.text = "Q / E       previous / next shader\nS             toggle auto-shuffle\nP             toggle post-processing\nF             fullscreen\nSpace       play / pause\nEsc          stop"
 	keys.add_theme_font_size_override("font_size", 12)
 	keys.modulate.a = 0.55
 	vbox.add_child(keys)
@@ -393,7 +393,7 @@ func _build_post_tab() -> Control:
 	vbox.add_child(note)
 
 	var pp_toggle := CheckBox.new()
-	pp_toggle.text = "Post-process enabled  [P]"
+	pp_toggle.text = "Post-process enabled"
 	pp_toggle.button_pressed = _visualizer._post_display.visible
 	pp_toggle.toggled.connect(func(on: bool):
 		_visualizer._post_display.visible = on
