@@ -13,12 +13,16 @@ var _vol_btn:    Button
 var _vol_slider: HSlider
 var _seeking := false
 
+# ── Logo ──────────────────────────────────────────────────────────────────────
+var _logo: TextureRect
+
 # ── Auto-hide ─────────────────────────────────────────────────────────────────
 var _hide_timer    := 0.0
 var _hidden        := false
 var _mouse_inside  := false
 var _hide_tween:   Tween
 var _origin_y      := 0.0
+var _logo_origin_y := 0.0
 var _origin_y_set  := false
 const AUTO_HIDE_DELAY := 2.0
 const AUTO_HIDE_SLIDE := 0.35
@@ -82,6 +86,8 @@ func _ready() -> void:
 
 	mouse_entered.connect(_on_player_mouse_entered)
 	mouse_exited.connect(_on_player_mouse_exited)
+
+	_setup_logo.call_deferred()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -216,6 +222,31 @@ func _build_bar() -> void:
 #  Frame update
 # ─────────────────────────────────────────────────────────────────────────────
 
+func _setup_logo() -> void:
+	var tex := load("res://icon.webp") as Texture2D
+	if tex == null:
+		return
+	_logo = TextureRect.new()
+	_logo.texture = tex
+	_logo.expand_mode = TextureRect.EXPAND_KEEP_SIZE
+	_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_logo.custom_minimum_size = Vector2(80, 80)
+	_logo.size = Vector2(80, 80)
+	_logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_logo.z_index = 99
+	get_parent().add_child(_logo)
+	# Centre horizontally, sit just above the player bar
+	_logo.position = Vector2(
+		(get_parent().size.x - _logo.size.x) * 0.5,
+		position.y - _logo.size.y - 4.0
+	)
+	# Keep centred on window resize
+	get_parent().resized.connect(func():
+		if is_instance_valid(_logo):
+			_logo.position.x = (get_parent().size.x - _logo.size.x) * 0.5
+	)
+
+
 func _on_player_mouse_entered() -> void:
 	_mouse_inside = true
 	_hide_timer = 0.0
@@ -245,12 +276,17 @@ func _tick_auto_hide(delta: float) -> void:
 func _hide_player() -> void:
 	if not _origin_y_set:
 		_origin_y = position.y
+		_logo_origin_y = _logo.position.y if is_instance_valid(_logo) else 0.0
 		_origin_y_set = true
 	_hidden = true
 	if _hide_tween and _hide_tween.is_valid():
 		_hide_tween.kill()
+	var slide := size.y - AUTO_HIDE_PEEK
 	_hide_tween = create_tween().set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	_hide_tween.tween_property(self, "position:y", _origin_y + size.y - AUTO_HIDE_PEEK, AUTO_HIDE_SLIDE)
+	_hide_tween.set_parallel(true)
+	_hide_tween.tween_property(self, "position:y", _origin_y + slide, AUTO_HIDE_SLIDE)
+	if is_instance_valid(_logo):
+		_hide_tween.tween_property(_logo, "position:y", _logo_origin_y + slide, AUTO_HIDE_SLIDE)
 
 
 func _show_player() -> void:
@@ -259,7 +295,10 @@ func _show_player() -> void:
 	if _hide_tween and _hide_tween.is_valid():
 		_hide_tween.kill()
 	_hide_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_hide_tween.set_parallel(true)
 	_hide_tween.tween_property(self, "position:y", _origin_y, AUTO_HIDE_SLIDE)
+	if is_instance_valid(_logo):
+		_hide_tween.tween_property(_logo, "position:y", _logo_origin_y, AUTO_HIDE_SLIDE)
 
 
 func _process(delta: float) -> void:
