@@ -261,7 +261,7 @@ func _rebuild_list() -> void:
 
 		# Inner HBox for layout
 		var hbox := HBoxContainer.new()
-		hbox.add_theme_constant_override("separation", 0)
+		hbox.add_theme_constant_override("separation", 2)
 		row.add_child(hbox)
 
 		# ── Remove button ─────────────────────────────────────────────
@@ -271,7 +271,7 @@ func _rebuild_list() -> void:
 		remove_btn.custom_minimum_size = Vector2(22, 22)
 		remove_btn.focus_mode = Control.FOCUS_NONE
 		remove_btn.mouse_filter = Control.MOUSE_FILTER_STOP
-		remove_btn.modulate.a = 0.3
+		remove_btn.modulate.a = 0.35
 		remove_btn.tooltip_text = "Remove from playlist"
 		StylesUI.apply_glass_btn(remove_btn)
 		remove_btn.pressed.connect(func() -> void:
@@ -284,7 +284,7 @@ func _rebuild_list() -> void:
 		num_lbl.text = "%d." % [i + 1]
 		num_lbl.add_theme_font_size_override("font_size", 12)
 		num_lbl.modulate.a = 0.40
-		num_lbl.custom_minimum_size.x = 28
+		num_lbl.custom_minimum_size.x = 20
 		num_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		num_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hbox.add_child(num_lbl)
