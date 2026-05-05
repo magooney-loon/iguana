@@ -193,6 +193,31 @@ func _build_general_tab() -> Control:
 	vbox.add_child(source_opt)
 
 	StylesUI.win_sep(vbox)
+	StylesUI.win_section(vbox, "CROSSFADE")
+
+	var xf_row := HBoxContainer.new()
+	xf_row.add_theme_constant_override("separation", 4)
+	var xf_pre := Label.new()
+	xf_pre.text = "Duration"
+	xf_row.add_child(xf_pre)
+	var xf_spin := SpinBox.new()
+	xf_spin.min_value = 0.5
+	xf_spin.max_value = 10.0
+	xf_spin.step      = 0.5
+	xf_spin.value     = AudioSource.crossfade_duration
+	xf_spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	xf_spin.value_changed.connect(func(v: float):
+		AudioSource.crossfade_duration = v
+		Config.crossfade_duration = v
+		Config.save()
+	)
+	xf_row.add_child(xf_spin)
+	var xf_sfx := Label.new()
+	xf_sfx.text = "seconds"
+	xf_row.add_child(xf_sfx)
+	vbox.add_child(xf_row)
+
+	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "SHADER SHUFFLE")
 
 	_shuffle_check = CheckBox.new()

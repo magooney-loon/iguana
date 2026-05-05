@@ -14,7 +14,7 @@ var _crossfade_tween: Tween
 
 # ── Crossfade ────────────────────────────────────────────────────────────────
 var _near_end_triggered := false
-const CROSSFADE_DURATION := 2.0
+var crossfade_duration := 2.0
 
 # ── Volume ───────────────────────────────────────────────────────────────────
 var _volume := 1.0
@@ -40,6 +40,7 @@ func _ready() -> void:
 	_fade_player.finished.connect(_on_player_finished)
 
 	set_volume(Config.volume)
+	crossfade_duration = Config.crossfade_duration
 
 
 # ── Playback ─────────────────────────────────────────────────────────────────
@@ -81,9 +82,9 @@ func crossfade_to(path: String) -> void:
 	# Tween: fade out current player, fade in fade player
 	_crossfade_tween = create_tween()
 	_crossfade_tween.set_parallel(true)
-	_crossfade_tween.tween_property(_player, "volume_db", -80.0, CROSSFADE_DURATION)\
+	_crossfade_tween.tween_property(_player, "volume_db", -80.0, crossfade_duration)\
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	_crossfade_tween.tween_property(_fade_player, "volume_db", 0.0, CROSSFADE_DURATION)\
+	_crossfade_tween.tween_property(_fade_player, "volume_db", 0.0, crossfade_duration)\
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	_crossfade_tween.set_parallel(false)
 	_crossfade_tween.tween_callback(func():
@@ -212,10 +213,10 @@ func _check_near_end() -> void:
 	if not _player.playing or _player.stream_paused or _player.stream == null:
 		return
 	var duration := _player.stream.get_length()
-	if duration <= CROSSFADE_DURATION * 2.0:
+	if duration <= crossfade_duration * 2.0:
 		return
 	var remaining := duration - _player.get_playback_position()
-	if remaining > CROSSFADE_DURATION:
+	if remaining > crossfade_duration:
 		return
 	_near_end_triggered = true
 	near_end.emit()

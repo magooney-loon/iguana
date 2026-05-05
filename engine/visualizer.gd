@@ -366,5 +366,6 @@ func save_settings() -> void:
 	Config.post_enabled      = _post_display.visible if is_instance_valid(_post_display) else true
 	Config.fullscreen        = (DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN)
 	Config.shader_index      = _shader_index
+	Config.crossfade_duration = AudioSource.crossfade_duration
 	Config.save()
 	_ui.show_label("Settings saved")
