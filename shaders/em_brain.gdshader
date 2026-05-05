@@ -1,19 +1,56 @@
 shader_type canvas_item;
 
 // ═══════════════════════════════════════════════════════════════════════
-//  @name:          FellyJish
-//  @author:        magooney
-//  @website:       github.com/magooney-loon
-//  @description:   Parametric jellyfish spiral with polar vortex feedback
+//  @name:          EM-Brain
+//  @author:        YoheiNishitsuji (magooney rmx)
+//  @website:       x.com/YoheiNishitsuji
+//  @description:   Rotating fractal domain-warp brain with chromatic split feedback
 //
 //  Post-processing defaults
-//  @exposure:       1.5
+//  @exposure:       1.4
 //  @tonemap_knee:   0.0
 //  @gamma:          2.2
-//  @vignette_dark:  0.25
-//  @grain_strength: 0.008
+//  @vignette_dark:  0.30
+//  @grain_strength: 0.006
 //  @loop_reinhard:  0.00
 // ═══════════════════════════════════════════════════════════════════════
+//
+//  Original tweet-code by YoheiNishitsuji:
+//    #define R rotate2D
+//    vec2 p=FC.xy,q,l=(p+p-r)/r.x*.4+vec2(-1.95,-.8),n;
+//    float s=6.,h,i,L=dot(l+1.7,l),e=99.;
+//    for(;i++<e;)l*=R(5.),n*=R(4.8)+rotate2D(t)*.01,
+//      h+=dot(r/r,sin(q=l*s*i+n)/s*6.),n-=cos(q),s*=1.05;
+//    h=-h*.4-L;o-=h*.5*vec4(.65,vec3(.9,.9,1));
+//
+//  99-iteration fractal accumulation. Two coordinate vectors `l` and
+//  `n` spiral through opposing rotations (5 rad and ~4.8 rad/step).
+//  Each step accumulates sin(l*s*i+n)/s*6 into a volumetric glow h,
+//  while n is warped by cos(q) feedback. Scale s*=1.05 adds fractal
+//  detail at progressively finer levels. Result: a brain-like organic
+//  structure with complex folding — the EM-Brain.
+//
+//  Decompressed algorithm:
+//    l = (2*fragCoord - res) / res.x * 0.4 + vec2(-1.95, -0.8)
+//    n = vec2(0), s = 6, h = 0, i = 0
+//    L = dot(l + 1.7, l)              — distance weighting / vignette
+//    for i = 1..99:
+//      l *= rotate2D(5.0)             — spiral coordinate transform
+//      n *= rotate2D(4.8) + rotate2D(t)*0.01  — warped counter-rotation
+//      q = l * s * i + n              — domain warp target
+//      h += dot(1,1, sin(q) * 6 / s) — accumulate volumetric glow
+//      n -= cos(q)                    — domain warp feedback
+//      s *= 1.05                      — fractal scale increase
+//    h = -h*0.4 - L                   — invert + distance falloff
+//    color -= h * 0.5 * (0.65, 0.9, 0.9, 1)  — teal/cyan output
+//
+//  Shader adaptation: 80–90 iterations with audio-reactive time speed,
+//  bass-modulated fractal scale, and chromatic split feedback. Each
+//  R/G/B channel samples the previous frame at a different rotation
+//  angle and directional flow offset — over many frames the channels
+//  diverge into prismatic rainbow-edged trails.
+// ═══════════════════════════════════════════════════════════════════════
+
 // ── Audio · all values 0–1, pushed every frame by AudioAnalyzer ─────
 //
 // Frequency bands (smoothed)
@@ -57,7 +94,7 @@ uniform int   frame           = 0;
 
 // ── Feedback loop ────────────────────────────────────────────────────
 uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable;
-uniform float loop_reinhard : hint_range(0.0, 3.0) = 0.6;
+uniform float loop_reinhard : hint_range(0.0, 3.0) = 0.5;
 
 // ── Utility · auto-provided ──────────────────────────────────────────
 uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
@@ -117,152 +154,139 @@ vec3 reinhard(vec3 col, float k) {
 void fragment() {
 	vec2 uv = UV;
 	float aspect = rect_size.x / rect_size.y;
-	vec2 p = (uv - 0.5) * vec2(aspect, 1.0);  // centered, aspect-corrected
 	float t = time_val;
 
 	// ══════════════════════════════════════════════════════════════════
-	//  1. FEEDBACK — polar vortex with concentric ripples
+	//  1. FEEDBACK — chromatic split
 	//
-	//  Operates in polar (r, θ) space instead of cartesian:
+	//  Each color channel (R, G, B) samples the previous frame at a
+	//  different rotation angle and directional flow displacement.
+	//  Over many frames the per-channel rotation diverges, splitting
+	//  trails into prismatic rainbow-edged echoes. Combined with a
+	//  shared zoom and per-channel directional flow for organic motion.
 	//
-	//    • Vortex rotation ∝ radius — inner trails barely drift,
-	//      outer trails spin into fast spirals. Creates a natural
-	//      whirlpool rather than the flat uniform rotation.
-	//
-	//    • Sine-modulated radial zoom — adds concentric breathing
-	//      rings that expand/contract, not a flat tunnel shrink.
-	//
-	//    • Outward-pulsing ripple displacement along the radial
-	//      direction — organic jellyfish pulsation on the trails.
-	//
-	//  Together these create a whirlpool/mandala trail pattern that
-	//  compounds differently from the standard zoom+rotate+warp.
+	//  This is fundamentally different from standard zoom+rotate+warp:
+	//  the three color channels evolve independently, creating spectral
+	//  separation that compounds into iridescent spiraling trails.
 	// ══════════════════════════════════════════════════════════════════
 
 	vec2 center = uv - 0.5;
 	center.x *= aspect;
 
-	// Polar decomposition
-	float r = length(center);
-	float theta = atan(center.y, center.x);
+	// Shared zoom — sub_bass breathes inward, onset pushes
+	float zoom = 0.980 - sub_bass * 0.006 - onset * 0.004;
+	vec2 zoomed = center * zoom;
 
-	// Vortex — rotation scales with distance from center
-	// Bass adds heavy low-frequency swirl, energy sustains it
-	float vortex = r * (0.035 + energy * 0.025 + bass * 0.02);
-	theta += vortex;
+	// Per-channel rotation — diverges over hundreds of frames
+	float ang_r = 0.003 + energy * 0.003;
+	float ang_g = 0.005 + energy * 0.004;
+	float ang_b = 0.007 + energy * 0.005;
 
-	// Radial zoom with breathing modulation
-	// The sine term creates concentric pulsing rings
-	float breathe = sin(r * 14.0 - t * 1.8) * 0.006;
-	float zoom = 0.978 - sub_bass * 0.008 - onset * 0.005 - breathe;
-	r *= zoom;
+	vec2 ruv = rot2(ang_r) * zoomed;
+	vec2 guv = rot2(ang_g) * zoomed;
+	vec2 buv = rot2(ang_b) * zoomed;
 
-	// Concentric ripple — outward-pulsing radial displacement
-	// Snare adds transient ripple bursts
-	float ripple_amp = 0.003 * (1.0 + bass * 2.5 + snare * 1.5);
-	float ripple = sin(r * 25.0 - t * 3.5) * ripple_amp;
-	r += ripple;
+	// Per-channel directional flow — bass amplifies the shimmer
+	float flow = 0.003 * (1.0 + bass * 2.0);
+	ruv += vec2(sin(center.y * 8.0 + t * 1.2), 0.0) * flow;
+	guv += vec2(sin(center.x * 7.0 + t * 0.9), cos(center.y * 6.0 + t * 1.1)) * flow * 0.7;
+	buv += vec2(0.0, cos(center.x * 6.0 + t * 1.5)) * flow;
 
-	// Reconstruct cartesian, undo aspect correction
-	vec2 fb_center = vec2(cos(theta), sin(theta)) * max(r, 0.0);
-	vec2 fb_uv = fb_center;
-	fb_uv.x /= aspect;
-	fb_uv += 0.5;
+	// Undo aspect correction, shift to 0–1 range
+	ruv = vec2(ruv.x / aspect, ruv.y) + 0.5;
+	guv = vec2(guv.x / aspect, guv.y) + 0.5;
+	buv = vec2(buv.x / aspect, buv.y) + 0.5;
 
-	// Edge fade — clamp to texture bounds
-	vec2 edge_d = min(fb_uv, 1.0 - fb_uv);
+	// Edge fade — use average UV (channels are close enough)
+	vec2 avg_uv = (ruv + guv + buv) / 3.0;
+	vec2 edge_d = min(avg_uv, 1.0 - avg_uv);
 	float edge_fade = smoothstep(0.0, 0.05, min(edge_d.x, edge_d.y));
 
-	vec3 trail = texture(prev_frame, fb_uv).rgb;
+	// Decay — louder music clears old trails faster
+	float decay = mix(0.92, 0.86, energy);
 
-	// Decay — louder music = shorter trails (fresh geometry dominates)
-	float decay = mix(0.91, 0.85, energy);
-	trail *= decay * edge_fade;
+	// Sample each channel from its own rotated/drifted position
+	vec3 trail;
+	trail.r = texture(prev_frame, ruv).r * decay * edge_fade;
+	trail.g = texture(prev_frame, guv).g * decay * edge_fade;
+	trail.b = texture(prev_frame, buv).b * decay * edge_fade;
 
 	// ══════════════════════════════════════════════════════════════════
-	//  2. GEOMETRY — FellyJish parametric jellyfish
+	//  2. GEOMETRY — EM-Brain fractal accumulation
 	//
-	//  140–220 samples along the parametric curve, each contributing
-	//  a Gaussian glow. The curve has:
-	//    • Two interleaved spirals (m=0, m=9) rotating at different
-	//      speeds due to the angular offset in c = d²/9 - t/16 + m
-	//    • A bifurcation at k²<19: inner points evolve fast with
-	//      sin(t*3 + d*4), outer points drift slowly with sin(d/2+4)
-	//    • Audio warps the cosine frequency and expands the pattern
+	//  Two coordinate vectors spiral through opposing rotations:
+	//    l *= rotate2D(5.0)          — ~286° per step
+	//    n *= rotate2D(4.8) + dR(t)  — ~275° + tiny time drift
+	//
+	//  Each step computes q = l*s*i + n, accumulates sin(q)*6/s
+	//  into glow h, and warps n by cos(q) feedback. Scale s grows
+	//  by 1.05× per step, adding fractal detail at finer levels.
+	//
+	//  The result is a brain-like organic structure — complex folding
+	//  patterns emerging from the interplay of two counter-rotating
+	//  spiral systems with domain warping.
 	// ══════════════════════════════════════════════════════════════════
 
-	// Time scale — energy makes the jellyfish writhe faster
-	float t_speed = t * (1.0 + energy * 0.25);
+	// Fragment coordinates in pixel space (faithful to original)
+	vec2 fc = uv * rect_size;
+	vec2 res = rect_size;
 
-	// Map original 400×400 canvas coordinates to UV space
-	float scale = 1.0 / 400.0;
+	// Starting position — offset into fractal space
+	vec2 l = (2.0 * fc - res) / res.x * 0.4 + vec2(-1.95, -0.8);
+	vec2 n = vec2(0.0);
 
-	// Kick expands the jellyfish momentarily
-	float size_pulse = 1.0 + kick * 0.1;
+	// Initial scale — kick pulse expands fractal detail
+	float s = 6.0 + kick * 0.5;
+	float h = 0.0;
 
-	// Dynamic point count — more energy reveals more structure
-	int num_pts = 140 + int(energy * 80.0);  // 140–220
+	// Distance weighting — vignette/spotlight around offset center
+	// dot(l + vec2(1.7), l) = |l|² + 1.7*(l.x + l.y)
+	float L = dot(l + vec2(1.7), l);
 
-	// Gaussian sharpness — treble tightens glow, bass softens it
-	float glow_sharp = 600.0 + treble * 400.0;
+	// Audio-reactive time — energy makes the brain writhe
+	float t_speed = t * (1.0 + energy * 0.2);
 
-	// Cosine palette — bioluminescent jellyfish colors
-	// Warmth → gold/crimson shift, brightness → cyan/teal shift
-	vec3 pal_c = vec3(1.0, 0.7 + warmth * 0.3, 0.4 + brightness * 0.4);
-	vec3 pal_d = vec3(0.0, 0.15, 0.2 + activity * 0.15);
+	// Precompute rotation matrices (constant across iterations)
+	mat2 l_rot = rot2(5.0);
+	mat2 n_rot = rot2(4.8) + rot2(t_speed) * 0.01;
 
-	// Accumulate glow from parametric samples
-	vec3 glow = vec3(0.0);
+	// Iteration count — energy reveals finer fractal detail
+	int max_iter = 80 + int(energy * 10.0);  // 80–90
 
-	for (int idx = 0; idx < 220; idx++) {
-		if (idx >= num_pts) break;
+	for (int iter = 0; iter < 90; iter++) {
+		if (iter >= max_iter) break;
 
-		float fi = float(idx);
-		// Map index to original parameter range (0 – 20000)
-		float i_param = fi * 20000.0 / float(num_pts);
+		float fi = float(iter + 1);  // i starts at 1 in original
 
-		// ── Parametric computation (faithful to original) ────────
+		// Spiral transforms — l and n counter-rotate
+		l *= l_rot;
+		n *= n_rot;
 
-		// Two interleaved spiral offsets
-		float m = mod(fi, 2.0) * 9.0;
+		// Domain warp target
+		vec2 q = l * s * fi + n;
 
-		// Bass subtly warps the cosine frequency — structure breathes
-		float k = 9.0 * cos(i_param / (81.0 - bass * 8.0));
-		float e_val = i_param / 765.0 - 13.0;
-		float d = length(vec2(k, e_val)) / 4.0;
+		// Accumulate volumetric glow — sin(q)*6/s weighted by iteration
+		h += dot(vec2(1.0), sin(q) * 6.0 / s);
 
-		// q with bifurcation — k²<19 splits into two dynamical regimes
-		float q = 79.0 - 2.0 * sin(k * 3.0);
-		float sin_arg = (k * k < 19.0) ? t_speed * 3.0 + d * 4.0
-		                               : d / 2.0 + 4.0;
-		q += sin(sin_arg) / 2.0 * k
-		     * (9.0 + 5.0 * sin(d * d - e_val / 6.0 - t_speed + m));
+		// Domain warp feedback — bends n toward cos structure
+		n -= cos(q);
 
-		// Angle parameter — per-spiral offset drives interleaving
-		float c = d * d / 9.0 - t_speed / 16.0 + m;
-
-		// Point position in UV space
-		vec2 pt = vec2(q * sin(c), (q + 50.0) * cos(c)) * scale * size_pulse;
-
-		// Gaussian glow falloff — soft luminous halos per point
-		float dist_sq = dot(p - pt, p - pt);
-		float falloff = exp(-dist_sq * glow_sharp);
-
-		// Color from palette — index-varying for rainbow banding
-		vec3 pt_col = 0.5 + 0.5 * cos(TAU * (pal_c * (fi / 220.0 + t * 0.03) + pal_d));
-
-		glow += falloff * pt_col;
+		// Fractal scale increase — finer detail each step
+		s *= 1.05;
 	}
 
-	// Central radial glow — soft breathing pulse at the core
-	float r_p = length(p);
-	float core_glow = exp(-r_p * r_p * 10.0) * beat * 0.08;
-	glow += vec3(0.3, 0.5, 0.9) * core_glow;
+	// Invert + distance falloff — L darkens outer regions
+	h = -h * 0.4 - L;
 
-	// Tanh tonemap — clamps per-frame output, then scale low for
-	// safe feedback equilibrium.  With decay ~0.88:
-	//   equilibrium = 0.10 / 0.12 ≈ 0.83  (stays ≤ 1.0)
-	vec3 new_col = tanh(glow * 0.5) * 0.10;
+	// Base color — teal/cyan from original vec4(0.65, 0.9, 0.9, 1.0)
+	// Audio shifts: warmth → gold, brightness → cooler blue
+	vec3 base_col = vec3(0.65, 0.9, 0.9);
+	base_col += vec3(warmth * 0.15, -warmth * 0.08, -warmth * 0.12);
+
+	// Output — max clamps negatives, tanh compresses for safe feedback
+	// emission ×0.10 keeps equilibrium ≤ 1.0 with decay ~0.89
+	vec3 raw = max(-h * 0.5 * base_col, 0.0);
+	vec3 new_col = tanh(raw) * 0.10;
 
 	// ══════════════════════════════════════════════════════════════════
 	//  3. COMPOSITE — blend trail + new geometry, apply loop_reinhard

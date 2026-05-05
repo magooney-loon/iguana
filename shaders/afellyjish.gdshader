@@ -1,41 +1,50 @@
 shader_type canvas_item;
 
 // ═══════════════════════════════════════════════════════════════════════
-//  @name:          Abstract
-//  @author:        Sabo Sugi (magooney rmx)
-//  @website:       codepen.io/sabosugi/full/WbGaBma
-//  @description:   Raymarched sine-iteration fractal with space distortion and tanh tonemapping
+//  @name:          aFellyJish
+//  @author:        magooney
+//  @website:       github.com/magooney-loon
+//  @description:   Parametric jellyfish spiral with polar vortex feedback
 //
 //  Post-processing defaults
-//  @exposure:       1.6
+//  @exposure:       1.5
 //  @tonemap_knee:   0.0
 //  @gamma:          2.2
-//  @vignette_dark:  1.00
-//  @grain_strength: 0.01
-//  @loop_reinhard:  0.0
+//  @vignette_dark:  0.25
+//  @grain_strength: 0.008
+//  @loop_reinhard:  0.00
 // ═══════════════════════════════════════════════════════════════════════
-
 // ── Audio · all values 0–1, pushed every frame by AudioAnalyzer ─────
+//
+// Frequency bands (smoothed)
 uniform float sub_bass    : hint_range(0.0, 1.0) = 0.0;
 uniform float bass        : hint_range(0.0, 1.0) = 0.0;
 uniform float low_mid     : hint_range(0.0, 1.0) = 0.0;
 uniform float mid         : hint_range(0.0, 1.0) = 0.0;
 uniform float presence    : hint_range(0.0, 1.0) = 0.0;
 uniform float treble      : hint_range(0.0, 1.0) = 0.0;
+//
+// Percussion envelopes (attack/decay shaped)
 uniform float beat        : hint_range(0.0, 1.0) = 0.0;
 uniform float kick        : hint_range(0.0, 1.0) = 0.0;
 uniform float snare       : hint_range(0.0, 1.0) = 0.0;
 uniform float hihat       : hint_range(0.0, 1.0) = 0.0;
+//
+// Spectral flux / onset (rate of change per band)
 uniform float flux_bass   : hint_range(0.0, 1.0) = 0.0;
 uniform float flux_mid    : hint_range(0.0, 1.0) = 0.0;
 uniform float flux_treble : hint_range(0.0, 1.0) = 0.0;
 uniform float onset       : hint_range(0.0, 1.0) = 0.0;
+//
+// Global descriptors
 uniform float energy      : hint_range(0.0, 1.0) = 0.0;
 uniform float activity    : hint_range(0.0, 1.0) = 0.0;
 uniform float loudness    : hint_range(0.0, 1.0) = 0.0;
 uniform float warmth      : hint_range(0.0, 1.0) = 0.0;
 uniform float brightness  : hint_range(0.0, 1.0) = 0.0;
 uniform float density     : hint_range(0.0, 1.0) = 0.0;
+//
+// Beat tracking
 uniform float beat_phase      : hint_range(0.0, 1.0) = 0.0;
 uniform float beat_confidence : hint_range(0.0, 1.0) = 0.0;
 uniform float beat_threshold  : hint_range(0.0, 1.0) = 0.3;
@@ -48,13 +57,13 @@ uniform int   frame           = 0;
 
 // ── Feedback loop ────────────────────────────────────────────────────
 uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable;
-uniform float loop_reinhard : hint_range(0.0, 3.0) = 0.0;
+uniform float loop_reinhard : hint_range(0.0, 3.0) = 0.6;
 
-// ── Utility ──────────────────────────────────────────────────────────
+// ── Utility · auto-provided ──────────────────────────────────────────
 uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform vec2  rect_size = vec2(1600.0, 900.0);
 
-// ── Spectral rows ────────────────────────────────────────────────────
+// ── Spectral rows (32 bands, 0–1 peak per row) ───────────────────────
 uniform float peak_00 : hint_range(0.0, 1.0) = 0.0;
 uniform float peak_01 : hint_range(0.0, 1.0) = 0.0;
 uniform float peak_02 : hint_range(0.0, 1.0) = 0.0;
@@ -103,130 +112,162 @@ vec3 reinhard(vec3 col, float k) {
 	return k > 0.0 ? col / (col + k) * (1.0 + k) : col;
 }
 
-// Interleaved Gradient Noise — structured film-like grain
-float ign(vec2 p) {
-	vec3 magic = vec3(0.06711056, 0.00583715, 52.9829189);
-	return fract(magic.z * fract(dot(p, magic.xy)));
-}
-
-// Safe tanh — clamp input to prevent exp() overflow / NaN
-vec3 safe_tanh(vec3 x) {
-	vec3 cx = clamp(x, -10.0, 10.0);
-	vec3 e2x = exp(2.0 * cx);
-	return (e2x - 1.0) / (e2x + 1.0);
-}
-
 // ── Fragment ─────────────────────────────────────────────────────────
 
 void fragment() {
-	vec2 uv  = UV;
-	vec2 res = rect_size;
-	vec2 p   = (uv - 0.5) * vec2(res.x / res.y, 1.0);
-	float aspect = res.x / res.y;
+	vec2 uv = UV;
+	float aspect = rect_size.x / rect_size.y;
+	vec2 p = (uv - 0.5) * vec2(aspect, 1.0);  // centered, aspect-corrected
 	float t = time_val;
 
 	// ══════════════════════════════════════════════════════════════════
-	//  1. FEEDBACK — gentle drift, no tunnel
+	//  1. FEEDBACK — polar vortex with concentric ripples
+	//
+	//  Operates in polar (r, θ) space instead of cartesian:
+	//
+	//    • Vortex rotation ∝ radius — inner trails barely drift,
+	//      outer trails spin into fast spirals. Creates a natural
+	//      whirlpool rather than the flat uniform rotation.
+	//
+	//    • Sine-modulated radial zoom — adds concentric breathing
+	//      rings that expand/contract, not a flat tunnel shrink.
+	//
+	//    • Outward-pulsing ripple displacement along the radial
+	//      direction — organic jellyfish pulsation on the trails.
+	//
+	//  Together these create a whirlpool/mandala trail pattern that
+	//  compounds differently from the standard zoom+rotate+warp.
 	// ══════════════════════════════════════════════════════════════════
+
 	vec2 center = uv - 0.5;
 	center.x *= aspect;
 
-	// Slow breathing zoom synced to sub_bass
-	center *= 0.995 - sub_bass * 0.003;
+	// Polar decomposition
+	float r = length(center);
+	float theta = atan(center.y, center.x);
 
-	// Micro-rotation from snare
-	center *= rot2(0.002 * snare);
+	// Vortex — rotation scales with distance from center
+	// Bass adds heavy low-frequency swirl, energy sustains it
+	float vortex = r * (0.035 + energy * 0.025 + bass * 0.02);
+	theta += vortex;
 
-	vec2 fb_uv = center;
+	// Radial zoom with breathing modulation
+	// The sine term creates concentric pulsing rings
+	float breathe = sin(r * 14.0 - t * 1.8) * 0.006;
+	float zoom = 0.978 - sub_bass * 0.008 - onset * 0.005 - breathe;
+	r *= zoom;
+
+	// Concentric ripple — outward-pulsing radial displacement
+	// Snare adds transient ripple bursts
+	float ripple_amp = 0.003 * (1.0 + bass * 2.5 + snare * 1.5);
+	float ripple = sin(r * 25.0 - t * 3.5) * ripple_amp;
+	r += ripple;
+
+	// Reconstruct cartesian, undo aspect correction
+	vec2 fb_center = vec2(cos(theta), sin(theta)) * max(r, 0.0);
+	vec2 fb_uv = fb_center;
 	fb_uv.x /= aspect;
 	fb_uv += 0.5;
 
-	// Gentle sine warp
-	vec2 warp = vec2(
-		sin(center.y * 5.0 + t * 0.7) * 0.008,
-		cos(center.x * 4.0 + t * 0.5) * 0.008
-	);
-	warp *= 1.0 + bass * 1.0;
-
-	vec2 sample_uv  = fb_uv + warp;
-	vec2 edge_d     = min(sample_uv, 1.0 - sample_uv);
+	// Edge fade — clamp to texture bounds
+	vec2 edge_d = min(fb_uv, 1.0 - fb_uv);
 	float edge_fade = smoothstep(0.0, 0.05, min(edge_d.x, edge_d.y));
 
-	vec3 trail = texture(prev_frame, sample_uv).rgb;
-	float decay = mix(0.92, 0.85, energy);
+	vec3 trail = texture(prev_frame, fb_uv).rgb;
+
+	// Decay — louder music = shorter trails (fresh geometry dominates)
+	float decay = mix(0.91, 0.85, energy);
 	trail *= decay * edge_fade;
 
 	// ══════════════════════════════════════════════════════════════════
-	//  2. GEOMETRY — raymarched sine-iteration fractal
+	//  2. GEOMETRY — FellyJish parametric jellyfish
+	//
+	//  140–220 samples along the parametric curve, each contributing
+	//  a Gaussian glow. The curve has:
+	//    • Two interleaved spirals (m=0, m=9) rotating at different
+	//      speeds due to the angular offset in c = d²/9 - t/16 + m
+	//    • A bifurcation at k²<19: inner points evolve fast with
+	//      sin(t*3 + d*4), outer points drift slowly with sin(d/2+4)
+	//    • Audio warps the cosine frequency and expands the pattern
 	// ══════════════════════════════════════════════════════════════════
 
-	// Pixel coordinates centered and aspect-corrected (equivalent to gl_FragCoord calc)
-	vec2 frag = p * 2.0;
+	// Time scale — energy makes the jellyfish writhe faster
+	float t_speed = t * (1.0 + energy * 0.25);
 
-	// Time scale — energy makes it evolve faster
-	float time_scale = 0.29 + energy * 0.15;
-	float ft = t * time_scale;
+	// Map original 400×400 canvas coordinates to UV space
+	float scale = 1.0 / 400.0;
 
-	// Camera sway — offset UV over time, snare adds jitter
-	frag += vec2(cos(ft * 2.0) * 0.15, cos(ft) * 0.13);
-	frag += vec2(snare * 0.04, hihat * 0.03);
+	// Kick expands the jellyfish momentarily
+	float size_pulse = 1.0 + kick * 0.1;
 
-	// Ray direction
-	vec3 ray_dir = normalize(vec3(frag, 0.7));
+	// Dynamic point count — more energy reveals more structure
+	int num_pts = 140 + int(energy * 80.0);  // 140–220
 
-	// IGN dither — cinematic 24fps frame snapping
-	float dither_frame = floor(t * 24.0);
-	vec2 noise_off = vec2(dither_frame * 127.1, dither_frame * 311.7);
-	float dither_noise = ign(uv * res + noise_off);
+	// Gaussian sharpness — treble tightens glow, bass softens it
+	float glow_sharp = 600.0 + treble * 400.0;
 
-	// Raymarch parameters
-	int ray_steps = 28 + int(energy * 8.0);  // 28–36 steps
-	float fractal_iters = 8.0 + bass * 6.0;  // 8–14 iterations
-	float fractal_amp = 0.114 + kick * 0.04; // bass pulse expands the fractal
+	// Cosine palette — bioluminescent jellyfish colors
+	// Warmth → gold/crimson shift, brightness → cyan/teal shift
+	vec3 pal_c = vec3(1.0, 0.7 + warmth * 0.3, 0.4 + brightness * 0.4);
+	vec3 pal_d = vec3(0.0, 0.15, 0.2 + activity * 0.15);
 
-	// Initialize raymarch
-	float total_dist = (dither_noise - 0.5) * 0.09;
-	vec3 accum = vec3(0.0);
+	// Accumulate glow from parametric samples
+	vec3 glow = vec3(0.0);
 
-	// Color frequency & phase — audio shifts the palette
-	vec3 color_freq = vec3(1.35, 0.688, 1.72);
-	color_freq += vec3(warmth * 0.3, activity * 0.15, brightness * 0.3);
+	for (int idx = 0; idx < 220; idx++) {
+		if (idx >= num_pts) break;
 
-	vec3 color_phase = vec3(5.28, 7.49, 3.56);
-	color_phase += vec3(flux_bass * 0.8, flux_mid * 0.5, flux_treble * 0.8);
+		float fi = float(idx);
+		// Map index to original parameter range (0 – 20000)
+		float i_param = fi * 20000.0 / float(num_pts);
 
-	// ── Raymarching loop ─────────────────────────────────────────
-	for (int i = 0; i < 40; i++) {
-		if (i >= ray_steps) break;
+		// ── Parametric computation (faithful to original) ────────
 
-		vec3 pos = ray_dir * total_dist;
+		// Two interleaved spiral offsets
+		float m = mod(fi, 2.0) * 9.0;
 
-		// Z-axis space distortion
-		pos.z = cos(pos.z * (sin(pos.x + ft * 0.7) + 1.5));
+		// Bass subtly warps the cosine frequency — structure breathes
+		float k = 9.0 * cos(i_param / (81.0 - bass * 8.0));
+		float e_val = i_param / 765.0 - 13.0;
+		float d = length(vec2(k, e_val)) / 4.0;
 
-		// Fractal sine iteration
-		for (float s = 3.0; s < 20.0; s += 1.0) {
-			if (s >= fractal_iters) break;
-			vec3 phase = 2.6 * ft + pos.yzx * s;
-			pos = pos * 1.05 + sin(phase) * fractal_amp;
-		}
+		// q with bifurcation — k²<19 splits into two dynamical regimes
+		float q = 79.0 - 2.0 * sin(k * 3.0);
+		float sin_arg = (k * k < 19.0) ? t_speed * 3.0 + d * 4.0
+		                               : d / 2.0 + 4.0;
+		q += sin(sin_arg) / 2.0 * k
+		     * (9.0 + 5.0 * sin(d * d - e_val / 6.0 - t_speed + m));
 
-		// Distance field
-		float step_size = 0.01 + 0.1 * abs(length(pos) - 0.8);
-		total_dist += step_size;
+		// Angle parameter — per-spiral offset drives interleaving
+		float c = d * d / 9.0 - t_speed / 16.0 + m;
 
-		// Color accumulation
-		vec3 color_base = sin(pos * color_freq - color_phase);
-		accum += color_base / step_size;
+		// Point position in UV space
+		vec2 pt = vec2(q * sin(c), (q + 50.0) * cos(c)) * scale * size_pulse;
+
+		// Gaussian glow falloff — soft luminous halos per point
+		float dist_sq = dot(p - pt, p - pt);
+		float falloff = exp(-dist_sq * glow_sharp);
+
+		// Color from palette — index-varying for rainbow banding
+		vec3 pt_col = 0.5 + 0.5 * cos(TAU * (pal_c * (fi / 220.0 + t * 0.03) + pal_d));
+
+		glow += falloff * pt_col;
 	}
 
-	// ── Tonemap — safe tanh on squared accumulation ──────────────
-	// Scale output low for safe feedback equilibrium
-	vec3 new_col = safe_tanh((accum * accum) / 1200000.0) * 0.12;
+	// Central radial glow — soft breathing pulse at the core
+	float r_p = length(p);
+	float core_glow = exp(-r_p * r_p * 10.0) * beat * 0.08;
+	glow += vec3(0.3, 0.5, 0.9) * core_glow;
+
+	// Tanh tonemap — clamps per-frame output, then scale low for
+	// safe feedback equilibrium.  With decay ~0.88:
+	//   equilibrium = 0.10 / 0.12 ≈ 0.83  (stays ≤ 1.0)
+	vec3 new_col = tanh(glow * 0.5) * 0.10;
 
 	// ══════════════════════════════════════════════════════════════════
-	//  3. COMPOSITE — blend trail + fractal, apply loop_reinhard
+	//  3. COMPOSITE — blend trail + new geometry, apply loop_reinhard
 	// ══════════════════════════════════════════════════════════════════
+
 	vec3 col = trail + new_col;
 	col = reinhard(col, loop_reinhard);
 
