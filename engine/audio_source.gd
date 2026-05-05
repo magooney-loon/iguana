@@ -77,7 +77,8 @@ func crossfade_to(path: String) -> void:
 	_fade_player.stream = stream
 	_fade_player.volume_db = -80.0
 	_fade_player.play()
-	_near_end_triggered = false
+	# Keep _near_end_triggered = true during the fade so _check_near_end doesn't
+	# re-fire on the still-playing old track and trigger a second advance().
 
 	# Tween: fade out current player, fade in fade player
 	_crossfade_tween = create_tween()
@@ -94,6 +95,8 @@ func crossfade_to(path: String) -> void:
 		_fade_player.stop()
 		_fade_player.volume_db = -80.0
 		analyzer._player = _player
+		# Reset only now — _player is the new track, safe to watch for its near-end.
+		_near_end_triggered = false
 	)
 
 
