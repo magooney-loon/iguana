@@ -24,15 +24,49 @@ static func apply_noise(panel: Control, subtle := true) -> void:
 	var mat := ShaderMaterial.new()
 	mat.shader = shader
 	if subtle:
-		mat.set_shader_parameter("grain_strength", 0.025)
-		mat.set_shader_parameter("scanline_strength", 0.02)
-		mat.set_shader_parameter("scratch_strength", 0.012)
-		mat.set_shader_parameter("vignette_strength", 0.05)
+		# Grain
+		mat.set_shader_parameter("grain_strength", 0.03)
+		mat.set_shader_parameter("grain_speed", 1.0)
+		# Scanlines
+		mat.set_shader_parameter("scanline_strength", 0.025)
+		mat.set_shader_parameter("scanline_scroll_spd", 0.2)
+		# Scratches
+		mat.set_shader_parameter("scratch_strength", 0.015)
+		mat.set_shader_parameter("scratch_drift", 0.1)
+		# CRT effects
+		mat.set_shader_parameter("flicker_strength", 0.01)
+		mat.set_shader_parameter("roll_speed", 0.035)
+		mat.set_shader_parameter("roll_strength", 0.02)
+		mat.set_shader_parameter("interference_str", 0.01)
+		# Vignette
+		mat.set_shader_parameter("vignette_strength", 0.06)
+		mat.set_shader_parameter("vignette_pulse", 0.015)
+		mat.set_shader_parameter("vignette_pulse_spd", 0.4)
+		# Chromatic aberration
+		mat.set_shader_parameter("chromatic_str", 0.0006)
+		mat.set_shader_parameter("chromatic_flicker", 0.3)
 	else:
-		mat.set_shader_parameter("grain_strength", 0.045)
-		mat.set_shader_parameter("scanline_strength", 0.04)
-		mat.set_shader_parameter("scratch_strength", 0.025)
-		mat.set_shader_parameter("vignette_strength", 0.10)
+		# Grain
+		mat.set_shader_parameter("grain_strength", 0.05)
+		mat.set_shader_parameter("grain_speed", 1.5)
+		# Scanlines
+		mat.set_shader_parameter("scanline_strength", 0.05)
+		mat.set_shader_parameter("scanline_scroll_spd", 0.4)
+		# Scratches
+		mat.set_shader_parameter("scratch_strength", 0.03)
+		mat.set_shader_parameter("scratch_drift", 0.25)
+		# CRT effects
+		mat.set_shader_parameter("flicker_strength", 0.025)
+		mat.set_shader_parameter("roll_speed", 0.06)
+		mat.set_shader_parameter("roll_strength", 0.04)
+		mat.set_shader_parameter("interference_str", 0.025)
+		# Vignette
+		mat.set_shader_parameter("vignette_strength", 0.12)
+		mat.set_shader_parameter("vignette_pulse", 0.03)
+		mat.set_shader_parameter("vignette_pulse_spd", 0.7)
+		# Chromatic aberration
+		mat.set_shader_parameter("chromatic_str", 0.0012)
+		mat.set_shader_parameter("chromatic_flicker", 0.5)
 	panel.material = mat
 
 
