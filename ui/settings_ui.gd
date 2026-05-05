@@ -306,7 +306,22 @@ func _build_shaders_tab() -> Control:
 
 	_shader_website_label = Label.new()
 	_shader_website_label.add_theme_font_size_override("font_size", 12)
-	_shader_website_label.modulate.a = 0.75
+	_shader_website_label.modulate = Color(0.55, 0.75, 1.0)
+	_shader_website_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	_shader_website_label.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_shader_website_label.gui_input.connect(func(event: InputEvent) -> void:
+		var url: String = _shader_website_label.get_meta("link_url", "")
+		if url.is_empty():
+			return
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			OS.shell_open(url)
+	)
+	_shader_website_label.mouse_entered.connect(func() -> void:
+		_shader_website_label.modulate = Color(0.70, 0.88, 1.0)
+	)
+	_shader_website_label.mouse_exited.connect(func() -> void:
+		_shader_website_label.modulate = Color(0.55, 0.75, 1.0)
+	)
 	vbox.add_child(_shader_website_label)
 
 	_shader_desc_clip = Control.new()
@@ -423,7 +438,17 @@ func _update_shader_info() -> void:
 	if _shader_author_label:
 		_shader_author_label.text  = "Author:   " + meta.get("author",  "N/A")
 	if _shader_website_label:
-		_shader_website_label.text = "Website:  " + meta.get("website", "N/A")
+		var website: String = meta.get("website", "N/A")
+		_shader_website_label.text = "Website:  " + website
+		if website != "N/A" and not website.is_empty():
+			var url := website
+			if not url.begins_with("http://") and not url.begins_with("https://"):
+				url = "https://" + url
+			_shader_website_label.set_meta("link_url", url)
+			_shader_website_label.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		else:
+			_shader_website_label.set_meta("link_url", "")
+			_shader_website_label.mouse_default_cursor_shape = Control.CURSOR_ARROW
 	if _shader_desc_label:
 		_shader_desc_label.text = meta.get("description", "")
 		_shader_desc_label.position.x = 0.0
@@ -725,7 +750,16 @@ func _build_about_tab() -> Control:
 	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "LINKS")
 
-	_about_row(vbox, "GitHub", "github.com/magooney-loon/iguana")
+	var gh_row := HBoxContainer.new()
+	gh_row.add_theme_constant_override("separation", 8)
+	var gh_lbl := Label.new()
+	gh_lbl.text = "GitHub"
+	gh_lbl.add_theme_font_size_override("font_size", 12)
+	gh_lbl.modulate.a = 0.55
+	gh_lbl.custom_minimum_size.x = 80
+	gh_row.add_child(gh_lbl)
+	gh_row.add_child(StylesUI.make_link_label("magooney-loon/iguana", "https://github.com/magooney-loon/iguana"))
+	vbox.add_child(gh_row)
 
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL

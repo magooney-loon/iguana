@@ -2,13 +2,13 @@ shader_type canvas_item;
 
 //  @name:          Hyperspatial
 //  @author:        magooney
-//  @website:       https://github.com/magooney-loon
+//  @website:       github.com/magooney-loon
 //  @description:   Folded-space IFS kaleidoscope with morphing polygon constellations
 //
 //  @exposure:       1.8
 //  @tonemap_knee:   0.5
 //  @gamma:          1.8
-//  @vignette_dark:  0.20
+//  @vignette_dark:  0.99
 //  @grain_strength: 0.006
 //  @loop_reinhard:  0.18
 // ═══════════════════════════════════════════════════════════════════════

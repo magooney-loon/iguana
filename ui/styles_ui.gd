@@ -171,6 +171,31 @@ static func set_icon(btn: Button, icon_name: String) -> void:
 	btn.text = ""
 
 
+## Create a Label that acts as a clickable link.
+## Stores `url` in metadata and opens it in the system browser on click.
+static func make_link_label(text: String, url: String, font_size: int = 12) -> Label:
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.add_theme_font_size_override("font_size", font_size)
+	lbl.modulate = Color(0.55, 0.75, 1.0)
+	lbl.mouse_filter = Control.MOUSE_FILTER_STOP
+	lbl.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	lbl.set_meta("link_url", url)
+	lbl.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			OS.shell_open(url)
+	)
+	lbl.mouse_entered.connect(func() -> void:
+		lbl.modulate = Color(0.70, 0.88, 1.0)
+		lbl.add_theme_color_override("font_color", Color(0.70, 0.88, 1.0))
+	)
+	lbl.mouse_exited.connect(func() -> void:
+		lbl.modulate = Color(0.55, 0.75, 1.0)
+		lbl.add_theme_color_override("font_color", Color(0.55, 0.75, 1.0))
+	)
+	return lbl
+
+
 static func win_section(parent: Control, title: String) -> void:
 	var lbl := Label.new()
 	lbl.text = title

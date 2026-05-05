@@ -2,7 +2,7 @@ shader_type canvas_item;
 
 //  @name:          Octagrams
 //  @author:        whisky_shusuky (magooney rmx)
-//  @website:       https://www.shadertoy.com/view/tlVGDt
+//  @website:       shadertoy.com/view/tlVGDt
 //  @description:   Inspired by arabesque.
 //
 //  @exposure:       1.42

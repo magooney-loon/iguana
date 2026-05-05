@@ -2,7 +2,7 @@ shader_type canvas_item;
 
 //  @name:          Phantom Star
 //  @author:        kasari39 (magooney rmx)
-//  @website:       https://www.shadertoy.com/view/ttKGDt
+//  @website:       shadertoy.com/view/ttKGDt
 //  @description:   IFS phantom raymarching with fractal lightning arcs and neon scan lines
 //
 //  @exposure:       1.6

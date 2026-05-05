@@ -2,7 +2,7 @@ shader_type canvas_item;
 
 //  @name:          Submersion
 //  @author:        magooney
-//  @website:       https://github.com/magooney-loon
+//  @website:       github.com/magooney-loon
 //  @description:   Deep-sea bioluminescent tunnel with organic wall oscillation and neon spiral bands
 //
 //  @exposure:       1.2
