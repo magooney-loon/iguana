@@ -43,7 +43,12 @@ func setup(visualizer, analyzer: AudioAnalyzer) -> void:
 func open() -> void:
 	if _tween and _tween.is_valid():
 		_tween.kill()
-	_win.move_to_center()
+	var vp  := get_viewport().get_visible_rect().size
+	var margin := 16
+	_win.position = Vector2i(
+		int(vp.x) - _win.size.x - margin,
+		int((vp.y - _win.size.y) / 2.0)
+	)
 	_win.show()
 	_sync()
 

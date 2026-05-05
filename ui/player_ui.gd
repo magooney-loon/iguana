@@ -104,6 +104,11 @@ func _build_bar() -> void:
 	top.add_theme_constant_override("separation", 6)
 	vbox.add_child(top)
 
+	var pl_btn := StylesUI.icon_btn("playlist", "Playlist", Vector2(32, 28), _playlist_ui.toggle)
+	top.add_child(pl_btn)
+
+	top.add_child(StylesUI.make_vsep())
+
 	var prev_btn := StylesUI.icon_btn("prev", "Previous track", Vector2(32, 28), _on_prev)
 	top.add_child(prev_btn)
 
@@ -175,9 +180,6 @@ func _build_bar() -> void:
 
 	_shuffle_btn = StylesUI.icon_btn("shuffle", "Shuffle", Vector2(32, 28), _on_shuffle_pressed)
 	top.add_child(_shuffle_btn)
-
-	var pl_btn := StylesUI.icon_btn("playlist", "Playlist", Vector2(32, 28), _playlist_ui.toggle)
-	top.add_child(pl_btn)
 
 	var fs_btn := StylesUI.icon_btn("fullscreen", "Fullscreen", Vector2(32, 28), _toggle_fullscreen)
 	top.add_child(fs_btn)
