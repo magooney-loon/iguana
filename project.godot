@@ -25,6 +25,10 @@ config/icon="res://icon.webp"
 
 buses/default_bus_layout="uid://byxtiup0hs2og"
 
+[autoload]
+
+Keymap="*res://engine/keymap.gd"
+
 [display]
 
 window/size/viewport_width=1600

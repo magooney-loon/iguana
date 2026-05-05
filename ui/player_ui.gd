@@ -358,12 +358,21 @@ func _on_song_finished() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
-	match (event as InputEventKey).keycode:
-		KEY_F:      _toggle_fullscreen()
-		KEY_SPACE:  _on_play_pause()
-		KEY_ESCAPE: _on_stop()
-		KEY_LEFT:   _on_prev()
-		KEY_RIGHT:  _on_next()
+	var kc: int = (event as InputEventKey).keycode
+	if kc == Keymap.get_key("play_pause"):
+		_on_play_pause()
+	elif kc == Keymap.get_key("stop"):
+		_on_stop()
+	elif kc == Keymap.get_key("prev_track"):
+		_on_prev()
+	elif kc == Keymap.get_key("next_track"):
+		_on_next()
+	elif kc == Keymap.get_key("fullscreen"):
+		_toggle_fullscreen()
+	elif kc == Keymap.get_key("toggle_playlist"):
+		_playlist_ui.toggle()
+	elif kc == Keymap.get_key("toggle_settings"):
+		_settings.toggle()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -26,6 +26,8 @@ var _pp_shader_label: Label
 # Debug tab
 var _dbg: Dictionary = {}
 
+# Keymap tab — read-only shortcut reference
+
 
 func setup(visualizer, analyzer: AudioAnalyzer) -> void:
 	_visualizer = visualizer
@@ -164,6 +166,7 @@ func _build() -> void:
 
 	_tabs.add_child(_build_general_tab())
 	_tabs.add_child(_build_shaders_tab())
+	_tabs.add_child(_build_keymap_tab())
 	_tabs.add_child(_build_debug_tab())
 
 
@@ -219,15 +222,6 @@ func _build_general_tab() -> Control:
 	spin_sfx.text = "seconds"
 	spin_row.add_child(spin_sfx)
 	vbox.add_child(spin_row)
-
-	StylesUI.win_sep(vbox)
-	StylesUI.win_section(vbox, "KEYBOARD SHORTCUTS")
-
-	var keys := Label.new()
-	keys.text = "Q / E       previous / next shader\nS             toggle auto-shuffle\nP             toggle post-processing\nF             fullscreen\nSpace       play / pause\nEsc          stop\n← / →       prev / next track"
-	keys.add_theme_font_size_override("font_size", 12)
-	keys.modulate.a = 0.55
-	vbox.add_child(keys)
 
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -374,6 +368,56 @@ func _reset_post_defaults() -> void:
 	_visualizer.pp_loop_reinhard  = _visualizer._SHADER_REINHARD_DEFAULTS[_visualizer._shader_index]
 	_visualizer._save_current_pp_config()
 	_update_pp_sliders()
+
+
+# ── Keymap tab ────────────────────────────────────────────────────────────────
+
+func _build_keymap_tab() -> Control:
+	var scroll := ScrollContainer.new()
+	scroll.name = "Keymap"
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	var pad := MarginContainer.new()
+	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pad.add_theme_constant_override("margin_left", 2)
+	pad.add_theme_constant_override("margin_right", 4)
+	pad.add_theme_constant_override("margin_bottom", 8)
+	scroll.add_child(pad)
+
+	var vbox := VBoxContainer.new()
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 3)
+	pad.add_child(vbox)
+
+	StylesUI.win_section(vbox, "KEYBOARD SHORTCUTS")
+
+	var actions: Array[String] = Keymap.get_all_actions()
+	for action_id in actions:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+
+		var label := Label.new()
+		label.text = Keymap.get_action_name(action_id)
+		label.add_theme_font_size_override("font_size", 12)
+		label.custom_minimum_size.x = 185
+		label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(label)
+
+		var key_label := Label.new()
+		key_label.text = Keymap.key_to_label(Keymap.get_key(action_id))
+		key_label.add_theme_font_size_override("font_size", 12)
+		key_label.custom_minimum_size.x = 80
+		key_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		key_label.modulate = Color(0.7, 0.82, 1.0)
+		row.add_child(key_label)
+
+		var spacer := Control.new()
+		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(spacer)
+
+		vbox.add_child(row)
+
+	return scroll
 
 
 # ── Debug tab ─────────────────────────────────────────────────────────────────

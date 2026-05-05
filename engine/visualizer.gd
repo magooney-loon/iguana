@@ -166,11 +166,15 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed):
 		return
-	match (event as InputEventKey).keycode:
-		KEY_E: _switch((_shader_index + 1) % _loaded_shaders.size())
-		KEY_Q: _switch((_shader_index - 1 + _loaded_shaders.size()) % _loaded_shaders.size())
-		KEY_S: _toggle_shuffle()
-		KEY_P: _toggle_post_process()
+	var kc: int = (event as InputEventKey).keycode
+	if kc == Keymap.get_key("next_shader"):
+		_switch((_shader_index + 1) % _loaded_shaders.size())
+	elif kc == Keymap.get_key("prev_shader"):
+		_switch((_shader_index - 1 + _loaded_shaders.size()) % _loaded_shaders.size())
+	elif kc == Keymap.get_key("toggle_shuffle"):
+		_toggle_shuffle()
+	elif kc == Keymap.get_key("toggle_postproc"):
+		_toggle_post_process()
 
 
 func _switch(idx: int) -> void:
