@@ -128,6 +128,7 @@ func _build() -> void:
 	# ── Title bar ─────────────────────────────────────────────────────
 	var title_bar := PanelContainer.new()
 	title_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(Color(0.10, 0.11, 0.18, 0.60), 14.0, true))
+	StylesUI.apply_noise(title_bar, true)
 	col.add_child(title_bar)
 
 	var title_margin := MarginContainer.new()
@@ -164,6 +165,7 @@ func _build() -> void:
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.add_theme_stylebox_override("panel", StylesUI.glass_box(Color(0.04, 0.05, 0.09, 0.60), 10.0, false))
+	StylesUI.apply_noise(_scroll, true)
 	list_margin.add_child(_scroll)
 
 	_track_container = VBoxContainer.new()
@@ -174,6 +176,7 @@ func _build() -> void:
 	# ── Footer bar ────────────────────────────────────────────────────
 	var footer_bar := PanelContainer.new()
 	footer_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(Color(0.08, 0.09, 0.15, 0.55), 8.0, true))
+	StylesUI.apply_noise(footer_bar, true)
 	col.add_child(footer_bar)
 
 	var footer_margin := MarginContainer.new()
@@ -243,6 +246,7 @@ func _rebuild_list() -> void:
 		var row := PanelContainer.new()
 		row.add_theme_stylebox_override("panel", _style_active.duplicate() if is_active else _style_normal.duplicate())
 		row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		StylesUI.apply_noise(row, true)
 		var idx := i
 
 		# Inner HBox for layout

@@ -121,6 +121,7 @@ func _build() -> void:
 	# ── Custom title bar ──────────────────────────────────────────────
 	var title_bar := PanelContainer.new()
 	title_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(Color(0.10, 0.11, 0.18, 0.60), 14.0, true))
+	StylesUI.apply_noise(title_bar, true)
 	col.add_child(title_bar)
 
 	var title_margin := MarginContainer.new()
@@ -165,6 +166,7 @@ func _build() -> void:
 	tab_panel.content_margin_top    = 10.0
 	tab_panel.content_margin_bottom = 10.0
 	_tabs.add_theme_stylebox_override("panel", tab_panel)
+	StylesUI.apply_noise(_tabs, true)
 	content_margin.add_child(_tabs)
 
 	_tabs.add_child(_build_general_tab())

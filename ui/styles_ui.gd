@@ -1,6 +1,43 @@
 class_name StylesUI
 
-## Aero Glass Theme — colour palette
+## ── Shared noise shader ──────────────────────────────────────────────────────
+## Loaded once and reused for every panel that requests an industrial overlay.
+static var _noise_shader: Shader
+
+
+static func _get_noise_shader() -> Shader:
+	if _noise_shader == null:
+		_noise_shader = load("res://shaders/ui_noise.gdshader") as Shader
+		if _noise_shader == null:
+			push_warning("StylesUI: failed to load ui_noise.gdshader")
+	return _noise_shader
+
+
+## Apply an industrial noise material directly to a panel Control.
+## The canvas_item shader modifies the panel's rendered StyleBox output
+## in-place — no extra children needed.
+static func apply_noise(panel: Control, subtle := true) -> void:
+	var shader := _get_noise_shader()
+	if shader == null:
+		return
+
+	var mat := ShaderMaterial.new()
+	mat.shader = shader
+	if subtle:
+		mat.set_shader_parameter("grain_strength", 0.025)
+		mat.set_shader_parameter("scanline_strength", 0.02)
+		mat.set_shader_parameter("scratch_strength", 0.012)
+		mat.set_shader_parameter("vignette_strength", 0.05)
+	else:
+		mat.set_shader_parameter("grain_strength", 0.045)
+		mat.set_shader_parameter("scanline_strength", 0.04)
+		mat.set_shader_parameter("scratch_strength", 0.025)
+		mat.set_shader_parameter("vignette_strength", 0.10)
+	panel.material = mat
+
+
+## ── Aero Glass Theme ──────────────────────────────────────────────────────────
+## Colour palette
 const C_GLASS     := Color(0.08, 0.09, 0.16, 0.68)
 const C_GLASS_LT := Color(0.14, 0.16, 0.26, 0.55)
 const C_BORDER   := Color(0.55, 0.65, 0.85, 0.18)
