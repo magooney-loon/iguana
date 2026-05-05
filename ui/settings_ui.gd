@@ -181,6 +181,22 @@ func _build_general_tab() -> Control:
 	vbox.name = "General"
 	vbox.add_theme_constant_override("separation", 5)
 
+	StylesUI.win_section(vbox, "AUDIO SOURCE")
+
+	var source_opt := OptionButton.new()
+	source_opt.add_item("File Playback", 0)
+	source_opt.add_item("Audio Loopback (Coming Soon)", 1)
+	source_opt.set_item_disabled(1, true)
+	source_opt.tooltip_text = "Audio Loopback will be available in a future update"
+	source_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	source_opt.focus_mode = Control.FOCUS_NONE
+	source_opt.item_selected.connect(func(idx: int) -> void:
+		if idx == 1:
+			source_opt.selected = 0  # Revert — not implemented yet
+	)
+	vbox.add_child(source_opt)
+
+	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "AUTO-SHUFFLE")
 
 	_shuffle_check = CheckBox.new()
@@ -215,7 +231,7 @@ func _build_general_tab() -> Control:
 	StylesUI.win_section(vbox, "KEYBOARD SHORTCUTS")
 
 	var keys := Label.new()
-	keys.text = "Q / E       previous / next shader\nS             toggle auto-shuffle\nP             toggle post-processing\nF             fullscreen\nSpace       play / pause\nEsc          stop"
+	keys.text = "Q / E       previous / next shader\nS             toggle auto-shuffle\nP             toggle post-processing\nF             fullscreen\nSpace       play / pause\nEsc          stop\n← / →       prev / next track"
 	keys.add_theme_font_size_override("font_size", 12)
 	keys.modulate.a = 0.55
 	vbox.add_child(keys)

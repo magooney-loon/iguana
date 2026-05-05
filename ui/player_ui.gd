@@ -13,8 +13,14 @@ var _song_label: Label
 var _paused  := false
 var _seeking := false
 
-# ── Settings sub-system ───────────────────────────────────────────────────────
-var _settings: SettingsUI
+# ── Sub-systems ───────────────────────────────────────────────────────────────
+var _settings:    SettingsUI
+var _playlist:    Playlist
+var _playlist_ui: PlaylistUI
+
+# ── Bar buttons that need live refresh ────────────────────────────────────────
+var _loop_btn:    Button
+var _shuffle_btn: Button
 
 
 func _ready() -> void:
@@ -24,10 +30,18 @@ func _ready() -> void:
 
 	StylesUI.apply_bar_style(self)
 
-	# Build settings window as a child node (before bar so _settings.toggle is available)
+	# ── Sub-systems (before bar so their toggle callbacks are wired) ────
+	_playlist = Playlist.new()
+	_playlist.track_changed.connect(_on_playlist_track_changed)
+
 	_settings = SettingsUI.new()
 	_settings.setup(_visualizer, _analyzer)
 	add_child(_settings)
+
+	_playlist_ui = PlaylistUI.new()
+	_playlist_ui.setup(_playlist)
+	_playlist_ui.on_track_selected = _on_playlist_jump
+	add_child(_playlist_ui)
 
 	_build_bar()
 
@@ -38,7 +52,7 @@ func _ready() -> void:
 	if _player.stream != null:
 		var rpath := _player.stream.resource_path
 		if not rpath.is_empty():
-			_song_label.text = rpath.get_file().get_basename()
+			_playlist.add(rpath)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -62,6 +76,18 @@ func _build_bar() -> void:
 	StylesUI.apply_glass_btn(load_btn)
 	top.add_child(load_btn)
 
+	top.add_child(StylesUI.make_vsep())
+
+	var prev_btn := Button.new()
+	prev_btn.text = "⏮"
+	prev_btn.tooltip_text = "Previous"
+	prev_btn.custom_minimum_size.x = 32
+	prev_btn.add_theme_font_size_override("font_size", 16)
+	prev_btn.focus_mode = Control.FOCUS_NONE
+	prev_btn.pressed.connect(_on_prev)
+	StylesUI.apply_glass_btn(prev_btn)
+	top.add_child(prev_btn)
+
 	_play_btn = Button.new()
 	_play_btn.custom_minimum_size.x = 36
 	_play_btn.add_theme_font_size_override("font_size", 18)
@@ -73,12 +99,22 @@ func _build_bar() -> void:
 	var stop_btn := Button.new()
 	stop_btn.text = "⏹"
 	stop_btn.tooltip_text = "Stop"
-	stop_btn.custom_minimum_size.x = 36
-	stop_btn.add_theme_font_size_override("font_size", 18)
+	stop_btn.custom_minimum_size.x = 32
+	stop_btn.add_theme_font_size_override("font_size", 16)
 	stop_btn.focus_mode = Control.FOCUS_NONE
 	stop_btn.pressed.connect(_on_stop)
 	StylesUI.apply_glass_btn(stop_btn)
 	top.add_child(stop_btn)
+
+	var next_btn := Button.new()
+	next_btn.text = "⏭"
+	next_btn.tooltip_text = "Next"
+	next_btn.custom_minimum_size.x = 32
+	next_btn.add_theme_font_size_override("font_size", 16)
+	next_btn.focus_mode = Control.FOCUS_NONE
+	next_btn.pressed.connect(_on_next)
+	StylesUI.apply_glass_btn(next_btn)
+	top.add_child(next_btn)
 
 	top.add_child(StylesUI.make_vsep())
 
@@ -98,11 +134,41 @@ func _build_bar() -> void:
 
 	top.add_child(StylesUI.make_vsep())
 
+	_loop_btn = Button.new()
+	_loop_btn.text = "🔁"
+	_loop_btn.tooltip_text = "Loop mode"
+	_loop_btn.custom_minimum_size.x = 32
+	_loop_btn.add_theme_font_size_override("font_size", 16)
+	_loop_btn.focus_mode = Control.FOCUS_NONE
+	_loop_btn.pressed.connect(_on_loop_pressed)
+	StylesUI.apply_glass_btn(_loop_btn)
+	top.add_child(_loop_btn)
+
+	_shuffle_btn = Button.new()
+	_shuffle_btn.text = "Sh"
+	_shuffle_btn.tooltip_text = "Shuffle"
+	_shuffle_btn.custom_minimum_size.x = 32
+	_shuffle_btn.add_theme_font_size_override("font_size", 12)
+	_shuffle_btn.focus_mode = Control.FOCUS_NONE
+	_shuffle_btn.pressed.connect(_on_shuffle_pressed)
+	StylesUI.apply_glass_btn(_shuffle_btn)
+	top.add_child(_shuffle_btn)
+
+	var pl_btn := Button.new()
+	pl_btn.text = "☰"
+	pl_btn.tooltip_text = "Playlist"
+	pl_btn.custom_minimum_size.x = 32
+	pl_btn.add_theme_font_size_override("font_size", 16)
+	pl_btn.focus_mode = Control.FOCUS_NONE
+	pl_btn.pressed.connect(_playlist_ui.toggle)
+	StylesUI.apply_glass_btn(pl_btn)
+	top.add_child(pl_btn)
+
 	var fs_btn := Button.new()
 	fs_btn.text = "⛶"
 	fs_btn.tooltip_text = "Fullscreen"
-	fs_btn.custom_minimum_size.x = 36
-	fs_btn.add_theme_font_size_override("font_size", 18)
+	fs_btn.custom_minimum_size.x = 32
+	fs_btn.add_theme_font_size_override("font_size", 16)
 	fs_btn.focus_mode = Control.FOCUS_NONE
 	fs_btn.pressed.connect(_toggle_fullscreen)
 	StylesUI.apply_glass_btn(fs_btn)
@@ -111,14 +177,14 @@ func _build_bar() -> void:
 	var set_btn := Button.new()
 	set_btn.text = "⚙"
 	set_btn.tooltip_text = "Settings"
-	set_btn.custom_minimum_size.x = 36
-	set_btn.add_theme_font_size_override("font_size", 18)
+	set_btn.custom_minimum_size.x = 32
+	set_btn.add_theme_font_size_override("font_size", 16)
 	set_btn.focus_mode = Control.FOCUS_NONE
 	set_btn.pressed.connect(_settings.toggle)
 	StylesUI.apply_glass_btn(set_btn)
 	top.add_child(set_btn)
 
-	# ── Bottom row: seek bar (glass track + glowing grabber) ───────────
+	# ── Bottom row: seek bar ───────────────────────────────────────────
 	_seek_bar = HSlider.new()
 	_seek_bar.min_value  = 0.0
 	_seek_bar.max_value  = 1.0
@@ -128,19 +194,16 @@ func _build_bar() -> void:
 	_seek_bar.focus_mode = Control.FOCUS_NONE
 	_seek_bar.value_changed.connect(_on_seek_changed)
 
-	# Slider track (background)
 	var sb_bg := StylesUI.glass_box(Color(0.04, 0.05, 0.10, 0.50), 5.0, false)
 	sb_bg.content_margin_top = 6.0
 	sb_bg.content_margin_bottom = 6.0
 	_seek_bar.add_theme_stylebox_override("slider", sb_bg)
 
-	# Filled portion
 	var sb_fill := StylesUI.glass_box(Color(0.30, 0.45, 0.75, 0.50), 5.0, false)
 	sb_fill.content_margin_top = 6.0
 	sb_fill.content_margin_bottom = 6.0
 	_seek_bar.add_theme_stylebox_override("fill", sb_fill)
 
-	# Grabber
 	var sb_grab := StylesUI.glass_box(Color(0.55, 0.70, 1.0, 0.80), 8.0, true)
 	sb_grab.content_margin_left = 4.0
 	sb_grab.content_margin_right = 4.0
@@ -150,6 +213,8 @@ func _build_bar() -> void:
 	_seek_bar.add_theme_stylebox_override("grabber_area_highlight", sb_grab)
 
 	vbox.add_child(_seek_bar)
+
+	_refresh_mode_buttons()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -176,22 +241,96 @@ func _update_player_ui() -> void:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  Playlist integration
+# ─────────────────────────────────────────────────────────────────────────────
+
+func _play_track(path: String) -> void:
+	var stream := _load_stream(path)
+	if stream == null:
+		return
+	_player.stop()
+	_player.stream = stream
+	_player.play()
+	_paused = false
+	_refresh_song_label()
+	_seek_bar.max_value = stream.get_length()
+	_refresh_play_btn()
+
+
+func _refresh_song_label() -> void:
+	var track := _playlist.get_current_track()
+	if track.is_empty():
+		_song_label.text = "No track loaded"
+		return
+	var name := track.get_file().get_basename()
+	if _playlist.size() > 1:
+		name += "  (%d/%d)" % [_playlist.get_current_index() + 1, _playlist.size()]
+	_song_label.text = name
+
+
+func _on_playlist_track_changed(_index: int) -> void:
+	_refresh_song_label()
+	_refresh_mode_buttons()
+
+
+func _on_playlist_jump(index: int) -> void:
+	var path := _playlist.jump_to(index)
+	if not path.is_empty():
+		_play_track(path)
+
+
+func _on_loop_pressed() -> void:
+	_playlist.cycle_play_mode()
+	_refresh_mode_buttons()
+
+
+func _on_shuffle_pressed() -> void:
+	if _playlist.get_play_mode() == Playlist.PlayMode.SHUFFLE:
+		_playlist.set_play_mode(Playlist.PlayMode.LOOP_ALL)
+	else:
+		_playlist.set_play_mode(Playlist.PlayMode.SHUFFLE)
+	_refresh_mode_buttons()
+
+
+func _refresh_mode_buttons() -> void:
+	match _playlist.get_play_mode():
+		Playlist.PlayMode.SEQUENTIAL:
+			_loop_btn.text = "→"
+			_loop_btn.tooltip_text = "Sequential (click to loop all)"
+			_shuffle_btn.modulate.a = 0.5
+		Playlist.PlayMode.LOOP_ALL:
+			_loop_btn.text = "🔁"
+			_loop_btn.tooltip_text = "Loop All (click to loop one)"
+			_shuffle_btn.modulate.a = 0.5
+		Playlist.PlayMode.LOOP_ONE:
+			_loop_btn.text = "🔂"
+			_loop_btn.tooltip_text = "Loop One (click to shuffle)"
+			_shuffle_btn.modulate.a = 0.5
+		Playlist.PlayMode.SHUFFLE:
+			_loop_btn.text = "🔁"
+			_loop_btn.tooltip_text = "Shuffle (click for sequential)"
+			_shuffle_btn.modulate.a = 1.0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  Actions
 # ─────────────────────────────────────────────────────────────────────────────
 
 func _on_play_pause() -> void:
 	if _player.stream == null:
+		# If nothing loaded but playlist has tracks, play current
+		if not _playlist.is_empty():
+			var path := _playlist.get_current_track()
+			if not path.is_empty():
+				_play_track(path)
 		return
 	if _player.stream_paused:
-		# Resume from where we paused
 		_player.stream_paused = false
 		_paused = false
 	elif _player.playing:
-		# Pause without losing position
 		_player.stream_paused = true
 		_paused = true
 	else:
-		# Stopped — start from the beginning
 		_player.play()
 		_paused = false
 	_refresh_play_btn()
@@ -201,6 +340,26 @@ func _on_stop() -> void:
 	_player.stop()
 	_paused = false
 	_refresh_play_btn()
+
+
+func _on_prev() -> void:
+	if _playlist.is_empty():
+		return
+	# If more than 3 seconds in, restart current track instead
+	if _player.stream != null and _player.get_playback_position() > 3.0:
+		_player.seek(0.0)
+		return
+	var path := _playlist.go_prev()
+	if not path.is_empty():
+		_play_track(path)
+
+
+func _on_next() -> void:
+	if _playlist.is_empty():
+		return
+	var path := _playlist.go_next()
+	if not path.is_empty():
+		_play_track(path)
 
 
 func _on_seek_changed(val: float) -> void:
@@ -216,42 +375,45 @@ func _toggle_fullscreen() -> void:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 
 
+func _on_song_finished() -> void:
+	_paused = false
+	var path := _playlist.advance()
+	if not path.is_empty():
+		_play_track(path)
+	else:
+		_refresh_play_btn()
+
+
 func _on_load() -> void:
 	var dialog := FileDialog.new()
-	dialog.access    = FileDialog.ACCESS_FILESYSTEM
-	dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-	dialog.filters   = PackedStringArray(["*.mp3,*.ogg ; Audio Files"])
-	dialog.file_selected.connect(_on_file_selected)
+	dialog.access     = FileDialog.ACCESS_FILESYSTEM
+	dialog.file_mode  = FileDialog.FILE_MODE_OPEN_FILES
+	dialog.filters    = PackedStringArray(["*.mp3,*.ogg ; Audio Files"])
+	dialog.files_selected.connect(_on_files_selected)
 	dialog.canceled.connect(dialog.queue_free)
 	add_child(dialog)
 	dialog.popup_centered_ratio(0.65)
 
 
-func _on_file_selected(path: String) -> void:
-	var stream := _load_stream(path)
-	if stream == null:
+func _on_files_selected(paths: PackedStringArray) -> void:
+	if paths.is_empty():
 		return
-	_player.stop()
-	_player.stream = stream
-	_player.play()
-	_paused = false
-	_song_label.text = path.get_file().get_basename()
-	_seek_bar.max_value = stream.get_length()
-	_refresh_play_btn()
-
-
-func _on_song_finished() -> void:
-	_paused = false
-	_refresh_play_btn()
+	_playlist.add_many(paths)
+	# Play the first newly-added file
+	var path := _playlist.get_current_track()
+	if not path.is_empty():
+		_play_track(path)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
 	match (event as InputEventKey).keycode:
-		KEY_F:     _toggle_fullscreen()
-		KEY_SPACE: _on_play_pause()
+		KEY_F:      _toggle_fullscreen()
+		KEY_SPACE:  _on_play_pause()
 		KEY_ESCAPE: _on_stop()
+		KEY_LEFT:   _on_prev()
+		KEY_RIGHT:  _on_next()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
