@@ -243,15 +243,10 @@ func _build_settings_window() -> void:
 	_settings_win.hide()
 	add_child(_settings_win)
 
-	# ── Glass shell ────────────────────────────────────────────────────
-	var shell := PanelContainer.new()
-	shell.set_anchors_preset(Control.PRESET_FULL_RECT)
-	shell.add_theme_stylebox_override("panel", _glass_box(Color(0.06, 0.07, 0.12, 0.85), 14.0, true))
-	_settings_win.add_child(shell)
-
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 0)
-	shell.add_child(col)
+	col.set_anchors_preset(Control.PRESET_FULL_RECT)
+	col.add_theme_constant_override("separation", 4)
+	_settings_win.add_child(col)
 
 	# ── Custom title bar ──────────────────────────────────────────────
 	var title_bar := PanelContainer.new()
