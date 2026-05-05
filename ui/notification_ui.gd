@@ -1,4 +1,4 @@
-class_name VisualizerUI
+class_name NotificationUI
 extends Control
 
 ## Minimal overlay: just the shader-name label that fades out after switching.

@@ -349,7 +349,7 @@ The ⚙ settings window has a **General** tab (shuffle interval, keyboard shortc
 ├── shaders/
 ├── ui/
 │   ├── player_ui.gd               # Player bar + floating settings window
-│   └── visualizer_ui.gd           # Shader name label overlay
+│   └── notification_ui.gd      # Overlay notification label
 ├── main.tscn
 ├── project.godot
 ├── GUIDE.md                       # Deep-dive: MilkDrop pipeline, gaps, decisions

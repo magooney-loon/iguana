@@ -152,7 +152,7 @@ Not everything is missing. Iguana has some genuine strengths:
 uniform sampler2D prev_frame : hint_default_white, filter_linear, repeat_disable;
 ```
 
-**UI consideration:** The VisualizerUI overlay must be a child of the `SubViewportContainer` (not the SubViewport) so it renders above the feedback viewport but is NOT captured in the feedback texture. If the UI is inside the viewport, debug text and the shader name label will appear as trails.
+**UI consideration:** The NotificationUI overlay must be a child of the `SubViewportContainer` (not the SubViewport) so it renders above the feedback viewport but is NOT captured in the feedback texture. If the UI is inside the viewport, debug text and the shader name label will appear as trails.
 
 **Silence handling:** When `_analyzer.is_sounding == false`, the feedback loop keeps running. With a slow decay (e.g. 0.97), the last frame will sit there indefinitely — which can look nice, but can also mean a bright flash from just before the track stopped burns in for a long time. Two options: push a `uniform float is_sounding` and in the shader ramp decay toward 0.0 faster when it's 0, or clamp the feedback UV sampling to black outside `[0,1]` (already done via `clamp(...)`) and accept the slow natural fade. Either is fine — just don't leave it untested.
 

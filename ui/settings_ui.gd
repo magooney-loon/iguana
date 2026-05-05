@@ -191,10 +191,10 @@ func _build_general_tab() -> Control:
 	vbox.add_child(source_opt)
 
 	StylesUI.win_sep(vbox)
-	StylesUI.win_section(vbox, "AUTO-SHUFFLE")
+	StylesUI.win_section(vbox, "SHADER SHUFFLE")
 
 	_shuffle_check = CheckBox.new()
-	_shuffle_check.text = "Auto-shuffle"
+	_shuffle_check.text = "Shader shuffle"
 	_shuffle_check.toggled.connect(func(on: bool):
 		_visualizer._shuffle_on    = on
 		_visualizer._shuffle_timer = 0.0

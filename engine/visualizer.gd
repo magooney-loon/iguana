@@ -32,7 +32,7 @@ var _switch_cooldown := 0.0
 var _frame_count := 0
 
 # UI overlay (lives on SubViewportContainer, not inside SubViewport)
-var _ui: VisualizerUI
+var _ui: NotificationUI
 
 var _noise_tex: NoiseTexture2D
 
@@ -128,7 +128,7 @@ func _ready() -> void:
 
 	# UI lives on the container so it is NOT captured in the feedback texture.
 	# If it were inside the SubViewport its labels would trail and spiral forever.
-	_ui = VisualizerUI.new()
+	_ui = NotificationUI.new()
 	_ui.setup(_analyzer, SHADERS, self)
 
 	# Defer add_child calls: parent nodes are still setting up at _ready() time.
@@ -198,7 +198,7 @@ func _switch(idx: int) -> void:
 func _toggle_shuffle() -> void:
 	_shuffle_on    = !_shuffle_on
 	_shuffle_timer = 0.0
-	_ui.show_label("Shuffle %s" % ("ON" if _shuffle_on else "OFF"))
+	_ui.show_label("Shader Shuffle %s" % ("ON" if _shuffle_on else "OFF"))
 
 
 func _toggle_post_process() -> void:

@@ -163,6 +163,12 @@ func _process(_delta: float) -> void:
 	_settings.sync_frame()
 
 
+## Show a short-lived overlay notification on the visualizer.
+func _notify(text: String) -> void:
+	if is_instance_valid(_visualizer) and is_instance_valid(_visualizer._ui):
+		_visualizer._ui.show_label(text)
+
+
 func _update_player_ui() -> void:
 	if _player.stream == null:
 		_time_label.text = "0:00 / 0:00"
@@ -240,6 +246,7 @@ func _on_playlist_jump(index: int) -> void:
 func _on_loop_pressed() -> void:
 	_playlist.cycle_play_mode()
 	_refresh_mode_buttons()
+	_notify(_mode_label())
 
 
 func _on_shuffle_pressed() -> void:
@@ -248,6 +255,7 @@ func _on_shuffle_pressed() -> void:
 	else:
 		_playlist.set_play_mode(Playlist.PlayMode.SHUFFLE)
 	_refresh_mode_buttons()
+	_notify(_mode_label())
 
 
 func _refresh_mode_buttons() -> void:
@@ -283,12 +291,15 @@ func _on_play_pause() -> void:
 	if _player.stream_paused:
 		_player.stream_paused = false
 		_paused = false
+		_notify("Play")
 	elif _player.playing:
 		_player.stream_paused = true
 		_paused = true
+		_notify("Pause")
 	else:
 		_player.play()
 		_paused = false
+		_notify("Play")
 	_refresh_play_btn()
 
 
@@ -296,6 +307,7 @@ func _on_stop() -> void:
 	_player.stop()
 	_paused = false
 	_refresh_play_btn()
+	_notify("Stopped")
 
 
 func _on_prev() -> void:
@@ -304,14 +316,17 @@ func _on_prev() -> void:
 	# If more than 3 seconds in, restart current track instead
 	if _player.stream != null and _player.get_playback_position() > 3.0:
 		_player.seek(0.0)
+		_notify("Restart")
 		return
 	_playlist.go_prev()
+	_notify("Previous")
 
 
 func _on_next() -> void:
 	if _playlist.is_empty():
 		return
 	_playlist.go_next()
+	_notify("Next")
 
 
 func _on_seek_changed(val: float) -> void:
@@ -323,8 +338,10 @@ func _toggle_fullscreen() -> void:
 	var mode := DisplayServer.window_get_mode()
 	if mode == DisplayServer.WINDOW_MODE_FULLSCREEN:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		_notify("Windowed")
 	else:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		_notify("Fullscreen")
 
 
 func _on_song_finished() -> void:
@@ -381,3 +398,12 @@ func _refresh_play_btn() -> void:
 func _fmt(secs: float) -> String:
 	var s := int(secs)
 	return "%d:%02d" % [int(s / 60.0), s % 60]
+
+
+func _mode_label() -> String:
+	match _playlist.get_play_mode():
+		Playlist.PlayMode.SEQUENTIAL: return "Sequential"
+		Playlist.PlayMode.LOOP_ALL:  return "Loop All"
+		Playlist.PlayMode.LOOP_ONE:  return "Loop One"
+		Playlist.PlayMode.SHUFFLE:   return "Shuffle"
+	return ""
