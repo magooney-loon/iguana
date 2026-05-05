@@ -292,13 +292,18 @@ func _rebuild_list() -> void:
 		dur_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hbox.add_child(dur_lbl)
 
+		# ── Spacer ─────────────────────────────────────────────────────
+		var spacer := Control.new()
+		spacer.custom_minimum_size.x = 6
+		hbox.add_child(spacer)
+
 		# ── Remove button ─────────────────────────────────────────────
 		var remove_btn := Button.new()
 		var remove_tex := StylesUI.load_icon("close")
 		if remove_tex:
 			remove_btn.icon = remove_tex
 			remove_btn.expand_icon = true
-		remove_btn.custom_minimum_size = Vector2(24, 24)
+		remove_btn.custom_minimum_size = Vector2(20, 20)
 		remove_btn.focus_mode = Control.FOCUS_NONE
 		remove_btn.mouse_filter = Control.MOUSE_FILTER_STOP
 		remove_btn.modulate.a = 0.5
