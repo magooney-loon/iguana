@@ -33,7 +33,7 @@ uniform float time_val    = 0.0;
 uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable;
 uniform sampler2D noise_tex  : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform vec2 rect_size = vec2(1600.0, 900.0);
-const float LOOP_REINHARD = 0.18;
+uniform float loop_reinhard : hint_range(0.0, 3.0) = 0.18;
 
 #define TAU 6.28318530718
 #define PI  3.14159265359
@@ -478,7 +478,7 @@ void fragment() {
 
 	// ── COMPOSITE with feedback ─────────────────────────────────────
 	vec3 final_col = trail + col;
-	final_col = final_col / (1.0 + final_col * LOOP_REINHARD);
+	final_col = final_col / (1.0 + final_col * loop_reinhard);
 
 	COLOR = vec4(final_col, 1.0);
 }

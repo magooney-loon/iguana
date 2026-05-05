@@ -21,6 +21,10 @@ var _shuffle_check:  CheckBox
 var _shuffle_spin:   SpinBox
 var _last_shader_idx := -1
 
+# Post-process slider references (param_name → { slider, val_lbl })
+var _pp_sliders: Dictionary = {}
+var _pp_shader_label: Label
+
 
 # Debug: key → { bar: ProgressBar, val: Label }
 var _dbg: Dictionary = {}
@@ -369,10 +373,16 @@ func _build_post_tab() -> Control:
 	vbox.name = "Post-Process"
 	vbox.add_theme_constant_override("separation", 6)
 
-	_win_section(vbox, "DISPLAY POST-PROCESSING")
+	_win_section(vbox, "PER-SHADER POST-PROCESSING")
+
+	_pp_shader_label = Label.new()
+	_pp_shader_label.text = "Editing: %s" % _visualizer.SHADERS[_visualizer._shader_index].name
+	_pp_shader_label.add_theme_font_size_override("font_size", 13)
+	_pp_shader_label.modulate.a = 0.80
+	vbox.add_child(_pp_shader_label)
 
 	var note := Label.new()
-	note.text = "Applied after the feedback loop — changes here\nnever feed back into the visualizer."
+	note.text = "Each shader stores its own post-processing preset.\nSettings are per-shader and saved to disk."
 	note.add_theme_font_size_override("font_size", 11)
 	note.modulate.a = 0.50
 	vbox.add_child(note)
@@ -387,20 +397,34 @@ func _build_post_tab() -> Control:
 
 	_win_sep(vbox)
 
-	_post_slider(vbox, "Exposure",        0.1,  3.0,  0.01, func(v: float): _visualizer.pp_exposure       = v)
-	_post_slider(vbox, "Tone compression",0.0,  2.0,  0.01, func(v: float): _visualizer.pp_tonemap_knee   = v)
-	_post_slider(vbox, "Gamma",           0.5,  3.0,  0.01, func(v: float): _visualizer.pp_gamma          = v)
-	_post_slider(vbox, "Vignette shadow", 0.0,  1.0,  0.01, func(v: float): _visualizer.pp_vignette_dark  = v)
-	_post_slider(vbox, "Film grain",      0.0,  0.08, 0.002,func(v: float): _visualizer.pp_grain_strength = v)
+	_pp_sliders.clear()
+	_pp_slider(vbox, "Exposure",         "exposure",       0.1,  3.0,  0.01)
+	_pp_slider(vbox, "Tone compression", "tonemap_knee",   0.0,  2.0,  0.01)
+	_pp_slider(vbox, "Gamma",            "gamma",          0.5,  3.0,  0.01)
+	_pp_slider(vbox, "Vignette shadow",  "vignette_dark",  0.0,  1.0,  0.01)
+	_pp_slider(vbox, "Film grain",       "grain_strength", 0.0,  0.08, 0.002)
+	_pp_slider(vbox, "Loop Reinhard",    "loop_reinhard",  0.0,  3.0,  0.01)
 
 	_win_sep(vbox)
+
+	var btn_row := HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 8)
 
 	var reset_btn := Button.new()
 	reset_btn.text = "Reset to defaults"
 	reset_btn.focus_mode = Control.FOCUS_NONE
 	reset_btn.pressed.connect(_reset_post_defaults)
 	_apply_glass_btn(reset_btn)
-	vbox.add_child(reset_btn)
+	btn_row.add_child(reset_btn)
+
+	var save_btn := Button.new()
+	save_btn.text = "Save Settings"
+	save_btn.focus_mode = Control.FOCUS_NONE
+	save_btn.pressed.connect(func(): _visualizer.save_settings())
+	_apply_glass_btn(save_btn)
+	btn_row.add_child(save_btn)
+
+	vbox.add_child(btn_row)
 
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -409,8 +433,8 @@ func _build_post_tab() -> Control:
 	return vbox
 
 
-func _post_slider(parent: VBoxContainer, label: String,
-		lo: float, hi: float, step: float, cb: Callable) -> void:
+func _pp_slider(parent: VBoxContainer, label: String, param: String,
+		lo: float, hi: float, step: float) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 
@@ -433,41 +457,52 @@ func _post_slider(parent: VBoxContainer, label: String,
 	val_lbl.horizontal_alignment  = HORIZONTAL_ALIGNMENT_RIGHT
 
 	# Wire initial values from visualizer
-	var initial: float = _get_post_param(label)
+	var initial: float = _get_pp_value(param)
 	slider.value   = initial
 	val_lbl.text   = "%.2f" % initial
 
 	slider.value_changed.connect(func(v: float):
 		val_lbl.text = "%.2f" % v
-		cb.call(v)
+		_visualizer.update_pp_param(param, v)
 	)
 	row.add_child(slider)
 	row.add_child(val_lbl)
 	parent.add_child(row)
 
+	_pp_sliders[param] = { "slider": slider, "val_lbl": val_lbl }
 
-func _get_post_param(label: String) -> float:
-	match label:
-		"Exposure":         return _visualizer.pp_exposure
-		"Tone compression": return _visualizer.pp_tonemap_knee
-		"Gamma":            return _visualizer.pp_gamma
-		"Vignette shadow":  return _visualizer.pp_vignette_dark
-		"Film grain":       return _visualizer.pp_grain_strength
+
+func _get_pp_value(param: String) -> float:
+	match param:
+		"exposure":       return _visualizer.pp_exposure
+		"tonemap_knee":   return _visualizer.pp_tonemap_knee
+		"gamma":          return _visualizer.pp_gamma
+		"vignette_dark":  return _visualizer.pp_vignette_dark
+		"grain_strength": return _visualizer.pp_grain_strength
+		"loop_reinhard":  return _visualizer.pp_loop_reinhard
 	return 0.0
 
 
+func _update_pp_sliders() -> void:
+	if _pp_shader_label:
+		_pp_shader_label.text = "Editing: %s" % _visualizer.SHADERS[_visualizer._shader_index].name
+	for param in _pp_sliders:
+		var entry: Dictionary = _pp_sliders[param]
+		var value: float = _get_pp_value(param)
+		(entry["slider"] as HSlider).set_value_no_signal(value)
+		(entry["val_lbl"] as Label).text = "%.2f" % value
+
+
 func _reset_post_defaults() -> void:
-	_visualizer.pp_exposure       = 1.42
-	_visualizer.pp_tonemap_knee   = 0.0
-	_visualizer.pp_gamma          = 2.0
-	_visualizer.pp_vignette_dark  = 0.30
-	_visualizer.pp_grain_strength = 0.01
-	# Rebuild the tab to reflect reset values
-	var old_tab: int = _settings_tabs.current_tab
-	_settings_tabs.remove_child(_settings_tabs.get_child(1))   # index 1 = Post-Process tab
-	_settings_tabs.add_child(_build_post_tab())
-	_settings_tabs.move_child(_settings_tabs.get_child(_settings_tabs.get_child_count() - 1), 1)
-	_settings_tabs.current_tab = old_tab
+	var defaults: Dictionary = _visualizer.PP_DEFAULTS
+	_visualizer.pp_exposure       = defaults["exposure"]
+	_visualizer.pp_tonemap_knee   = defaults["tonemap_knee"]
+	_visualizer.pp_gamma          = defaults["gamma"]
+	_visualizer.pp_vignette_dark  = defaults["vignette_dark"]
+	_visualizer.pp_grain_strength = defaults["grain_strength"]
+	_visualizer.pp_loop_reinhard  = _visualizer._SHADER_REINHARD_DEFAULTS[_visualizer._shader_index]
+	_visualizer._save_current_pp_config()
+	_update_pp_sliders()
 
 
 # ── Shaders tab ───────────────────────────────────────────────────────────────
@@ -639,6 +674,7 @@ func _sync_settings() -> void:
 		_last_shader_idx = idx
 		for i in _shader_btns.size():
 			_shader_btns[i].set_pressed_no_signal(i == idx)
+		_update_pp_sliders()
 	# Shuffle state
 	_shuffle_check.set_block_signals(true)
 	_shuffle_check.button_pressed = _visualizer._shuffle_on

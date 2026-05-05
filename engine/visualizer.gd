@@ -53,6 +53,21 @@ var pp_tonemap_knee   := 0.0
 var pp_gamma          := 2.0
 var pp_vignette_dark  := 0.30
 var pp_grain_strength := 0.01
+var pp_loop_reinhard  := 0.0   # per-shader feedback-loop Reinhard compression
+
+# Per-shader post-processing overrides (one dict per shader).
+var _shader_pp_configs: Array[Dictionary] = []
+const PP_DEFAULTS := {
+	"exposure":       1.42,
+	"tonemap_knee":   0.0,
+	"gamma":          2.0,
+	"vignette_dark":  0.30,
+	"grain_strength": 0.01,
+	"loop_reinhard":  0.0,
+}
+# Default loop_reinhard per shader (matches each .gdshader default)
+const _SHADER_REINHARD_DEFAULTS := [0.9, 1.2, 1.0, 0.69, 0.18]
+const SETTINGS_PATH := "user://iguana_settings.cfg"
 
 
 func _ready() -> void:
@@ -64,6 +79,12 @@ func _ready() -> void:
 
 	for def in SHADERS:
 		_loaded_shaders.append(load(def.path))
+
+	# Initialize per-shader PP configs with defaults
+	for i in _loaded_shaders.size():
+		var cfg := PP_DEFAULTS.duplicate()
+		cfg["loop_reinhard"] = _SHADER_REINHARD_DEFAULTS[i]
+		_shader_pp_configs.append(cfg)
 
 	material = ShaderMaterial.new()
 	(material as ShaderMaterial).shader = _loaded_shaders[0]
@@ -135,6 +156,10 @@ func _ready() -> void:
 	_noise_tex.noise = fnoise
 	_noise_tex.seamless = true
 
+	# Load persisted settings and apply first shader's post-processing config
+	_load_settings()
+	_apply_pp_config(0)
+
 
 # ── Input and shader switching ─────────────────────────────────────
 
@@ -149,6 +174,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _switch(idx: int) -> void:
+	# Save current shader's PP config before switching away
+	_save_current_pp_config()
+
 	# Capture a STATIC snapshot of the current frame for cross-fade
 	var img: Image = _backbuffer_vp.get_texture().get_image()
 	_transition_overlay.texture = ImageTexture.create_from_image(img)
@@ -162,6 +190,9 @@ func _switch(idx: int) -> void:
 	(material as ShaderMaterial).shader = _loaded_shaders[idx]
 	_ui.on_shader_changed(idx)
 	_ui.show_label("< %s >" % SHADERS[idx].name)
+
+	# Apply new shader's post-processing config
+	_apply_pp_config(idx)
 
 
 func _toggle_shuffle() -> void:
@@ -261,6 +292,7 @@ func _push_uniforms(mat: ShaderMaterial) -> void:
 	mat.set_shader_parameter("hihat_threshold", a._hihat_threshold)
 	mat.set_shader_parameter("time_val",    a._time)
 	mat.set_shader_parameter("noise_tex",   _noise_tex)
+	mat.set_shader_parameter("loop_reinhard", pp_loop_reinhard)
 	for i in range(a._row_peaks.size()):
 		mat.set_shader_parameter("peak_%02d" % i, a._row_peaks[i])
 
@@ -275,3 +307,72 @@ func _push_uniforms(mat: ShaderMaterial) -> void:
 	_post_mat.set_shader_parameter("gamma",          pp_gamma)
 	_post_mat.set_shader_parameter("vignette_dark",  pp_vignette_dark)
 	_post_mat.set_shader_parameter("grain_strength", pp_grain_strength)
+
+
+# ── Per-shader post-processing config ──────────────────────────────
+
+func _apply_pp_config(idx: int) -> void:
+	var cfg := _shader_pp_configs[idx]
+	pp_exposure       = cfg.get("exposure", PP_DEFAULTS["exposure"])
+	pp_tonemap_knee   = cfg.get("tonemap_knee", PP_DEFAULTS["tonemap_knee"])
+	pp_gamma          = cfg.get("gamma", PP_DEFAULTS["gamma"])
+	pp_vignette_dark  = cfg.get("vignette_dark", PP_DEFAULTS["vignette_dark"])
+	pp_grain_strength = cfg.get("grain_strength", PP_DEFAULTS["grain_strength"])
+	pp_loop_reinhard  = cfg.get("loop_reinhard", _SHADER_REINHARD_DEFAULTS[idx])
+
+
+func _save_current_pp_config() -> void:
+	_shader_pp_configs[_shader_index] = {
+		"exposure":       pp_exposure,
+		"tonemap_knee":   pp_tonemap_knee,
+		"gamma":          pp_gamma,
+		"vignette_dark":  pp_vignette_dark,
+		"grain_strength": pp_grain_strength,
+		"loop_reinhard":  pp_loop_reinhard,
+	}
+
+
+func update_pp_param(param: String, value: float) -> void:
+	match param:
+		"exposure":       pp_exposure       = value
+		"tonemap_knee":   pp_tonemap_knee   = value
+		"gamma":          pp_gamma          = value
+		"vignette_dark":  pp_vignette_dark  = value
+		"grain_strength": pp_grain_strength = value
+		"loop_reinhard":  pp_loop_reinhard  = value
+	_shader_pp_configs[_shader_index][param] = value
+
+
+# ── Settings persistence ────────────────────────────────────────────
+
+func save_settings() -> void:
+	_save_current_pp_config()
+	var cfg := ConfigFile.new()
+	for i in _shader_pp_configs.size():
+		var section := "shader_%d" % i
+		for key in _shader_pp_configs[i]:
+			cfg.set_value(section, key, _shader_pp_configs[i][key])
+	cfg.set_value("general", "shuffle_interval", shuffle_interval)
+	cfg.set_value("general", "shuffle_on", _shuffle_on)
+	cfg.set_value("general", "post_enabled", _post_display.visible if is_instance_valid(_post_display) else true)
+	cfg.save(SETTINGS_PATH)
+	_ui.show_label("Settings saved")
+
+
+func _load_settings() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(SETTINGS_PATH) != OK:
+		return
+	for i in _loaded_shaders.size():
+		var section := "shader_%d" % i
+		if cfg.has_section(section):
+			for key in PP_DEFAULTS:
+				if cfg.has_section_key(section, key):
+					_shader_pp_configs[i][key] = cfg.get_value(section, key)
+	if cfg.has_section_key("general", "shuffle_interval"):
+		shuffle_interval = cfg.get_value("general", "shuffle_interval")
+	if cfg.has_section_key("general", "shuffle_on"):
+		_shuffle_on = cfg.get_value("general", "shuffle_on")
+	if cfg.has_section_key("general", "post_enabled"):
+		if is_instance_valid(_post_display):
+			_post_display.visible = cfg.get_value("general", "post_enabled")

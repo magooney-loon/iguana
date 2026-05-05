@@ -36,7 +36,7 @@ uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable
 // ── Utility ──────────────────────────────────────────────────────────
 uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform vec2 rect_size = vec2(1600.0, 900.0);
-const float LOOP_REINHARD = 0.9;
+uniform float loop_reinhard : hint_range(0.0, 3.0) = 0.9;
 
 #define TAU 6.28318530718
 #define PI  3.14159265359
@@ -346,7 +346,7 @@ void fragment() {
 	float trail_lum = dot(trail, vec3(0.299, 0.587, 0.114));
 	vec3 col = new_col * (1.0 + trail_lum) + trail * 0.1;
 
-	col = col / (1.0 + col * LOOP_REINHARD);
+	col = col / (1.0 + col * loop_reinhard);
 
 	COLOR = vec4(col, 1.0);
 }
