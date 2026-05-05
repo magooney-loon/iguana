@@ -29,6 +29,7 @@ buses/default_bus_layout="uid://byxtiup0hs2og"
 
 Keymap="*res://engine/keymap.gd"
 Config="*res://config.gd"
+AudioSource="*res://engine/audio_source.gd"
 
 [display]
 

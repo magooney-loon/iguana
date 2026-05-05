@@ -1,26 +1,16 @@
 extends PanelContainer
 
 # ── External references ───────────────────────────────────────────────────────
-var _player:     AudioStreamPlayer
 var _visualizer              # visualizer.gd node (ColorRect inside SubViewport)
-var _analyzer:   AudioAnalyzer
 
 # ── Player bar controls ───────────────────────────────────────────────────────
 var _play_btn:   Button
 var _seek_bar:   HSlider
 var _time_label: Label
 var _song_label: Label
-var _paused  := false
-var _seeking := false
 var _vol_btn:    Button
 var _vol_slider: HSlider
-var _volume     := 1.0
-
-# ── Crossfade ──────────────────────────────────────────────────────────────
-var _fade_player:       AudioStreamPlayer
-var _crossfade_tween:   Tween
-var _near_end_triggered := false
-const CROSSFADE_DURATION := 2.0
+var _seeking := false
 
 # ── Sub-systems ───────────────────────────────────────────────────────────────
 var _settings:    SettingsUI
@@ -33,13 +23,7 @@ var _shuffle_btn: Button
 
 
 func _ready() -> void:
-	_player     = owner.get_node("Player") as AudioStreamPlayer
 	_visualizer = get_tree().root.get_node("Main/VisualizerContainer/FeedbackViewport/Visualizer")
-	_analyzer   = _visualizer._analyzer
-
-	# Second player for crossfade transitions
-	_fade_player = AudioStreamPlayer.new()
-	add_child(_fade_player)
 
 	StylesUI.apply_bar_style(self)
 
@@ -47,7 +31,7 @@ func _ready() -> void:
 	_playlist = Playlist.new()
 
 	_settings = SettingsUI.new()
-	_settings.setup(_visualizer, _analyzer)
+	_settings.setup(_visualizer, AudioSource.analyzer)
 	add_child(_settings)
 
 	_playlist_ui = PlaylistUI.new()
@@ -55,19 +39,20 @@ func _ready() -> void:
 	_playlist_ui.on_track_selected = _on_playlist_jump
 	add_child(_playlist_ui)
 
-	_player.finished.connect(_on_song_finished)
-	_fade_player.finished.connect(_on_song_finished)
+	# Build the player bar FIRST so UI controls exist before signals fire
+	_build_bar()
 
-	# Populate playlist with the default song BEFORE connecting our handler
-	# so we don't restart the already-playing autoplay track
-	if _player.stream != null:
-		var rpath := _player.stream.resource_path
-		if not rpath.is_empty():
-			_playlist.add(rpath)
+	# Wire AudioSource signals
+	AudioSource.track_finished.connect(_on_track_finished)
+	AudioSource.near_end.connect(_on_near_end)
 
-	# Now connect — all future track changes auto-play
+	# Connect playlist signals BEFORE adding the default track so it auto-plays
 	_playlist.track_changed.connect(_on_playlist_track_changed)
 	_playlist.playlist_changed.connect(_on_playlist_changed)
+
+	# Add default track if it exists
+	if ResourceLoader.exists("res://default.ogg"):
+		_playlist.add("res://default.ogg")
 
 	# Restore persisted play mode
 	_playlist.set_play_mode(Config.play_mode as Playlist.PlayMode)
@@ -76,11 +61,9 @@ func _ready() -> void:
 	if Config.fullscreen:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 
-	# Build the player bar (creates _vol_btn, _vol_slider, etc.)
-	_build_bar()
-
-	# Restore volume (after bar is built so icon/slider update)
-	_set_volume(Config.volume)
+	# Restore volume (bar already built)
+	AudioSource.set_volume(Config.volume)
+	_refresh_vol_ui()
 
 	_refresh_song_label()
 	_refresh_mode_buttons()
@@ -139,7 +122,7 @@ func _build_bar() -> void:
 	_vol_slider.min_value  = 0.0
 	_vol_slider.max_value  = 1.0
 	_vol_slider.step       = 0.01
-	_vol_slider.value      = _volume
+	_vol_slider.value      = AudioSource.get_volume()
 	_vol_slider.custom_minimum_size = Vector2(80, 0)
 	_vol_slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_vol_slider.focus_mode = Control.FOCUS_NONE
@@ -222,7 +205,6 @@ func _build_bar() -> void:
 func _process(_delta: float) -> void:
 	_update_player_ui()
 	_settings.sync_frame()
-	_check_near_end()
 
 
 ## Show a short-lived overlay notification on the visualizer.
@@ -232,11 +214,11 @@ func _notify(text: String) -> void:
 
 
 func _update_player_ui() -> void:
-	if _player.stream == null:
+	if not AudioSource.has_stream():
 		_time_label.text = "0:00 / 0:00"
 		return
-	var pos      := _player.get_playback_position()
-	var duration := _player.stream.get_length()
+	var pos      := AudioSource.get_playback_position()
+	var duration := AudioSource.get_duration()
 	_time_label.text = "%s / %s" % [_fmt(pos), _fmt(duration)]
 	if duration > 0.01:
 		_seeking = true
@@ -248,94 +230,6 @@ func _update_player_ui() -> void:
 # ─────────────────────────────────────────────────────────────────────────────
 #  Playlist integration
 # ─────────────────────────────────────────────────────────────────────────────
-
-func _play_track(path: String) -> void:
-	var stream := _load_stream(path)
-	if stream == null:
-		return
-	_player.stop()
-	_player.stream = stream
-	_player.volume_db = 0.0
-	_player.play()
-	_paused = false
-	_near_end_triggered = false
-	_refresh_song_label()
-	_seek_bar.max_value = stream.get_length()
-	_refresh_play_btn()
-
-
-func _crossfade_to(path: String) -> void:
-	var stream := _load_stream(path)
-	if stream == null:
-		return
-
-	# Kill any in-progress crossfade and reset state
-	if _crossfade_tween and _crossfade_tween.is_valid():
-		_crossfade_tween.kill()
-		_player.volume_db = 0.0
-		_fade_player.stop()
-		_fade_player.volume_db = -80.0
-
-	# Start the new track on the fade player at silence
-	_fade_player.stream = stream
-	_fade_player.volume_db = -80.0
-	_fade_player.play()
-
-	_near_end_triggered = false
-	_refresh_song_label()
-	_seek_bar.max_value = stream.get_length()
-	_refresh_play_btn()
-
-	# Tween: fade out current player, fade in fade player
-	_crossfade_tween = create_tween()
-	_crossfade_tween.set_parallel(true)
-	_crossfade_tween.tween_property(_player, "volume_db", -80.0, CROSSFADE_DURATION)\
-		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	_crossfade_tween.tween_property(_fade_player, "volume_db", 0.0, CROSSFADE_DURATION)\
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	_crossfade_tween.set_parallel(false)
-	_crossfade_tween.tween_callback(func():
-		# Swap players: the fade player becomes the main player
-		var old_player := _player
-		_player = _fade_player
-		_fade_player = old_player
-		_fade_player.stop()
-		_fade_player.volume_db = -80.0
-		# Keep analyzer pointing at the active player so is_sounding stays correct
-		_analyzer._player = _player
-	)
-
-
-func _cancel_crossfade() -> void:
-	if _crossfade_tween and _crossfade_tween.is_valid():
-		_crossfade_tween.kill()
-	_player.volume_db = 0.0
-	_fade_player.stop()
-	_fade_player.volume_db = -80.0
-	_near_end_triggered = false
-
-
-func _check_near_end() -> void:
-	if _near_end_triggered:
-		return
-	if not _player.playing or _player.stream_paused or _player.stream == null:
-		return
-	var duration := _player.stream.get_length()
-	if duration <= CROSSFADE_DURATION * 2.0:
-		return  # Too short for crossfade
-	var remaining := duration - _player.get_playback_position()
-	if remaining > CROSSFADE_DURATION:
-		return
-	_near_end_triggered = true
-	# LOOP_ONE: advance() won't emit track_changed (same index)
-	if _playlist.get_play_mode() == Playlist.PlayMode.LOOP_ONE:
-		_crossfade_to(_playlist.get_current_track())
-		return
-	var path := _playlist.advance()
-	if path.is_empty():
-		_near_end_triggered = false
-	# else: advance() emitted track_changed → _on_playlist_track_changed → _crossfade_to
-
 
 func _refresh_song_label() -> void:
 	var track := _playlist.get_current_track()
@@ -351,10 +245,7 @@ func _refresh_song_label() -> void:
 func _on_playlist_track_changed(index: int) -> void:
 	if index < 0:
 		# Playlist emptied — stop playback
-		_cancel_crossfade()
-		_player.stop()
-		_player.stream = null
-		_paused = false
+		AudioSource.stop()
 		_song_label.text = "No track loaded"
 		_time_label.text = "0:00 / 0:00"
 		_seek_bar.max_value = 1.0
@@ -362,18 +253,17 @@ func _on_playlist_track_changed(index: int) -> void:
 		_refresh_play_btn()
 		return
 	# Crossfade if audio is playing, immediate play otherwise
-	if _player.playing and not _paused:
-		_crossfade_to(_playlist.get_current_track())
+	if AudioSource.is_playing():
+		AudioSource.crossfade_to(_playlist.get_current_track())
 	else:
-		_cancel_crossfade()
-		_play_track(_playlist.get_current_track())
+		AudioSource.play(_playlist.get_current_track())
+	_refresh_song_label()
+	_refresh_play_btn()
 
 
 func _on_playlist_changed() -> void:
 	if _playlist.is_empty():
-		_player.stop()
-		_player.stream = null
-		_paused = false
+		AudioSource.stop()
 		_song_label.text = "No track loaded"
 		_time_label.text = "0:00 / 0:00"
 		_seek_bar.max_value = 1.0
@@ -425,34 +315,55 @@ func _refresh_mode_buttons() -> void:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  AudioSource signal handlers
+# ─────────────────────────────────────────────────────────────────────────────
+
+func _on_near_end() -> void:
+	# LOOP_ONE: advance() won't emit track_changed (same index)
+	if _playlist.get_play_mode() == Playlist.PlayMode.LOOP_ONE:
+		AudioSource.crossfade_to(_playlist.get_current_track())
+		return
+	var path := _playlist.advance()
+	if path.is_empty():
+		return
+	# advance() emitted track_changed → _on_playlist_track_changed handles crossfade
+
+
+func _on_track_finished() -> void:
+	var path := _playlist.advance()
+	if path.is_empty():
+		_refresh_play_btn()
+	elif _playlist.get_play_mode() == Playlist.PlayMode.LOOP_ONE:
+		# LOOP_ONE doesn't emit track_changed (same index), play manually
+		AudioSource.play(path)
+		_refresh_play_btn()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  Actions
 # ─────────────────────────────────────────────────────────────────────────────
 
 func _on_play_pause() -> void:
-	if _player.stream == null:
+	if not AudioSource.has_stream():
 		# If nothing loaded but playlist has tracks, play current
 		if not _playlist.is_empty():
-			_play_track(_playlist.get_current_track())
+			AudioSource.play(_playlist.get_current_track())
+			_refresh_song_label()
 		return
-	if _player.stream_paused:
-		_player.stream_paused = false
-		_paused = false
+	if AudioSource.is_paused():
+		AudioSource.set_paused(false)
 		_notify("Play")
-	elif _player.playing:
-		_player.stream_paused = true
-		_paused = true
+	elif AudioSource.is_playing():
+		AudioSource.set_paused(true)
 		_notify("Pause")
 	else:
-		_player.play()
-		_paused = false
+		AudioSource.start_playing()
 		_notify("Play")
 	_refresh_play_btn()
 
 
 func _on_stop() -> void:
-	_cancel_crossfade()
-	_player.stop()
-	_paused = false
+	AudioSource.stop()
 	_refresh_play_btn()
 	_notify("Stopped")
 
@@ -461,8 +372,8 @@ func _on_prev() -> void:
 	if _playlist.is_empty():
 		return
 	# If more than 3 seconds in, restart current track instead
-	if _player.stream != null and _player.get_playback_position() > 3.0:
-		_player.seek(0.0)
+	if AudioSource.has_stream() and AudioSource.get_playback_position() > 3.0:
+		AudioSource.seek(0.0)
 		_notify("Restart")
 		return
 	_playlist.go_prev()
@@ -478,7 +389,7 @@ func _on_next() -> void:
 
 func _on_seek_changed(val: float) -> void:
 	if not _seeking:
-		_player.seek(val)
+		AudioSource.seek(val)
 
 
 func _toggle_fullscreen() -> void:
@@ -494,59 +405,25 @@ func _toggle_fullscreen() -> void:
 	Config.save()
 
 
-func _set_volume(v: float) -> void:
-	_volume = clampf(v, 0.0, 1.0)
-	AudioServer.set_bus_volume_db(0, linear_to_db(_volume))
-	AudioServer.set_bus_mute(0, _volume < 0.005)
-	_refresh_vol_icon()
-	if _vol_slider:
-		_vol_slider.set_value_no_signal(_volume)
-
-
 func _on_vol_changed(v: float) -> void:
-	_set_volume(v)
-	Config.volume = _volume
+	AudioSource.set_volume(v)
+	Config.volume = AudioSource.get_volume()
 	Config.save()
-
-
-var _volume_before_mute := 1.0
+	_refresh_vol_ui()
 
 
 func _on_vol_mute_toggle() -> void:
-	if _volume > 0.005:
-		_volume_before_mute = _volume
-		_set_volume(0.0)
-	else:
-		_set_volume(_volume_before_mute)
-	Config.volume = _volume
+	AudioSource.toggle_mute()
+	Config.volume = AudioSource.get_volume()
 	Config.save()
+	_refresh_vol_ui()
 
 
-func _refresh_vol_icon() -> void:
-	if _vol_btn == null:
-		return
-	if _volume < 0.005:
-		StylesUI.set_icon(_vol_btn, "volume_muted")
-	elif _volume < 0.4:
-		StylesUI.set_icon(_vol_btn, "volume_low")
-	else:
-		StylesUI.set_icon(_vol_btn, "volume_high")
-
-
-func _on_song_finished() -> void:
-	_paused = false
-	if _near_end_triggered:
-		# Near-end crossfade already started the next track — nothing to do.
-		# The crossfade completion callback will swap players.
-		_near_end_triggered = false
-		return
-	var path := _playlist.advance()
-	if path.is_empty():
-		_refresh_play_btn()
-	elif _playlist.get_play_mode() == Playlist.PlayMode.LOOP_ONE:
-		# LOOP_ONE doesn't emit track_changed (same index), play manually
-		_play_track(path)
-	# else: advance() emitted track_changed → _on_playlist_track_changed auto-plays
+func _refresh_vol_ui() -> void:
+	if _vol_btn:
+		StylesUI.set_icon(_vol_btn, AudioSource.get_volume_icon())
+	if _vol_slider:
+		_vol_slider.set_value_no_signal(AudioSource.get_volume())
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -568,39 +445,25 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif kc == Keymap.get_key("toggle_settings"):
 		_settings.toggle()
 	elif kc == Keymap.get_key("volume_up"):
-		_set_volume(_volume + 0.05)
-		Config.volume = _volume
+		AudioSource.adjust_volume(0.05)
+		Config.volume = AudioSource.get_volume()
 		Config.save()
-		_notify("Volume %d%%" % int(_volume * 100))
+		_refresh_vol_ui()
+		_notify("Volume %d%%" % int(AudioSource.get_volume() * 100))
 	elif kc == Keymap.get_key("volume_down"):
-		_set_volume(_volume - 0.05)
-		Config.volume = _volume
+		AudioSource.adjust_volume(-0.05)
+		Config.volume = AudioSource.get_volume()
 		Config.save()
-		_notify("Volume %d%%" % int(_volume * 100))
+		_refresh_vol_ui()
+		_notify("Volume %d%%" % int(AudioSource.get_volume() * 100))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-func _load_stream(path: String) -> AudioStream:
-	var ext   := path.get_extension().to_lower()
-	var bytes := FileAccess.get_file_as_bytes(path)
-	if bytes.is_empty():
-		return null
-	match ext:
-		"mp3":
-			var s := AudioStreamMP3.new()
-			s.data = bytes
-			return s
-		"ogg":
-			return AudioStreamOggVorbis.load_from_buffer(bytes)
-	push_warning("PlayerUI: unsupported format '%s'" % ext)
-	return null
-
-
 func _refresh_play_btn() -> void:
-	if _player.playing and not _paused:
+	if AudioSource.is_playing():
 		StylesUI.set_icon(_play_btn, "pause")
 		_play_btn.tooltip_text = "Pause"
 	else:

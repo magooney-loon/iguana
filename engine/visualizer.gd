@@ -71,11 +71,7 @@ const _SHADER_REINHARD_DEFAULTS := [0.9, 1.2, 1.0, 0.69, 0.18]
 
 
 func _ready() -> void:
-	_analyzer = AudioAnalyzer.new()
-	_analyzer.setup(
-		AudioServer.get_bus_effect_instance(0, 0),
-		owner.get_node("Player") as AudioStreamPlayer,
-	)
+	_analyzer = AudioSource.analyzer
 
 	for def in SHADERS:
 		_loaded_shaders.append(load(def.path))
@@ -232,7 +228,7 @@ func _shuffle() -> void:
 # ── Frame loop ─────────────────────────────────────────────────────
 
 func _process(delta: float) -> void:
-	_analyzer.process(delta)
+	AudioSource.process_frame(delta)
 	_frame_count += 1
 
 	if _analyzer.is_sounding:
