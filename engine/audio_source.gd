@@ -14,7 +14,8 @@ var _crossfade_tween: Tween
 
 # ── Crossfade ────────────────────────────────────────────────────────────────
 var _near_end_triggered := false
-var crossfade_duration := 2.0
+var _crossfading        := false
+var crossfade_duration  := 2.0
 
 # ── Volume ───────────────────────────────────────────────────────────────────
 var _volume := 1.0
@@ -77,6 +78,7 @@ func crossfade_to(path: String) -> void:
 	_fade_player.stream = stream
 	_fade_player.volume_db = -80.0
 	_fade_player.play()
+	_crossfading = true
 	# Keep _near_end_triggered = true during the fade so _check_near_end doesn't
 	# re-fire on the still-playing old track and trigger a second advance().
 
@@ -95,6 +97,7 @@ func crossfade_to(path: String) -> void:
 		_fade_player.stop()
 		_fade_player.volume_db = -80.0
 		analyzer._player = _player
+		_crossfading = false
 		# Reset only now — _player is the new track, safe to watch for its near-end.
 		_near_end_triggered = false
 	)
@@ -147,7 +150,7 @@ func get_playback_position() -> float:
 
 
 func get_duration() -> float:
-	if _crossfade_tween and _crossfade_tween.is_valid() and _fade_player.stream != null:
+	if _crossfading and _fade_player.stream != null:
 		return _fade_player.stream.get_length()
 	if _player.stream == null:
 		return 0.0
@@ -155,7 +158,7 @@ func get_duration() -> float:
 
 
 func get_crossfade_position() -> float:
-	if _crossfade_tween and _crossfade_tween.is_valid() and _fade_player.playing:
+	if _crossfading and _fade_player.playing:
 		return _fade_player.get_playback_position()
 	return -1.0
 
@@ -239,6 +242,7 @@ func _cancel_crossfade() -> void:
 	_player.volume_db = 0.0
 	_fade_player.stop()
 	_fade_player.volume_db = -80.0
+	_crossfading = false
 	_near_end_triggered = false
 
 

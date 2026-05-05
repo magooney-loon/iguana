@@ -8,6 +8,7 @@ var _play_btn:   Button
 var _seek_bar:   HSlider
 var _time_label: Label
 var _song_label: Label
+var _song_tween: Tween
 var _vol_btn:    Button
 var _vol_slider: HSlider
 var _seeking := false
@@ -219,11 +220,12 @@ func _update_player_ui() -> void:
 	var duration := AudioSource.get_duration()
 	var xfade_pos := AudioSource.get_crossfade_position()
 	var pos := xfade_pos if xfade_pos >= 0.0 else AudioSource.get_playback_position()
+	var bar_max := maxf(duration - AudioSource.crossfade_duration, 0.01)
 	_time_label.text = "%s / %s" % [_fmt(pos), _fmt(duration)]
 	if duration > 0.01:
 		_seeking = true
-		_seek_bar.max_value = duration
-		_seek_bar.value     = pos
+		_seek_bar.max_value = bar_max
+		_seek_bar.value     = minf(pos, bar_max)
 		_seeking = false
 
 
@@ -231,15 +233,27 @@ func _update_player_ui() -> void:
 #  Playlist integration
 # ─────────────────────────────────────────────────────────────────────────────
 
-func _refresh_song_label() -> void:
+func _refresh_song_label(crossfade: bool = false) -> void:
 	var track := _playlist.get_current_track()
+	var track_name: String
 	if track.is_empty():
-		_song_label.text = "No track loaded"
+		track_name = "No track loaded"
+	else:
+		track_name = track.get_file().get_basename()
+		if _playlist.size() > 1:
+			track_name += "  (%d/%d)" % [_playlist.get_current_index() + 1, _playlist.size()]
+
+	if not crossfade or _song_label.text == track_name:
+		_song_label.text = track_name
+		_song_label.modulate.a = 1.0
 		return
-	var track_name := track.get_file().get_basename()
-	if _playlist.size() > 1:
-		track_name += "  (%d/%d)" % [_playlist.get_current_index() + 1, _playlist.size()]
-	_song_label.text = track_name
+
+	if _song_tween and _song_tween.is_valid():
+		_song_tween.kill()
+	_song_tween = create_tween()
+	_song_tween.tween_property(_song_label, "modulate:a", 0.0, 0.2)
+	_song_tween.tween_callback(func(): _song_label.text = track_name)
+	_song_tween.tween_property(_song_label, "modulate:a", 1.0, 0.3)
 
 
 func _on_playlist_track_changed(index: int) -> void:
@@ -253,11 +267,12 @@ func _on_playlist_track_changed(index: int) -> void:
 		_refresh_play_btn()
 		return
 	# Crossfade if audio is playing, immediate play otherwise
-	if AudioSource.is_playing():
+	var was_playing := AudioSource.is_playing()
+	if was_playing:
 		AudioSource.crossfade_to(_playlist.get_current_track())
 	else:
 		AudioSource.play(_playlist.get_current_track())
-	_refresh_song_label()
+	_refresh_song_label(was_playing)
 	_refresh_play_btn()
 
 
