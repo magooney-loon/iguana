@@ -3,7 +3,7 @@ shader_type canvas_item;
 //  @name:          Afterimage
 //  @author:        Test
 //  @website:       Test
-//  @description:   IFS phantom raymarching with fractal lightning arcs, breathing rings, spiral vortex arms, neon scan lines, and liquid mercury highlights
+//  @description:   IFS phantom raymarching with fractal lightning arcs and neon scan lines
 //
 //  @exposure:       1.6
 //  @tonemap_knee:   0.3
@@ -23,7 +23,7 @@ shader_type canvas_item;
 //  in a SEPARATE post_process pass — it never feeds back into the loop.
 //
 //  Writing a new shader?
-//    · Copy this file, add your entry to the SHADERS array in visualizer.gd
+//    · Copy shader_template.gdshader into res://shaders/ and fill in the @meta tags
 //    · Implement the three pipeline phases in fragment()
 //    · Tweak loop_reinhard to control how bright trails feed back
 // ═══════════════════════════════════════════════════════════════════════

@@ -20,10 +20,13 @@ var _shuffle_check: CheckBox
 var _shuffle_spin:  SpinBox
 
 # Post-process tab
-var _pp_sliders:          Dictionary = {}
-var _pp_shader_label:     Label
-var _shader_author_label: Label
-var _shader_website_label: Label
+var _pp_sliders:            Dictionary = {}
+var _pp_shader_label:       Label
+var _shader_author_label:   Label
+var _shader_website_label:  Label
+var _shader_desc_label:     Label
+var _shader_desc_clip:      Control
+var _shader_desc_tween:     Tween
 
 # Debug tab
 var _dbg: Dictionary = {}
@@ -291,8 +294,18 @@ func _build_shaders_tab() -> Control:
 	_shader_website_label = Label.new()
 	_shader_website_label.add_theme_font_size_override("font_size", 12)
 	_shader_website_label.modulate.a = 0.75
-	_shader_website_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(_shader_website_label)
+
+	_shader_desc_clip = Control.new()
+	_shader_desc_clip.clip_contents = true
+	_shader_desc_clip.custom_minimum_size.y = 18
+	_shader_desc_clip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(_shader_desc_clip)
+
+	_shader_desc_label = Label.new()
+	_shader_desc_label.add_theme_font_size_override("font_size", 12)
+	_shader_desc_label.modulate.a = 0.75
+	_shader_desc_clip.add_child(_shader_desc_label)
 
 	_update_shader_info()
 
@@ -394,12 +407,47 @@ func _get_pp_value(param: String) -> float:
 
 func _update_shader_info() -> void:
 	var meta: Dictionary = _visualizer.SHADERS[_visualizer._shader_index]
-	var author: String  = meta.get("author",  "N/A")
-	var website: String = meta.get("website", "N/A")
 	if _shader_author_label:
-		_shader_author_label.text  = "Author:   " + author
+		_shader_author_label.text  = "Author:   " + meta.get("author",  "N/A")
 	if _shader_website_label:
-		_shader_website_label.text = "Website:  " + website
+		_shader_website_label.text = "Website:  " + meta.get("website", "N/A")
+	if _shader_desc_label:
+		_shader_desc_label.text = meta.get("description", "")
+		_shader_desc_label.position.x = 0.0
+		_restart_desc_marquee()
+
+
+func _restart_desc_marquee() -> void:
+	if _shader_desc_tween and _shader_desc_tween.is_valid():
+		_shader_desc_tween.kill()
+	_setup_desc_marquee.call_deferred()
+
+
+func _setup_desc_marquee() -> void:
+	if not _shader_desc_label or not _shader_desc_clip:
+		return
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var natural_w := _shader_desc_label.get_combined_minimum_size().x
+	var clip_w    := _shader_desc_clip.size.x
+	if clip_w <= 0.0:
+		return
+
+	_shader_desc_label.size.x = max(natural_w, clip_w)
+	_shader_desc_label.position = Vector2.ZERO
+
+	if natural_w > clip_w + 2.0:
+		var overflow    := natural_w - clip_w
+		var scroll_time := overflow / 28.0
+		_shader_desc_tween = create_tween().set_loops().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		_shader_desc_tween.tween_interval(2.0)
+		_shader_desc_tween.tween_property(_shader_desc_label, "position:x", -overflow, scroll_time)\
+			.set_ease(Tween.EASE_IN_OUT)
+		_shader_desc_tween.tween_interval(1.5)
+		_shader_desc_tween.tween_property(_shader_desc_label, "position:x", 0.0, scroll_time)\
+			.set_ease(Tween.EASE_IN_OUT)
+		_shader_desc_tween.tween_interval(2.0)
 
 
 func _update_pp_sliders() -> void:

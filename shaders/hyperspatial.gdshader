@@ -3,7 +3,7 @@ shader_type canvas_item;
 //  @name:          Hyperspatial
 //  @author:        Test
 //  @website:       Test
-//  @description:   Folded-space IFS kaleidoscope with deep indigo-to-crimson palettes, acid green phantom pulses, morphing polygon constellations, and flowing silk ribbons
+//  @description:   Folded-space IFS kaleidoscope with morphing polygon constellations
 //
 //  @exposure:       1.8
 //  @tonemap_knee:   0.5
@@ -23,7 +23,7 @@ shader_type canvas_item;
 //  in a SEPARATE post_process pass — it never feeds back into the loop.
 //
 //  Writing a new shader?
-//    · Copy this file, add your entry to the SHADERS array in visualizer.gd
+//    · Copy shader_template.gdshader into res://shaders/ and fill in the @meta tags
 //    · Implement the three pipeline phases in fragment()
 //    · Tweak loop_reinhard to control how bright trails feed back
 // ═══════════════════════════════════════════════════════════════════════

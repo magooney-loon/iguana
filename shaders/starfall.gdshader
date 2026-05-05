@@ -3,7 +3,7 @@ shader_type canvas_item;
 //  @name:          Starfall
 //  @author:        Test
 //  @website:       Test
-//  @description:   Raymarched sacred geometry with bioluminescent overlays, aurora curtains, energy tendrils, plankton, and flowing silk ribbons
+//  @description:   Raymarched sacred geometry with bioluminescent overlays and aurora curtains
 //
 //  @exposure:       1.42
 //  @tonemap_knee:   0.0
@@ -23,7 +23,7 @@ shader_type canvas_item;
 //  in a SEPARATE post_process pass — it never feeds back into the loop.
 //
 //  Writing a new shader?
-//    · Copy this file, add your entry to the SHADERS array in visualizer.gd
+//    · Copy shader_template.gdshader into res://shaders/ and fill in the @meta tags
 //    · Implement the three pipeline phases in fragment()
 //    · Tweak loop_reinhard to control how bright trails feed back
 // ═══════════════════════════════════════════════════════════════════════

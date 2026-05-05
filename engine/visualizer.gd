@@ -92,6 +92,7 @@ func _parse_shader_meta(path: String) -> Dictionary:
 	var meta := {}
 	var f := FileAccess.open(path, FileAccess.READ)
 	if not f:
+		push_warning("Shader loader: cannot open '%s'" % path)
 		return meta
 	var lines_read := 0
 	while not f.eof_reached() and lines_read < 40:
@@ -106,21 +107,36 @@ func _parse_shader_meta(path: String) -> Dictionary:
 		if colon == -1:
 			continue
 		var key   := content.substr(1, colon - 1).strip_edges()
-		var value := content.substr(colon + 1).strip_edges()
+		var raw   := content.substr(colon + 1)
+		# Strip inline comments (e.g. "1.42   // some note")
+		var comment_pos := raw.find("//")
+		var value := (raw.substr(0, comment_pos) if comment_pos != -1 else raw).strip_edges()
 		if key in PP_DEFAULTS:
-			meta[key] = value.to_float()
+			# Reject N/A or non-numeric values — fall back to PP_DEFAULTS at load time
+			if value == "N/A" or not value.is_valid_float():
+				push_warning("Shader '%s': invalid value for @%s = '%s', using default" % [path.get_file(), key, value])
+			else:
+				meta[key] = value.to_float()
 		else:
 			meta[key] = value
 	f.close()
+	# Fall back to filename (without extension) if @name is missing or N/A
+	if not meta.has("name") or (meta["name"] as String).strip_edges() in ["", "N/A"]:
+		meta["name"] = path.get_file().get_basename().capitalize()
 	return meta
 
 
 func _ready() -> void:
 	_analyzer = AudioSource.analyzer
 
-	SHADERS = _discover_shaders()
-	for def in SHADERS:
-		_loaded_shaders.append(load(def.path))
+	var discovered := _discover_shaders()
+	for def in discovered:
+		var shader: Shader = load(def.path)
+		if shader == null:
+			push_warning("Shader loader: failed to load '%s', skipping" % def.path)
+			continue
+		SHADERS.append(def)
+		_loaded_shaders.append(shader)
 
 	# Initialize per-shader PP configs: start from global defaults, override with shader header values
 	for i in _loaded_shaders.size():
