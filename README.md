@@ -44,7 +44,9 @@ PostProcessDisplay (ColorRect)   — reads FeedbackViewport texture, applies
 │   └── visualizer.gd          # Shader switching, feedback buffer, uniform push
 ├── shaders/
 │   ├── post_process.gdshader  # External tonemap/gamma/grain/vignette layer
-│   ├── shader_template.gdshader # Starter template for new shaders
+│   ├── utils/
+│   │   ├── shader_template.gdshader # Starter template for new shaders
+│   │   └── ui_noise.gdshader   # Industrial noise overlay for UI panels
 │   └── *.gdshader             # Visualizer shaders (auto-discovered at runtime)
 ├── ui/
 │   ├── player_ui.gd           # Player bar + settings window host

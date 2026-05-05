@@ -23,7 +23,7 @@ shader_type canvas_item;
 //  in a SEPARATE post_process pass — it never feeds back into the loop.
 //
 //  Writing a new shader?
-//    · Copy shader_template.gdshader into res://shaders/ and fill in the @meta tags
+//    · Copy shader_template.gdshader into res://shaders/utils/ and fill in the @meta tags
 //    · Implement the three pipeline phases in fragment()
 //    · Tweak loop_reinhard to control how bright trails feed back
 // ═══════════════════════════════════════════════════════════════════════

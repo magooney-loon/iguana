@@ -1,6 +1,5 @@
 shader_type canvas_item;
 
-//  @meta:          skip
 // ── Industrial Noise Overlay — Animated ──────────────────────────────────────
 // Procedural grain, scanlines, scratches, CRT flicker, rolling bars,
 // interference sweeps, and pulsing vignette.  Everything is driven by TIME

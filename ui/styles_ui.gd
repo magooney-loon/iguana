@@ -7,7 +7,7 @@ static var _noise_shader: Shader
 
 static func _get_noise_shader() -> Shader:
 	if _noise_shader == null:
-		_noise_shader = load("res://shaders/ui_noise.gdshader") as Shader
+		_noise_shader = load("res://shaders/utils/ui_noise.gdshader") as Shader
 		if _noise_shader == null:
 			push_warning("StylesUI: failed to load ui_noise.gdshader")
 	return _noise_shader
