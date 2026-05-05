@@ -1,12 +1,9 @@
 extends ColorRect
 
-const SHADERS := [
-	{ "path": "res://shaders/starfall.gdshader",        "name": "Starfall" },
-	{ "path": "res://shaders/afterimage.gdshader",      "name": "Afterimage" },
-	{ "path": "res://shaders/phosphorescence.gdshader", "name": "Phosphorescence" },
-	{ "path": "res://shaders/submersion.gdshader",      "name": "Submersion" },
-	{ "path": "res://shaders/hyperspatial.gdshader",    "name": "Hyperspatial" },
-]
+# Populated at runtime by _discover_shaders() — each entry has "path", "name",
+# "author", "description", "loop_reinhard". Add a new shader by dropping a
+# .gdshader file in res://shaders/ with @meta tags in its header.
+var SHADERS: Array[Dictionary] = []
 
 var _analyzer: AudioAnalyzer
 var _loaded_shaders: Array[Shader] = []
@@ -65,21 +62,72 @@ const PP_DEFAULTS := {
 	"grain_strength": 0.01,
 	"loop_reinhard":  0.0,
 }
-# Default loop_reinhard per shader (matches each .gdshader default)
-const _SHADER_REINHARD_DEFAULTS := [0.9, 1.2, 1.0, 0.69, 0.18]
 
+
+
+func _discover_shaders() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var dir := DirAccess.open("res://shaders")
+	if not dir:
+		return result
+	dir.list_dir_begin()
+	var fname := dir.get_next()
+	var paths: Array[String] = []
+	while fname != "":
+		if fname.ends_with(".gdshader"):
+			paths.append("res://shaders/" + fname)
+		fname = dir.get_next()
+	dir.list_dir_end()
+	paths.sort()
+	for path in paths:
+		var meta := _parse_shader_meta(path)
+		if meta.get("meta") == "skip":
+			continue
+		meta["path"] = path
+		result.append(meta)
+	return result
+
+
+func _parse_shader_meta(path: String) -> Dictionary:
+	var meta := {}
+	var f := FileAccess.open(path, FileAccess.READ)
+	if not f:
+		return meta
+	var lines_read := 0
+	while not f.eof_reached() and lines_read < 40:
+		var line := f.get_line().strip_edges()
+		lines_read += 1
+		if not line.begins_with("//"):
+			continue
+		var content := line.trim_prefix("//").strip_edges()
+		if not content.begins_with("@"):
+			continue
+		var colon := content.find(":")
+		if colon == -1:
+			continue
+		var key   := content.substr(1, colon - 1).strip_edges()
+		var value := content.substr(colon + 1).strip_edges()
+		if key in PP_DEFAULTS:
+			meta[key] = value.to_float()
+		else:
+			meta[key] = value
+	f.close()
+	return meta
 
 
 func _ready() -> void:
 	_analyzer = AudioSource.analyzer
 
+	SHADERS = _discover_shaders()
 	for def in SHADERS:
 		_loaded_shaders.append(load(def.path))
 
-	# Initialize per-shader PP configs with defaults
+	# Initialize per-shader PP configs: start from global defaults, override with shader header values
 	for i in _loaded_shaders.size():
 		var cfg := PP_DEFAULTS.duplicate()
-		cfg["loop_reinhard"] = _SHADER_REINHARD_DEFAULTS[i]
+		for key in PP_DEFAULTS.keys():
+			if SHADERS[i].has(key):
+				cfg[key] = SHADERS[i][key]
 		_shader_pp_configs.append(cfg)
 
 	material = ShaderMaterial.new()
@@ -325,12 +373,12 @@ func _push_uniforms(mat: ShaderMaterial) -> void:
 
 func _apply_pp_config(idx: int) -> void:
 	var cfg := _shader_pp_configs[idx]
-	pp_exposure       = cfg.get("exposure", PP_DEFAULTS["exposure"])
-	pp_tonemap_knee   = cfg.get("tonemap_knee", PP_DEFAULTS["tonemap_knee"])
-	pp_gamma          = cfg.get("gamma", PP_DEFAULTS["gamma"])
-	pp_vignette_dark  = cfg.get("vignette_dark", PP_DEFAULTS["vignette_dark"])
+	pp_exposure       = cfg.get("exposure",       PP_DEFAULTS["exposure"])
+	pp_tonemap_knee   = cfg.get("tonemap_knee",   PP_DEFAULTS["tonemap_knee"])
+	pp_gamma          = cfg.get("gamma",          PP_DEFAULTS["gamma"])
+	pp_vignette_dark  = cfg.get("vignette_dark",  PP_DEFAULTS["vignette_dark"])
 	pp_grain_strength = cfg.get("grain_strength", PP_DEFAULTS["grain_strength"])
-	pp_loop_reinhard  = cfg.get("loop_reinhard", _SHADER_REINHARD_DEFAULTS[idx])
+	pp_loop_reinhard  = cfg.get("loop_reinhard",  PP_DEFAULTS["loop_reinhard"])
 
 
 func _save_current_pp_config() -> void:

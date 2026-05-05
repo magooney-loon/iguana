@@ -1,9 +1,16 @@
 shader_type canvas_item;
 
-// ═══════════════════════════════════════════════════════════════════════
-//  SUBMERSION — Deep-sea bioluminescent tunnel with organic wall
-//  oscillation, neon spiral bands, Inigo Quilez cosine palettes,
-//  and iridescent noise-driven morphing
+//  @name:          Submersion
+//  @author:        N/A
+//  @website:       N/A
+//  @description:   Deep-sea bioluminescent tunnel with organic wall oscillation, neon spiral bands, cosine palettes, and iridescent noise-driven morphing
+//
+//  @exposure:       1.2
+//  @tonemap_knee:   0.0
+//  @gamma:          2.2
+//  @vignette_dark:  0.45
+//  @grain_strength: 0.02
+//  @loop_reinhard:  0.69
 // ═══════════════════════════════════════════════════════════════════════
 //
 //  Pipeline:

@@ -1,9 +1,16 @@
 shader_type canvas_item;
 
-// ═══════════════════════════════════════════════════════════════════════
-//  AFTERIMAGE — IFS phantom raymarching with fractal lightning arcs,
-//  breathing rings, spiral vortex arms, neon scan lines, microscopic
-//  organisms, cellular voronoi membranes, and liquid mercury highlights
+//  @name:          Afterimage
+//  @author:        N/A
+//  @website:       N/A
+//  @description:   IFS phantom raymarching with fractal lightning arcs, breathing rings, spiral vortex arms, neon scan lines, and liquid mercury highlights
+//
+//  @exposure:       1.6
+//  @tonemap_knee:   0.3
+//  @gamma:          1.9
+//  @vignette_dark:  0.25
+//  @grain_strength: 0.008
+//  @loop_reinhard:  1.2
 // ═══════════════════════════════════════════════════════════════════════
 //
 //  Pipeline:

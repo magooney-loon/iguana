@@ -1,9 +1,16 @@
 shader_type canvas_item;
 
-// ═══════════════════════════════════════════════════════════════════════
-//  PHOSPHORESCENCE — Neon soft-body tunnel with iridescent plasma fill,
-//  mercury ring propagation, volumetric center rays, and noise-driven
-//  wall iridescence
+//  @name:          Phosphorescence
+//  @author:        N/A
+//  @website:       N/A
+//  @description:   Neon soft-body tunnel with iridescent plasma fill, mercury ring propagation, volumetric center rays, and noise-driven wall iridescence
+//
+//  @exposure:       1.3
+//  @tonemap_knee:   0.0
+//  @gamma:          2.1
+//  @vignette_dark:  0.40
+//  @grain_strength: 0.015
+//  @loop_reinhard:  1.0
 // ═══════════════════════════════════════════════════════════════════════
 //
 //  Pipeline:

@@ -1,4 +1,5 @@
 shader_type canvas_item;
+// @meta: skip
 
 uniform sampler2D screen_tex : hint_default_black, filter_linear, repeat_disable;
 uniform sampler2D noise_tex  : hint_default_white, filter_linear_mipmap, repeat_enable;
