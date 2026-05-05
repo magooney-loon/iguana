@@ -254,16 +254,26 @@ func _rebuild_list() -> void:
 
 		# ── Remove button ─────────────────────────────────────────────
 		var remove_btn := Button.new()
-		var remove_tex := StylesUI.load_icon("remove")
+		var remove_tex := StylesUI.load_icon("close")
 		if remove_tex:
 			remove_btn.icon = remove_tex
 			remove_btn.expand_icon = true
-		remove_btn.custom_minimum_size = Vector2(22, 22)
+		remove_btn.custom_minimum_size = Vector2(24, 24)
 		remove_btn.focus_mode = Control.FOCUS_NONE
 		remove_btn.mouse_filter = Control.MOUSE_FILTER_STOP
-		remove_btn.modulate.a = 0.35
+		remove_btn.modulate.a = 0.5
 		remove_btn.tooltip_text = "Remove from playlist"
-		StylesUI.apply_glass_btn(remove_btn)
+		# Slim style — default glass_btn margins (10px) would crush the icon to a dot
+		var _rs := func(bg: Color) -> StyleBoxFlat:
+			var s := StylesUI.glass_box(bg, 5.0, false)
+			s.content_margin_left = 4.0
+			s.content_margin_right = 4.0
+			s.content_margin_top = 3.0
+			s.content_margin_bottom = 3.0
+			return s
+		remove_btn.add_theme_stylebox_override("normal", _rs.call(StylesUI.C_BTN))
+		remove_btn.add_theme_stylebox_override("hover", _rs.call(StylesUI.C_BTN_H))
+		remove_btn.add_theme_stylebox_override("pressed", _rs.call(StylesUI.C_BTN_P))
 		remove_btn.pressed.connect(func() -> void:
 			_playlist.remove(idx)
 		)
