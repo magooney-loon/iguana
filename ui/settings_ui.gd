@@ -790,6 +790,7 @@ func _build_about_tab() -> Control:
 	StylesUI.win_section(vbox, "DEVELOPER")
 
 	_about_row(vbox, "Developer", "Magooney")
+	_about_row(vbox, "Team", "MyMoonEnt")
 	_about_row(vbox, "Engine",    "Godot 4")
 	_about_row(vbox, "License",   "AGPL-v3")
 
@@ -817,6 +818,28 @@ func _build_about_tab() -> Control:
 	x_row.add_child(x_lbl)
 	x_row.add_child(StylesUI.make_link_label("@MyMoonEnt", "https://x.com/MyMoonEnt"))
 	vbox.add_child(x_row)
+
+	var rd_row := HBoxContainer.new()
+	rd_row.add_theme_constant_override("separation", 8)
+	var rd_lbl := Label.new()
+	rd_lbl.text = "Reddit"
+	rd_lbl.add_theme_font_size_override("font_size", 12)
+	rd_lbl.modulate.a = 0.55
+	rd_lbl.custom_minimum_size.x = 80
+	rd_row.add_child(rd_lbl)
+	rd_row.add_child(StylesUI.make_link_label("u/SubjectHealthy2409", "https://www.reddit.com/user/SubjectHealthy2409/"))
+	vbox.add_child(rd_row)
+
+	var em_row := HBoxContainer.new()
+	em_row.add_theme_constant_override("separation", 8)
+	var em_lbl := Label.new()
+	em_lbl.text = "Contact"
+	em_lbl.add_theme_font_size_override("font_size", 12)
+	em_lbl.modulate.a = 0.55
+	em_lbl.custom_minimum_size.x = 80
+	em_row.add_child(em_lbl)
+	em_row.add_child(StylesUI.make_link_label("contact@magooney.org", "mailto:contact@magooney.org"))
+	vbox.add_child(em_row)
 
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
