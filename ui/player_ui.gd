@@ -216,8 +216,9 @@ func _update_player_ui() -> void:
 	if not AudioSource.has_stream():
 		_time_label.text = "0:00 / 0:00"
 		return
-	var pos      := AudioSource.get_playback_position()
 	var duration := AudioSource.get_duration()
+	var xfade_pos := AudioSource.get_crossfade_position()
+	var pos := xfade_pos if xfade_pos >= 0.0 else AudioSource.get_playback_position()
 	_time_label.text = "%s / %s" % [_fmt(pos), _fmt(duration)]
 	if duration > 0.01:
 		_seeking = true

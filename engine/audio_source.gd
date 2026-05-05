@@ -147,9 +147,17 @@ func get_playback_position() -> float:
 
 
 func get_duration() -> float:
+	if _crossfade_tween and _crossfade_tween.is_valid() and _fade_player.stream != null:
+		return _fade_player.stream.get_length()
 	if _player.stream == null:
 		return 0.0
 	return _player.stream.get_length()
+
+
+func get_crossfade_position() -> float:
+	if _crossfade_tween and _crossfade_tween.is_valid() and _fade_player.playing:
+		return _fade_player.get_playback_position()
+	return -1.0
 
 
 func has_stream() -> bool:
