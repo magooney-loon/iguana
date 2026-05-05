@@ -46,6 +46,11 @@ func _ready() -> void:
 	# ── Sub-systems ────────────────────────────────────────────────────
 	_playlist = Playlist.new()
 
+	# Give Main node access to the playlist for drag & drop
+	var main := get_tree().root.get_node("Main")
+	if main and main.has_method("set"):
+		main._playlist = _playlist
+
 	_settings = SettingsUI.new()
 	_settings.setup(_visualizer, AudioSource.analyzer)
 	add_child(_settings)

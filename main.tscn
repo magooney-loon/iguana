@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://cjx024rn3rvwi" path="res://engine/visualizer.gd" id="1"]
 [ext_resource type="Script" uid="uid://nsmlada460xa" path="res://ui/player_ui.gd" id="4"]
+[ext_resource type="Script" path="res://engine/main.gd" id="5"]
 
 [node name="Main" type="Control" unique_id=1057640982]
 anchors_preset = 15
@@ -9,6 +10,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("5")
 
 [node name="VisualizerContainer" type="SubViewportContainer" parent="."]
 anchors_preset = 15
