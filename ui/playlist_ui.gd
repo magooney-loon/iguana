@@ -325,15 +325,14 @@ func _rebuild_list() -> void:
 		)
 
 		# Hover effects
-		if not is_active:
-			row.mouse_entered.connect(func() -> void:
-				if not _is_active_row(idx):
-					row.add_theme_stylebox_override("panel", _style_hover.duplicate())
-			)
-			row.mouse_exited.connect(func() -> void:
-				if not _is_active_row(idx):
-					row.add_theme_stylebox_override("panel", _style_normal.duplicate())
-			)
+		row.mouse_entered.connect(func() -> void:
+			if not _is_active_row(idx):
+				row.add_theme_stylebox_override("panel", _style_hover.duplicate())
+		)
+		row.mouse_exited.connect(func() -> void:
+			if not _is_active_row(idx):
+				row.add_theme_stylebox_override("panel", _style_normal.duplicate())
+		)
 
 		_track_container.add_child(row)
 		_track_rows.append({
