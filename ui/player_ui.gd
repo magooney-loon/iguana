@@ -455,6 +455,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		Config.save()
 		_refresh_vol_ui()
 		_notify("Volume %d%%" % int(AudioSource.get_volume() * 100))
+	elif kc == Keymap.get_key("mute"):
+		AudioSource.toggle_mute()
+		Config.volume = AudioSource.get_volume()
+		Config.save()
+		_refresh_vol_ui()
+		_notify("Muted" if AudioSource.get_volume() < 0.005 else "Unmuted")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

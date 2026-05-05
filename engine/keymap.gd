@@ -19,6 +19,7 @@ const ACTIONS := {
 	"toggle_settings": { "name": "Toggle Settings",       "key": KEY_COMMA },
 	"volume_up":      { "name": "Volume Up",                "key": KEY_UP },
 	"volume_down":    { "name": "Volume Down",              "key": KEY_DOWN },
+	"mute":           { "name": "Toggle Mute",              "key": KEY_M },
 }
 
 ## Ordered action ids (for display)
