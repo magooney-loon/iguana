@@ -131,8 +131,8 @@ func _build() -> void:
 	col.add_child(title_bar)
 
 	var title_margin := MarginContainer.new()
-	title_margin.add_theme_constant_override("margin_left", 12)
-	title_margin.add_theme_constant_override("margin_right", 8)
+	title_margin.add_theme_constant_override("margin_left", 8)
+	title_margin.add_theme_constant_override("margin_right", 12)
 	title_margin.add_theme_constant_override("margin_top", 8)
 	title_margin.add_theme_constant_override("margin_bottom", 6)
 	title_bar.add_child(title_margin)
@@ -141,15 +141,16 @@ func _build() -> void:
 	title_row.add_theme_constant_override("separation", 6)
 	title_margin.add_child(title_row)
 
+	var close_btn := StylesUI.icon_btn("close", "Close", Vector2(28, 28), close)
+	title_row.add_child(close_btn)
+
 	var title_lbl := Label.new()
 	title_lbl.text = "Playlist"
 	title_lbl.add_theme_font_size_override("font_size", 14)
 	title_lbl.modulate = Color(0.7, 0.82, 1.0)
 	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	title_row.add_child(title_lbl)
-
-	var close_btn := StylesUI.icon_btn("close", "Close", Vector2(28, 28), close)
-	title_row.add_child(close_btn)
 
 	# ── Track list ────────────────────────────────────────────────────
 	var list_margin := MarginContainer.new()
