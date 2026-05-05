@@ -254,33 +254,6 @@ func _rebuild_list() -> void:
 		hbox.add_theme_constant_override("separation", 2)
 		row.add_child(hbox)
 
-		# ── Remove button ─────────────────────────────────────────────
-		var remove_btn := Button.new()
-		var remove_tex := StylesUI.load_icon("close")
-		if remove_tex:
-			remove_btn.icon = remove_tex
-			remove_btn.expand_icon = true
-		remove_btn.custom_minimum_size = Vector2(24, 24)
-		remove_btn.focus_mode = Control.FOCUS_NONE
-		remove_btn.mouse_filter = Control.MOUSE_FILTER_STOP
-		remove_btn.modulate.a = 0.5
-		remove_btn.tooltip_text = "Remove from playlist"
-		# Slim style — default glass_btn margins (10px) would crush the icon to a dot
-		var _rs := func(bg: Color) -> StyleBoxFlat:
-			var s := StylesUI.glass_box(bg, 5.0, false)
-			s.content_margin_left = 4.0
-			s.content_margin_right = 4.0
-			s.content_margin_top = 3.0
-			s.content_margin_bottom = 3.0
-			return s
-		remove_btn.add_theme_stylebox_override("normal", _rs.call(StylesUI.C_BTN))
-		remove_btn.add_theme_stylebox_override("hover", _rs.call(StylesUI.C_BTN_H))
-		remove_btn.add_theme_stylebox_override("pressed", _rs.call(StylesUI.C_BTN_P))
-		remove_btn.pressed.connect(func() -> void:
-			_playlist.remove(idx)
-		)
-		hbox.add_child(remove_btn)
-
 		# ── Number ────────────────────────────────────────────────────
 		var num_lbl := Label.new()
 		num_lbl.text = "%d." % [i + 1]
@@ -318,6 +291,32 @@ func _rebuild_list() -> void:
 		dur_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		dur_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hbox.add_child(dur_lbl)
+
+		# ── Remove button ─────────────────────────────────────────────
+		var remove_btn := Button.new()
+		var remove_tex := StylesUI.load_icon("close")
+		if remove_tex:
+			remove_btn.icon = remove_tex
+			remove_btn.expand_icon = true
+		remove_btn.custom_minimum_size = Vector2(24, 24)
+		remove_btn.focus_mode = Control.FOCUS_NONE
+		remove_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+		remove_btn.modulate.a = 0.5
+		remove_btn.tooltip_text = "Remove from playlist"
+		var _rs := func(bg: Color) -> StyleBoxFlat:
+			var s := StylesUI.glass_box(bg, 5.0, false)
+			s.content_margin_left = 4.0
+			s.content_margin_right = 4.0
+			s.content_margin_top = 3.0
+			s.content_margin_bottom = 3.0
+			return s
+		remove_btn.add_theme_stylebox_override("normal", _rs.call(StylesUI.C_BTN))
+		remove_btn.add_theme_stylebox_override("hover", _rs.call(StylesUI.C_BTN_H))
+		remove_btn.add_theme_stylebox_override("pressed", _rs.call(StylesUI.C_BTN_P))
+		remove_btn.pressed.connect(func() -> void:
+			_playlist.remove(idx)
+		)
+		hbox.add_child(remove_btn)
 
 		# Click handling
 		row.gui_input.connect(func(event: InputEvent) -> void:
