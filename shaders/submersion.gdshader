@@ -5,12 +5,12 @@ shader_type canvas_item;
 //  @website:       github.com/magooney-loon
 //  @description:   Deep-sea bioluminescent tunnel with organic wall oscillation and neon spiral bands
 //
-//  @exposure:       1.2
+//  @exposure:       1.52
 //  @tonemap_knee:   0.0
 //  @gamma:          2.2
 //  @vignette_dark:  0.45
 //  @grain_strength: 0.02
-//  @loop_reinhard:  0.69
+//  @loop_reinhard:  0.27
 // ═══════════════════════════════════════════════════════════════════════
 //
 //  Pipeline:

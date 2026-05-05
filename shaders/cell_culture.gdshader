@@ -2,16 +2,17 @@ shader_type canvas_item;
 
 // ═══════════════════════════════════════════════════════════════════════
 //  @name:          Cell Culture
-//  @author:        Iguana
+//  @author:        magooney
+//  @website:       github.com/magooney-loon
 //  @description:   Living Voronoi cell colony with mitosis pulses, vein networks and bioluminescent membranes
 //
 //  Post-processing defaults
-//  @exposure:       1.85
-//  @tonemap_knee:   0.0
-//  @gamma:          2.0
+//  @exposure:       2.07
+//  @tonemap_knee:   0.25
+//  @gamma:          3.00
 //  @vignette_dark:  0.40
 //  @grain_strength: 0.02
-//  @loop_reinhard:  0.9
+//  @loop_reinhard:  0.00
 // ═══════════════════════════════════════════════════════════════════════
 
 // ── Audio · all values 0–1, pushed every frame by AudioAnalyzer ─────
@@ -156,38 +157,56 @@ void fragment() {
 	float t = time_val;
 
 	// ══════════════════════════════════════════════════════════════════
-	//  1. FEEDBACK — warp / zoom / rotate previous frame
+	//  1. FEEDBACK — microscope slide drift + organic spread
 	// ══════════════════════════════════════════════════════════════════
+	// No tunnel, no spiral. The culture drifts and grows like a real
+	// petri dish under a slowly panning microscope.
+
 	vec2 center = uv - 0.5;
 	center.x *= aspect;
 
-	// Zoom — sub_bass pulse makes the petri dish "breathe"
-	center *= 0.985 - sub_bass * 0.012;
+	// ── Outward expansion (culture growing), not inward tunnel ──────
+	// Slow breathing cycle + kick-triggered growth spurt
+	float breathe = sin(t * 0.3) * 0.003;
+	float grow    = kick * 0.008 + sub_bass * 0.004;
+	center *= 1.0 + breathe + grow;
 
-	// Rotation — energy drives slow organic swirl
-	float rot = 0.004 + energy * 0.006 + snare * 0.008;
-	center *= rot2(rot);
+	// ── Wandering drift instead of rotation ────────────────────────
+	// Two overlapping sine paths = smooth Brownian-like wander
+	vec2 drift = vec2(
+		sin(t * 0.17) * 0.006 + cos(t * 0.31) * 0.004,
+		cos(t * 0.23) * 0.006 + sin(t * 0.37) * 0.004
+	);
+	drift *= 1.0 + energy * 1.5;   // louder = faster pan
+	center -= drift;
 
 	vec2 fb_uv = center;
 	fb_uv.x /= aspect;
 	fb_uv += 0.5;
 
-	// Warp — domain distortion from the feedback loop itself
+	// ── Polar organic warp — radial/circular flow ──────────────────
+	// Displacement in polar coords creates the circular petri dish feel
+	float r_c = length(center);
+	float a_c = atan(center.y, center.x);
+	float warp_r = sin(a_c * 5.0 + t * 0.7 + r_c * 8.0) * 0.010
+	             + sin(a_c * 3.0 - t * 0.5 + r_c * 4.0) * 0.006;
+	float warp_a = cos(a_c * 4.0 + t * 0.9 + r_c * 6.0) * 0.010
+	             + cos(a_c * 7.0 - t * 0.3 + r_c * 3.0) * 0.005;
+	// Convert polar warp back to cartesian
 	vec2 warp = vec2(
-		sin(center.y * 8.0 + t * 1.1) * 0.012,
-		cos(center.x * 6.0 + t * 0.9) * 0.012
+		warp_r * cos(a_c) - warp_a * sin(a_c),
+		warp_r * sin(a_c) + warp_a * cos(a_c)
 	);
-	warp *= 1.0 + bass * 2.0 + energy * 1.0;
+	warp *= 1.0 + bass * 1.5 + energy * 0.8;
 
 	vec2 sample_uv  = fb_uv + warp;
 	vec2 edge_d     = min(sample_uv, 1.0 - sample_uv);
-	float edge_fade = smoothstep(0.0, 0.04, min(edge_d.x, edge_d.y));
+	float edge_fade = smoothstep(0.0, 0.05, min(edge_d.x, edge_d.y));
 
 	vec3 trail = texture(prev_frame, sample_uv).rgb;
-		// Decay: higher energy = shorter trails (faster fade), cap at 0.94
-		// At 0.90 decay → 10× equilibrium → max safe emission ≈ 0.10
-		float decay = mix(0.94, 0.88, energy);
-		trail *= decay * edge_fade;
+	// Decay: higher energy = shorter trails (faster fade)
+	float decay = mix(0.93, 0.86, energy);
+	trail *= decay * edge_fade;
 
 	// ══════════════════════════════════════════════════════════════════
 	//  2. GEOMETRY — living Voronoi cell culture

@@ -5,12 +5,12 @@ shader_type canvas_item;
 //  @website:       github.com/magooney-loon
 //  @description:   Folded-space IFS kaleidoscope with morphing polygon constellations
 //
-//  @exposure:       1.8
+//  @exposure:       3.00
 //  @tonemap_knee:   0.5
-//  @gamma:          1.8
+//  @gamma:          1.98
 //  @vignette_dark:  0.99
-//  @grain_strength: 0.006
-//  @loop_reinhard:  0.18
+//  @grain_strength: 0.01
+//  @loop_reinhard:  0.00
 // ═══════════════════════════════════════════════════════════════════════
 //
 //  Pipeline:
