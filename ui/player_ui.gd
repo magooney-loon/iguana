@@ -25,6 +25,10 @@ var _last_shader_idx := -1
 var _pp_sliders: Dictionary = {}
 var _pp_shader_label: Label
 
+# Settings window animation
+var _settings_content: Control
+var _settings_tween: Tween
+
 
 # Debug: key → { bar: ProgressBar, val: Label }
 var _dbg: Dictionary = {}
@@ -239,7 +243,7 @@ func _build_settings_window() -> void:
 	_settings_win.min_size = Vector2i(360, 420)
 	_settings_win.transparent = true
 	_settings_win.borderless = true
-	_settings_win.close_requested.connect(func(): _settings_win.hide())
+	_settings_win.close_requested.connect(_close_settings)
 	_settings_win.hide()
 	add_child(_settings_win)
 
@@ -251,6 +255,7 @@ func _build_settings_window() -> void:
 	shadow_pad.add_theme_constant_override("margin_top",    12)
 	shadow_pad.add_theme_constant_override("margin_bottom", 12)
 	_settings_win.add_child(shadow_pad)
+	_settings_content = shadow_pad
 
 	var col := VBoxContainer.new()
 	col.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -285,7 +290,7 @@ func _build_settings_window() -> void:
 	close_btn.custom_minimum_size = Vector2(28, 28)
 	close_btn.add_theme_font_size_override("font_size", 14)
 	close_btn.focus_mode = Control.FOCUS_NONE
-	close_btn.pressed.connect(func(): _settings_win.hide())
+	close_btn.pressed.connect(_close_settings)
 	_apply_glass_btn(close_btn)
 	title_row.add_child(close_btn)
 
@@ -758,11 +763,44 @@ func _toggle_fullscreen() -> void:
 
 func _toggle_settings() -> void:
 	if _settings_win.visible:
-		_settings_win.hide()
-		return
+		_close_settings()
+	else:
+		_open_settings()
+
+
+func _open_settings() -> void:
+	if _settings_tween and _settings_tween.is_valid():
+		_settings_tween.kill()
 	_settings_win.move_to_center()
 	_settings_win.show()
 	_sync_settings()
+
+	_settings_content.pivot_offset = _settings_content.size / 2.0
+	_settings_content.scale = Vector2(0.90, 0.90)
+	_settings_content.modulate.a = 0.0
+
+	_settings_tween = create_tween()
+	_settings_tween.set_parallel(true)
+	_settings_tween.tween_property(_settings_content, "scale", Vector2.ONE, 0.32)\
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	_settings_tween.tween_property(_settings_content, "modulate:a", 1.0, 0.22)\
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	_settings_tween.set_parallel(false)
+
+
+func _close_settings() -> void:
+	if _settings_tween and _settings_tween.is_valid():
+		_settings_tween.kill()
+	_settings_content.pivot_offset = _settings_content.size / 2.0
+
+	_settings_tween = create_tween()
+	_settings_tween.set_parallel(true)
+	_settings_tween.tween_property(_settings_content, "scale", Vector2(0.90, 0.90), 0.18)\
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	_settings_tween.tween_property(_settings_content, "modulate:a", 0.0, 0.18)\
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	_settings_tween.set_parallel(false)
+	_settings_tween.tween_callback(_settings_win.hide)
 
 
 func _on_shader_btn(idx: int) -> void:
