@@ -262,10 +262,10 @@ func _refresh_song_label() -> void:
 	if track.is_empty():
 		_song_label.text = "No track loaded"
 		return
-	var name := track.get_file().get_basename()
+	var track_name := track.get_file().get_basename()
 	if _playlist.size() > 1:
-		name += "  (%d/%d)" % [_playlist.get_current_index() + 1, _playlist.size()]
-	_song_label.text = name
+		track_name += "  (%d/%d)" % [_playlist.get_current_index() + 1, _playlist.size()]
+	_song_label.text = track_name
 
 
 func _on_playlist_track_changed(_index: int) -> void:

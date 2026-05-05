@@ -7,20 +7,29 @@ var _content: Control
 var _tween: Tween
 var _scroll: ScrollContainer
 var _track_container: VBoxContainer
-var _track_buttons: Array[Button] = []
-var _duration_cache: Dictionary = {}   # path → float seconds
+var _track_rows: Array[Dictionary] = []  # {row, name_clip, name_label, dur_label}
+var _duration_cache: Dictionary = {}     # path → float seconds
+var _marquee_tweens: Array[Tween] = []
+
+# Footer
 var _footer_stats: Label
 var _add_btn: Button
 var _clear_btn: Button
 
+# Row styles
+var _style_normal: StyleBoxFlat
+var _style_hover:  StyleBoxFlat
+var _style_active: StyleBoxFlat
+
 # Callbacks — set by player_ui
-var on_track_selected: Callable   # (index: int) -> void
+var on_track_selected: Callable
 
 
 func setup(playlist: Playlist) -> void:
 	_playlist = playlist
 	_playlist.track_changed.connect(_on_track_changed)
 	_playlist.playlist_changed.connect(_rebuild_list)
+	_init_styles()
 	_build()
 
 
@@ -68,6 +77,28 @@ func close() -> void:
 
 func is_visible() -> bool:
 	return _win != null and _win.visible
+
+
+# ── Styles ────────────────────────────────────────────────────────────────────
+
+func _init_styles() -> void:
+	_style_normal = StylesUI.glass_box(StylesUI.C_BTN, 6.0, true)
+	_style_normal.content_margin_left   = 10.0
+	_style_normal.content_margin_right  = 10.0
+	_style_normal.content_margin_top    = 5.0
+	_style_normal.content_margin_bottom = 5.0
+
+	_style_hover = StylesUI.glass_box(StylesUI.C_BTN_H, 6.0, true)
+	_style_hover.content_margin_left   = 10.0
+	_style_hover.content_margin_right  = 10.0
+	_style_hover.content_margin_top    = 5.0
+	_style_hover.content_margin_bottom = 5.0
+
+	_style_active = StylesUI.glass_box(Color(0.22, 0.34, 0.56, 0.50), 6.0, true)
+	_style_active.content_margin_left   = 10.0
+	_style_active.content_margin_right  = 10.0
+	_style_active.content_margin_top    = 5.0
+	_style_active.content_margin_bottom = 5.0
 
 
 # ── Build ─────────────────────────────────────────────────────────────────────
@@ -139,6 +170,7 @@ func _build() -> void:
 
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.add_theme_stylebox_override("panel", StylesUI.glass_box(Color(0.04, 0.05, 0.09, 0.60), 10.0, false))
 	list_margin.add_child(_scroll)
 
@@ -147,7 +179,7 @@ func _build() -> void:
 	_track_container.add_theme_constant_override("separation", 2)
 	_scroll.add_child(_track_container)
 
-	# ── Footer bar: stats + actions ───────────────────────────────────
+	# ── Footer bar ────────────────────────────────────────────────────
 	var footer_bar := PanelContainer.new()
 	footer_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(Color(0.08, 0.09, 0.15, 0.55), 8.0, true))
 	col.add_child(footer_bar)
@@ -188,10 +220,18 @@ func _build() -> void:
 
 # ── Track list ────────────────────────────────────────────────────────────────
 
+func _kill_marquees() -> void:
+	for tw in _marquee_tweens:
+		if tw and tw.is_valid():
+			tw.kill()
+	_marquee_tweens.clear()
+
+
 func _rebuild_list() -> void:
+	_kill_marquees()
 	for child in _track_container.get_children():
 		child.queue_free()
-	_track_buttons.clear()
+	_track_rows.clear()
 
 	if _playlist.is_empty():
 		var empty_lbl := Label.new()
@@ -205,40 +245,158 @@ func _rebuild_list() -> void:
 
 	_cache_durations()
 
+	var current_idx := _playlist.get_current_index()
+
 	for i in _playlist.size():
-		var btn := Button.new()
 		var track_path: String = _playlist.get_track(i)
 		var track_name := track_path.get_file().get_basename()
 		var dur: float = _duration_cache.get(track_path, 0.0)
-		btn.text = "%d.   %s   %s" % [i + 1, track_name, _fmt_duration(dur)]
-		btn.toggle_mode  = true
-		btn.button_group = ButtonGroup.new()
-		btn.alignment    = HORIZONTAL_ALIGNMENT_LEFT
-		btn.add_theme_font_size_override("font_size", 12)
-		btn.focus_mode   = Control.FOCUS_NONE
-		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var idx := i
-		btn.pressed.connect(func() -> void:
-			if on_track_selected.is_valid():
-				on_track_selected.call(idx)
-		)
-		StylesUI.apply_glass_btn(btn)
-		_track_container.add_child(btn)
-		_track_buttons.append(btn)
+		var is_active := (i == current_idx)
 
-	_highlight_current()
+		# Row container (PanelContainer for background styling)
+		var row := PanelContainer.new()
+		row.add_theme_stylebox_override("panel", _style_active.duplicate() if is_active else _style_normal.duplicate())
+		row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var idx := i
+
+		# Inner HBox for layout
+		var hbox := HBoxContainer.new()
+		hbox.add_theme_constant_override("separation", 0)
+		row.add_child(hbox)
+
+		# ── Remove button ─────────────────────────────────────────────
+		var remove_btn := Button.new()
+		remove_btn.text = "✕"
+		remove_btn.add_theme_font_size_override("font_size", 11)
+		remove_btn.custom_minimum_size = Vector2(22, 22)
+		remove_btn.focus_mode = Control.FOCUS_NONE
+		remove_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+		remove_btn.modulate.a = 0.3
+		remove_btn.tooltip_text = "Remove from playlist"
+		StylesUI.apply_glass_btn(remove_btn)
+		remove_btn.pressed.connect(func() -> void:
+			_playlist.remove(idx)
+		)
+		hbox.add_child(remove_btn)
+
+		# ── Number ────────────────────────────────────────────────────
+		var num_lbl := Label.new()
+		num_lbl.text = "%d." % [i + 1]
+		num_lbl.add_theme_font_size_override("font_size", 12)
+		num_lbl.modulate.a = 0.40
+		num_lbl.custom_minimum_size.x = 28
+		num_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		num_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(num_lbl)
+
+		# ── Name (clipped, with marquee if needed) ────────────────────
+		var name_clip := Control.new()
+		name_clip.clip_contents = true
+		name_clip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(name_clip)
+
+		var name_label := Label.new()
+		name_label.text = track_name
+		name_label.add_theme_font_size_override("font_size", 12)
+		name_label.anchor_top = 0.0
+		name_label.anchor_bottom = 1.0
+		name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		if is_active:
+			name_label.modulate = Color(0.75, 0.88, 1.0)
+		name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		name_clip.add_child(name_label)
+
+		# ── Duration ──────────────────────────────────────────────────
+		var dur_lbl := Label.new()
+		dur_lbl.text = _fmt_duration(dur)
+		dur_lbl.add_theme_font_size_override("font_size", 12)
+		dur_lbl.modulate.a = 0.50
+		dur_lbl.custom_minimum_size.x = 44
+		dur_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		dur_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(dur_lbl)
+
+		# Click handling
+		row.gui_input.connect(func(event: InputEvent) -> void:
+			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+				if on_track_selected.is_valid():
+					on_track_selected.call(idx)
+		)
+
+		# Hover effects
+		if not is_active:
+			row.mouse_entered.connect(func() -> void:
+				if not _is_active_row(idx):
+					row.add_theme_stylebox_override("panel", _style_hover.duplicate())
+			)
+			row.mouse_exited.connect(func() -> void:
+				if not _is_active_row(idx):
+					row.add_theme_stylebox_override("panel", _style_normal.duplicate())
+			)
+
+		_track_container.add_child(row)
+		_track_rows.append({
+			"row": row,
+			"name_clip": name_clip,
+			"name_label": name_label,
+			"dur_label": dur_lbl,
+			"index": i,
+		})
+
 	_update_footer()
+	# Wait for layout then set up marquees
+	_setup_marquees.call_deferred()
+
+
+func _is_active_row(idx: int) -> bool:
+	return idx == _playlist.get_current_index()
+
+
+func _setup_marquees() -> void:
+	_kill_marquees()
+	await get_tree().process_frame
+
+	for entry in _track_rows:
+		var label: Label = entry["name_label"]
+		var clip: Control = entry["name_clip"]
+
+		var natural_w := label.get_combined_minimum_size().x
+		var clip_w := clip.size.x
+		var clip_h := clip.size.y
+
+		# Size the label width to natural width (anchors handle height)
+		label.size.x = max(natural_w, clip_w)
+		label.position = Vector2(0, 0)
+
+		if natural_w > clip_w + 2.0:
+			var overflow := natural_w - clip_w
+			var speed := 28.0
+			var scroll_time := overflow / speed
+			var tw := create_tween().set_loops().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+			tw.tween_interval(2.0)
+			tw.tween_property(label, "position:x", -overflow, scroll_time)\
+				.set_ease(Tween.EASE_IN_OUT)
+			tw.tween_interval(1.5)
+			tw.tween_property(label, "position:x", 0.0, scroll_time)\
+				.set_ease(Tween.EASE_IN_OUT)
+			tw.tween_interval(2.0)
+			_marquee_tweens.append(tw)
 
 
 func _highlight_current() -> void:
 	var idx := _playlist.get_current_index()
-	for i in _track_buttons.size():
-		var btn: Button = _track_buttons[i]
-		btn.set_pressed_no_signal(i == idx)
+	for entry in _track_rows:
+		var i: int = entry["index"]
+		var row: PanelContainer = entry["row"]
+		var name_label: Label = entry["name_label"]
 		if i == idx:
-			btn.modulate = Color(0.7, 0.85, 1.0)
+			row.add_theme_stylebox_override("panel", _style_active.duplicate())
+			name_label.modulate = Color(0.75, 0.88, 1.0)
 		else:
-			btn.modulate = Color.WHITE
+			row.add_theme_stylebox_override("panel", _style_normal.duplicate())
+			name_label.modulate = Color.WHITE
+	_setup_marquees.call_deferred()
 
 
 func _update_footer() -> void:
@@ -256,9 +414,9 @@ func _update_footer() -> void:
 
 func _on_track_changed(index: int) -> void:
 	_highlight_current()
-	if index >= 0 and index < _track_buttons.size():
+	if index >= 0 and index < _track_rows.size():
 		await get_tree().process_frame
-		_scroll.ensure_control_visible(_track_buttons[index])
+		_scroll.ensure_control_visible(_track_rows[index]["row"])
 
 
 # ── Duration caching ──────────────────────────────────────────────────────────
@@ -316,10 +474,10 @@ func _on_clear_pressed() -> void:
 static func _fmt_duration(secs: float) -> String:
 	if secs <= 0.0:
 		return "0:00"
-	var total := int(secs)
-	var h := total / 3600
-	var m := (total % 3600) / 60
-	var s := total % 60
+	var total: int = int(secs)
+	var h: int = total / 3600
+	var m: int = (total % 3600) / 60
+	var s: int = total % 60
 	if h > 0:
 		return "%d:%02d:%02d" % [h, m, s]
 	return "%d:%02d" % [m, s]
