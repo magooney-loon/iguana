@@ -249,10 +249,10 @@ func _setup_logo() -> void:
 	style.corner_radius_bottom_right = 0
 	style.set_border_width_all(1)
 	style.border_width_bottom   = 0
-	style.content_margin_left   = 14.0
-	style.content_margin_right  = 14.0
-	style.content_margin_top    = 8.0
-	style.content_margin_bottom = 8.0
+	style.content_margin_left   = 8.0
+	style.content_margin_right  = 8.0
+	style.content_margin_top    = 5.0
+	style.content_margin_bottom = 2.0
 	panel.add_theme_stylebox_override("panel", style)
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.z_index = 99
