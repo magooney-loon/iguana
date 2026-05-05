@@ -1,8 +1,8 @@
 shader_type canvas_item;
 
 //  @name:          Phosphorescence
-//  @author:        Test
-//  @website:       Test
+//  @author:        magooney
+//  @website:       https://github.com/magooney-loon
 //  @description:   Neon soft-body tunnel with iridescent plasma fill and volumetric center rays
 //
 //  @exposure:       1.3

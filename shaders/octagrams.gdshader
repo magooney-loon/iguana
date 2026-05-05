@@ -1,9 +1,9 @@
 shader_type canvas_item;
 
-//  @name:          Starfall
-//  @author:        Test
-//  @website:       Test
-//  @description:   Raymarched sacred geometry with bioluminescent overlays and aurora curtains
+//  @name:          Octagrams
+//  @author:        whisky_shusuky (magooney rmx)
+//  @website:       https://www.shadertoy.com/view/tlVGDt
+//  @description:   Inspired by arabesque.
 //
 //  @exposure:       1.42
 //  @tonemap_knee:   0.0
