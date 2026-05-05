@@ -1,7 +1,7 @@
 shader_type canvas_item;
 
 //  @meta:          skip
-//
+// COPY WITHOUT THE @meta:          skip
 // ═══════════════════════════════════════════════════════════════════════
 //  @name:          My Shader
 //  @author:        Your Name
