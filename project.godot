@@ -28,6 +28,7 @@ buses/default_bus_layout="uid://byxtiup0hs2og"
 [autoload]
 
 Keymap="*res://engine/keymap.gd"
+Config="*res://config.gd"
 
 [display]
 

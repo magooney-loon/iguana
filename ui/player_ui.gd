@@ -57,6 +57,13 @@ func _ready() -> void:
 	_playlist.track_changed.connect(_on_playlist_track_changed)
 	_playlist.playlist_changed.connect(_on_playlist_changed)
 
+	# Restore persisted play mode
+	_playlist.set_play_mode(Config.play_mode as Playlist.PlayMode)
+
+	# Restore fullscreen state
+	if Config.fullscreen:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+
 	_refresh_song_label()
 	_refresh_mode_buttons()
 	_refresh_play_btn()
@@ -245,6 +252,8 @@ func _on_playlist_jump(index: int) -> void:
 
 func _on_loop_pressed() -> void:
 	_playlist.cycle_play_mode()
+	Config.play_mode = _playlist.get_play_mode() as int
+	Config.save()
 	_refresh_mode_buttons()
 	_notify(_mode_label())
 
@@ -254,6 +263,8 @@ func _on_shuffle_pressed() -> void:
 		_playlist.set_play_mode(Playlist.PlayMode.LOOP_ALL)
 	else:
 		_playlist.set_play_mode(Playlist.PlayMode.SHUFFLE)
+	Config.play_mode = _playlist.get_play_mode() as int
+	Config.save()
 	_refresh_mode_buttons()
 	_notify(_mode_label())
 
@@ -338,10 +349,13 @@ func _toggle_fullscreen() -> void:
 	var mode := DisplayServer.window_get_mode()
 	if mode == DisplayServer.WINDOW_MODE_FULLSCREEN:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		Config.fullscreen = false
 		_notify("Windowed")
 	else:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		Config.fullscreen = true
 		_notify("Fullscreen")
+	Config.save()
 
 
 func _on_song_finished() -> void:

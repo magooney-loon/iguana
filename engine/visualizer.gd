@@ -67,7 +67,7 @@ const PP_DEFAULTS := {
 }
 # Default loop_reinhard per shader (matches each .gdshader default)
 const _SHADER_REINHARD_DEFAULTS := [0.9, 1.2, 1.0, 0.69, 0.18]
-const SETTINGS_PATH := "user://iguana_settings.cfg"
+
 
 
 func _ready() -> void:
@@ -156,9 +156,17 @@ func _ready() -> void:
 	_noise_tex.noise = fnoise
 	_noise_tex.seamless = true
 
-	# Load persisted settings and apply first shader's post-processing config
-	_load_settings()
-	_apply_pp_config(0)
+	# Sync per-shader PP defaults to Config (centralized store)
+	Config.shader_pp_configs = _shader_pp_configs
+	Config.load_settings()
+	# Apply loaded general settings
+	shuffle_interval = Config.shuffle_interval
+	_shuffle_on = Config.shuffle_on
+	_post_display.visible = Config.post_enabled
+	# Apply loaded shader index and PP config
+	_shader_index = Config.shader_index
+	(material as ShaderMaterial).shader = _loaded_shaders[_shader_index]
+	_apply_pp_config(_shader_index)
 
 
 # ── Input and shader switching ─────────────────────────────────────
@@ -202,11 +210,15 @@ func _switch(idx: int) -> void:
 func _toggle_shuffle() -> void:
 	_shuffle_on    = !_shuffle_on
 	_shuffle_timer = 0.0
+	Config.shuffle_on = _shuffle_on
+	Config.save()
 	_ui.show_label("Shader Shuffle %s" % ("ON" if _shuffle_on else "OFF"))
 
 
 func _toggle_post_process() -> void:
 	_post_display.visible = !_post_display.visible
+	Config.post_enabled = _post_display.visible
+	Config.save()
 	_ui.show_label("Post-process %s" % ("ON" if _post_display.visible else "OFF"))
 
 
@@ -351,32 +363,12 @@ func update_pp_param(param: String, value: float) -> void:
 
 func save_settings() -> void:
 	_save_current_pp_config()
-	var cfg := ConfigFile.new()
-	for i in _shader_pp_configs.size():
-		var section := "shader_%d" % i
-		for key in _shader_pp_configs[i]:
-			cfg.set_value(section, key, _shader_pp_configs[i][key])
-	cfg.set_value("general", "shuffle_interval", shuffle_interval)
-	cfg.set_value("general", "shuffle_on", _shuffle_on)
-	cfg.set_value("general", "post_enabled", _post_display.visible if is_instance_valid(_post_display) else true)
-	cfg.save(SETTINGS_PATH)
+	# Sync current state into Config
+	Config.shader_pp_configs = _shader_pp_configs
+	Config.shuffle_on        = _shuffle_on
+	Config.shuffle_interval  = shuffle_interval
+	Config.post_enabled      = _post_display.visible if is_instance_valid(_post_display) else true
+	Config.fullscreen        = (DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN)
+	Config.shader_index      = _shader_index
+	Config.save()
 	_ui.show_label("Settings saved")
-
-
-func _load_settings() -> void:
-	var cfg := ConfigFile.new()
-	if cfg.load(SETTINGS_PATH) != OK:
-		return
-	for i in _loaded_shaders.size():
-		var section := "shader_%d" % i
-		if cfg.has_section(section):
-			for key in PP_DEFAULTS:
-				if cfg.has_section_key(section, key):
-					_shader_pp_configs[i][key] = cfg.get_value(section, key)
-	if cfg.has_section_key("general", "shuffle_interval"):
-		shuffle_interval = cfg.get_value("general", "shuffle_interval")
-	if cfg.has_section_key("general", "shuffle_on"):
-		_shuffle_on = cfg.get_value("general", "shuffle_on")
-	if cfg.has_section_key("general", "post_enabled"):
-		if is_instance_valid(_post_display):
-			_post_display.visible = cfg.get_value("general", "post_enabled")
