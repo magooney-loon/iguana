@@ -16,6 +16,12 @@ var _vol_btn:    Button
 var _vol_slider: HSlider
 var _volume     := 1.0
 
+# ── Crossfade ──────────────────────────────────────────────────────────────
+var _fade_player:       AudioStreamPlayer
+var _crossfade_tween:   Tween
+var _near_end_triggered := false
+const CROSSFADE_DURATION := 2.0
+
 # ── Sub-systems ───────────────────────────────────────────────────────────────
 var _settings:    SettingsUI
 var _playlist:    Playlist
@@ -30,6 +36,10 @@ func _ready() -> void:
 	_player     = owner.get_node("Player") as AudioStreamPlayer
 	_visualizer = get_tree().root.get_node("Main/VisualizerContainer/FeedbackViewport/Visualizer")
 	_analyzer   = _visualizer._analyzer
+
+	# Second player for crossfade transitions
+	_fade_player = AudioStreamPlayer.new()
+	add_child(_fade_player)
 
 	StylesUI.apply_bar_style(self)
 
@@ -46,6 +56,7 @@ func _ready() -> void:
 	add_child(_playlist_ui)
 
 	_player.finished.connect(_on_song_finished)
+	_fade_player.finished.connect(_on_song_finished)
 
 	# Populate playlist with the default song BEFORE connecting our handler
 	# so we don't restart the already-playing autoplay track
@@ -211,6 +222,7 @@ func _build_bar() -> void:
 func _process(_delta: float) -> void:
 	_update_player_ui()
 	_settings.sync_frame()
+	_check_near_end()
 
 
 ## Show a short-lived overlay notification on the visualizer.
@@ -243,11 +255,86 @@ func _play_track(path: String) -> void:
 		return
 	_player.stop()
 	_player.stream = stream
+	_player.volume_db = 0.0
 	_player.play()
 	_paused = false
+	_near_end_triggered = false
 	_refresh_song_label()
 	_seek_bar.max_value = stream.get_length()
 	_refresh_play_btn()
+
+
+func _crossfade_to(path: String) -> void:
+	var stream := _load_stream(path)
+	if stream == null:
+		return
+
+	# Kill any in-progress crossfade and reset state
+	if _crossfade_tween and _crossfade_tween.is_valid():
+		_crossfade_tween.kill()
+		_player.volume_db = 0.0
+		_fade_player.stop()
+		_fade_player.volume_db = -80.0
+
+	# Start the new track on the fade player at silence
+	_fade_player.stream = stream
+	_fade_player.volume_db = -80.0
+	_fade_player.play()
+
+	_near_end_triggered = false
+	_refresh_song_label()
+	_seek_bar.max_value = stream.get_length()
+	_refresh_play_btn()
+
+	# Tween: fade out current player, fade in fade player
+	_crossfade_tween = create_tween()
+	_crossfade_tween.set_parallel(true)
+	_crossfade_tween.tween_property(_player, "volume_db", -80.0, CROSSFADE_DURATION)\
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+	_crossfade_tween.tween_property(_fade_player, "volume_db", 0.0, CROSSFADE_DURATION)\
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_crossfade_tween.set_parallel(false)
+	_crossfade_tween.tween_callback(func():
+		# Swap players: the fade player becomes the main player
+		var old_player := _player
+		_player = _fade_player
+		_fade_player = old_player
+		_fade_player.stop()
+		_fade_player.volume_db = -80.0
+		# Keep analyzer pointing at the active player so is_sounding stays correct
+		_analyzer._player = _player
+	)
+
+
+func _cancel_crossfade() -> void:
+	if _crossfade_tween and _crossfade_tween.is_valid():
+		_crossfade_tween.kill()
+	_player.volume_db = 0.0
+	_fade_player.stop()
+	_fade_player.volume_db = -80.0
+	_near_end_triggered = false
+
+
+func _check_near_end() -> void:
+	if _near_end_triggered:
+		return
+	if not _player.playing or _player.stream_paused or _player.stream == null:
+		return
+	var duration := _player.stream.get_length()
+	if duration <= CROSSFADE_DURATION * 2.0:
+		return  # Too short for crossfade
+	var remaining := duration - _player.get_playback_position()
+	if remaining > CROSSFADE_DURATION:
+		return
+	_near_end_triggered = true
+	# LOOP_ONE: advance() won't emit track_changed (same index)
+	if _playlist.get_play_mode() == Playlist.PlayMode.LOOP_ONE:
+		_crossfade_to(_playlist.get_current_track())
+		return
+	var path := _playlist.advance()
+	if path.is_empty():
+		_near_end_triggered = false
+	# else: advance() emitted track_changed → _on_playlist_track_changed → _crossfade_to
 
 
 func _refresh_song_label() -> void:
@@ -264,6 +351,7 @@ func _refresh_song_label() -> void:
 func _on_playlist_track_changed(index: int) -> void:
 	if index < 0:
 		# Playlist emptied — stop playback
+		_cancel_crossfade()
 		_player.stop()
 		_player.stream = null
 		_paused = false
@@ -273,8 +361,12 @@ func _on_playlist_track_changed(index: int) -> void:
 		_seek_bar.value = 0.0
 		_refresh_play_btn()
 		return
-	# Auto-play the new current track (handles remove, jump, prev, next)
-	_play_track(_playlist.get_current_track())
+	# Crossfade if audio is playing, immediate play otherwise
+	if _player.playing and not _paused:
+		_crossfade_to(_playlist.get_current_track())
+	else:
+		_cancel_crossfade()
+		_play_track(_playlist.get_current_track())
 
 
 func _on_playlist_changed() -> void:
@@ -358,6 +450,7 @@ func _on_play_pause() -> void:
 
 
 func _on_stop() -> void:
+	_cancel_crossfade()
 	_player.stop()
 	_paused = false
 	_refresh_play_btn()
@@ -442,6 +535,11 @@ func _refresh_vol_icon() -> void:
 
 func _on_song_finished() -> void:
 	_paused = false
+	if _near_end_triggered:
+		# Near-end crossfade already started the next track — nothing to do.
+		# The crossfade completion callback will swap players.
+		_near_end_triggered = false
+		return
 	var path := _playlist.advance()
 	if path.is_empty():
 		_refresh_play_btn()
