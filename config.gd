@@ -31,7 +31,6 @@ const PP_DEFAULTS := {
 	"grain_strength": 0.01,
 	"loop_reinhard":  0.0,
 }
-const SHADER_REINHARD_DEFAULTS := [0.9, 1.2, 1.0, 0.69, 0.18]
 
 
 # ── Public API ────────────────────────────────────────────────────────────────

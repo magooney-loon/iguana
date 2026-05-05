@@ -384,13 +384,15 @@ func _update_pp_sliders() -> void:
 
 
 func _reset_post_defaults() -> void:
-	var defaults: Dictionary = _visualizer.PP_DEFAULTS
-	_visualizer.pp_exposure       = defaults["exposure"]
-	_visualizer.pp_tonemap_knee   = defaults["tonemap_knee"]
-	_visualizer.pp_gamma          = defaults["gamma"]
-	_visualizer.pp_vignette_dark  = defaults["vignette_dark"]
-	_visualizer.pp_grain_strength = defaults["grain_strength"]
-	_visualizer.pp_loop_reinhard  = _visualizer._SHADER_REINHARD_DEFAULTS[_visualizer._shader_index]
+	var idx: int = _visualizer._shader_index
+	var shader_meta: Dictionary = _visualizer.SHADERS[idx]
+	var global: Dictionary = _visualizer.PP_DEFAULTS
+	_visualizer.pp_exposure       = shader_meta.get("exposure",       global["exposure"])
+	_visualizer.pp_tonemap_knee   = shader_meta.get("tonemap_knee",   global["tonemap_knee"])
+	_visualizer.pp_gamma          = shader_meta.get("gamma",          global["gamma"])
+	_visualizer.pp_vignette_dark  = shader_meta.get("vignette_dark",  global["vignette_dark"])
+	_visualizer.pp_grain_strength = shader_meta.get("grain_strength", global["grain_strength"])
+	_visualizer.pp_loop_reinhard  = shader_meta.get("loop_reinhard",  global["loop_reinhard"])
 	_visualizer._save_current_pp_config()
 	_update_pp_sliders()
 
