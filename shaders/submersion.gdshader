@@ -1,46 +1,82 @@
 shader_type canvas_item;
 
-// ── Audio uniforms ────────────────────────────────────────────────────
-uniform float sub_bass    : hint_range(0.0, 1.0) = 0.0;
-uniform float bass        : hint_range(0.0, 1.0) = 0.0;
-uniform float low_mid     : hint_range(0.0, 1.0) = 0.0;
-uniform float mid         : hint_range(0.0, 1.0) = 0.0;
-uniform float presence    : hint_range(0.0, 1.0) = 0.0;
-uniform float treble      : hint_range(0.0, 1.0) = 0.0;
+// ═══════════════════════════════════════════════════════════════════════
+//  SUBMERSION — Deep-sea bioluminescent tunnel with organic wall
+//  oscillation, neon spiral bands, Inigo Quilez cosine palettes,
+//  and iridescent noise-driven morphing
+// ═══════════════════════════════════════════════════════════════════════
+//
+//  Pipeline:
+//    1. FEEDBACK  — warp / zoom / rotate prev_frame into trailing echoes
+//    2. GEOMETRY  — draw fresh visuals (raymarching, overlays, effects)
+//    3. COMPOSITE — trail + new_col, tonemapped with loop_reinhard
+//
+//  All uniforms below are pushed automatically by visualizer.gd.
+//  Per-shader post-processing (exposure, gamma, vignette, grain) runs
+//  in a SEPARATE post_process pass — it never feeds back into the loop.
+//
+//  Writing a new shader?
+//    · Copy this file, add your entry to the SHADERS array in visualizer.gd
+//    · Implement the three pipeline phases in fragment()
+//    · Tweak loop_reinhard to control how bright trails feed back
+// ═══════════════════════════════════════════════════════════════════════
 
-uniform float beat        : hint_range(0.0, 1.0) = 0.0;
-uniform float kick        : hint_range(0.0, 1.0) = 0.0;
-uniform float snare       : hint_range(0.0, 1.0) = 0.0;
-uniform float hihat       : hint_range(0.0, 1.0) = 0.0;
+// ── Audio engine · auto-driven by AudioAnalyzer ─────────────────────
+//
+// Frequency bands (0–1, smoothed each frame)
+uniform float sub_bass    : hint_range(0.0, 1.0) = 0.0;  //   20–60 Hz
+uniform float bass        : hint_range(0.0, 1.0) = 0.0;  //   60–250 Hz
+uniform float low_mid     : hint_range(0.0, 1.0) = 0.0;  //  250–800 Hz
+uniform float mid         : hint_range(0.0, 1.0) = 0.0;  //  800 Hz–4 kHz
+uniform float presence    : hint_range(0.0, 1.0) = 0.0;  //   4–8 kHz
+uniform float treble      : hint_range(0.0, 1.0) = 0.0;  //   8–16 kHz
+//
+// Percussion envelopes (0–1, attack/decay shaped)
+uniform float beat        : hint_range(0.0, 1.0) = 0.0;  // general beat pulse
+uniform float kick        : hint_range(0.0, 1.0) = 0.0;  // low-frequency kick
+uniform float snare       : hint_range(0.0, 1.0) = 0.0;  // mid-frequency snare
+uniform float hihat       : hint_range(0.0, 1.0) = 0.0;  // high-frequency hat
+//
+// Spectral flux / onset (0–1, rate of change per band)
+uniform float flux_bass   : hint_range(0.0, 1.0) = 0.0;  // bass band flux
+uniform float flux_mid    : hint_range(0.0, 1.0) = 0.0;  // mid band flux
+uniform float flux_treble : hint_range(0.0, 1.0) = 0.0;  // treble band flux
+uniform float onset       : hint_range(0.0, 1.0) = 0.0;  // weighted onset strength
+//
+// Global descriptors (0–1 unless noted)
+uniform float energy      : hint_range(0.0, 1.0) = 0.0;  // RMS loudness
+uniform float activity    : hint_range(0.0, 1.0) = 0.0;  // spectral activity
+uniform float loudness    : hint_range(0.0, 1.0) = 0.0;  // perceptual loudness
+uniform float warmth      : hint_range(0.0, 1.0) = 0.0;  // bass ↔ treble ratio
+uniform float brightness  : hint_range(0.0, 1.0) = 0.0;  // treble energy ratio
+uniform float density     : hint_range(0.0, 1.0) = 0.0;  // spectral flatness
+//
+// Timing
+uniform float beat_phase      : hint_range(0.0, 1.0) = 0.0;  // 0–1 position in beat
+uniform float beat_confidence : hint_range(0.0, 1.0) = 0.0;  // tracker confidence
+uniform float bpm             = 120.0;                          // estimated BPM
+uniform float time_val        = 0.0;                             // elapsed seconds
 
-uniform float flux_bass   : hint_range(0.0, 1.0) = 0.0;
-uniform float flux_mid    : hint_range(0.0, 1.0) = 0.0;
-uniform float flux_treble : hint_range(0.0, 1.0) = 0.0;
-uniform float onset       : hint_range(0.0, 1.0) = 0.0;
-
-uniform float energy      : hint_range(0.0, 1.0) = 0.0;
-uniform float activity    : hint_range(0.0, 1.0) = 0.0;
-uniform float loudness    : hint_range(0.0, 1.0) = 0.0;
-uniform float warmth      : hint_range(0.0, 1.0) = 0.0;
-uniform float brightness  : hint_range(0.0, 1.0) = 0.0;
-uniform float density     : hint_range(0.0, 1.0) = 0.0;
-
-uniform float beat_phase      : hint_range(0.0, 1.0) = 0.0;
-uniform float beat_confidence : hint_range(0.0, 1.0) = 0.0;
-uniform float bpm             = 120.0;
-uniform float time_val        = 0.0;
-
+// ── Feedback loop ───────────────────────────────────────────────────
+// Previous frame's output — sample this (warped/zoomed/rotated) to
+// create MilkDrop-style trails, tunnels, and infinite zoom effects.
 uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable;
 
-uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
-uniform vec2 rect_size = vec2(1600.0, 900.0);
+// ── Per-shader tuning · configurable in Settings UI ─────────────────
+// Reinhard tonemapping applied INSIDE the feedback loop.
+// Higher = more compression (dimmer highlights, more detail retained).
+// 0 = bypass.  Default is set per-shader in visualizer.gd.
 uniform float loop_reinhard : hint_range(0.0, 3.0) = 0.69;
 
-// ── Constants ─────────────────────────────────────────────────────────
-#define PI  3.14159265359
-#define TAU 6.28318530718
+// ── Utility · auto-provided by visualizer.gd ────────────────────────
+uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
+uniform vec2 rect_size = vec2(1600.0, 900.0);  // viewport resolution in pixels
 
-// ── Math helpers ──────────────────────────────────────────────────────
+// ── Constants ───────────────────────────────────────────────────────
+#define TAU 6.28318530718
+#define PI  3.14159265359
+
+// ── Shader-specific helpers ─────────────────────────────────────────
 mat2 rot2(float a) {
 	float c = cos(a), s = sin(a);
 	return mat2(vec2(c, s), vec2(-s, c));
