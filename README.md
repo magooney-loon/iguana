@@ -126,6 +126,36 @@ Each shader declares its preferred post-processing values in its header. The eng
 
 `loop_reinhard` is applied **inside** the feedback loop (in the shader itself) to prevent trail blow-out. The other five are applied by the external post-process layer. All are tunable live in the Settings window.
 
+---
+
+## Feedback Brightness
+
+Every pixel in a feedback shader converges to a steady-state brightness:
+
+```
+equilibrium = emission × max_per_frame_output / (1.0 − decay)
+```
+
+With `decay = 0.93` and `emission = 0.12`, that's `0.12 / 0.07 ≈ 1.71×` the per-frame value. If the geometry outputs near 1.0 (e.g. `tanh` of bright glow), the equilibrium **exceeds 1.0** — pixels clip to white within a few frames.
+
+### Why `loop_reinhard` can make it worse
+
+Reinhard's formula `col / (col + k) × (1 + k)` multiplies **everything** by `(1 + k)`. At `k = 0.9`, dim pixels are boosted 1.9× every single frame. In a feedback loop, that midtone boost **compounds** into a washed-out fog. Reinhard compresses highlights, yes — but it also lifts shadows and midtones, which is the opposite of what you want when whites are already clipping.
+
+### The correct fix
+
+Keep per-frame output small so the feedback loop accumulates gradually instead of slamming white on frame 1:
+
+- **Scale the glow denominator** so `tanh` outputs 0.3–0.6 instead of 0.9–1.0
+- **Reduce `emission`** to 0.07–0.10 so equilibrium stays ≤ 1.0
+- Let trails **build up** over 10–15 frames — this is the MilkDrop aesthetic
+
+This applies to any shader that tonemaps internally (`tanh`, `smin`, etc.) and then composites into the feedback loop. The post-process `exposure` control can then boost the final image without feeding back.
+
+See [docs/MILKDROP.md](docs/MILKDROP.md) §6 for the full equilibrium table and tuning reference.
+
+---
+
 ## License
 
 AGPL-v3 License.
