@@ -15,6 +15,7 @@ var post_enabled      := true
 var fullscreen        := false
 var shader_index      := 0
 var play_mode         := 1  # Playlist.PlayMode.LOOP_ALL
+var volume            := 1.0  # 0.0 – 1.0
 
 # Per-shader post-processing: Array of Dictionary
 # Populated externally by visualizer.gd (it owns the shader configs).
@@ -44,6 +45,7 @@ func save() -> void:
 	cfg.set_value("general", "fullscreen", fullscreen)
 	cfg.set_value("general", "shader_index", shader_index)
 	cfg.set_value("general", "play_mode", play_mode)
+	cfg.set_value("general", "volume", volume)
 
 	# Per-shader PP configs
 	for i in shader_pp_configs.size():
@@ -75,6 +77,8 @@ func load_settings() -> void:
 		shader_index = cfg.get_value("general", "shader_index")
 	if cfg.has_section_key("general", "play_mode"):
 		play_mode = cfg.get_value("general", "play_mode")
+	if cfg.has_section_key("general", "volume"):
+		volume = cfg.get_value("general", "volume")
 
 	# Per-shader PP configs — merge into whatever the visualizer initialized
 	for i in shader_pp_configs.size():

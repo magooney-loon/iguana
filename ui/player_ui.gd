@@ -12,6 +12,9 @@ var _time_label: Label
 var _song_label: Label
 var _paused  := false
 var _seeking := false
+var _vol_btn:    Button
+var _vol_slider: HSlider
+var _volume     := 1.0
 
 # ── Sub-systems ───────────────────────────────────────────────────────────────
 var _settings:    SettingsUI
@@ -42,8 +45,6 @@ func _ready() -> void:
 	_playlist_ui.on_track_selected = _on_playlist_jump
 	add_child(_playlist_ui)
 
-	_build_bar()
-
 	_player.finished.connect(_on_song_finished)
 
 	# Populate playlist with the default song BEFORE connecting our handler
@@ -63,6 +64,12 @@ func _ready() -> void:
 	# Restore fullscreen state
 	if Config.fullscreen:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+
+	# Build the player bar (creates _vol_btn, _vol_slider, etc.)
+	_build_bar()
+
+	# Restore volume (after bar is built so icon/slider update)
+	_set_volume(Config.volume)
 
 	_refresh_song_label()
 	_refresh_mode_buttons()
@@ -110,6 +117,42 @@ func _build_bar() -> void:
 	_time_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	top.add_child(_time_label)
+
+	top.add_child(StylesUI.make_vsep())
+
+	# Volume control
+	_vol_btn = StylesUI.icon_btn("volume_high", "Mute / Unmute", Vector2(32, 28), _on_vol_mute_toggle)
+	top.add_child(_vol_btn)
+
+	_vol_slider = HSlider.new()
+	_vol_slider.min_value  = 0.0
+	_vol_slider.max_value  = 1.0
+	_vol_slider.step       = 0.01
+	_vol_slider.value      = _volume
+	_vol_slider.custom_minimum_size = Vector2(80, 0)
+	_vol_slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_vol_slider.focus_mode = Control.FOCUS_NONE
+	_vol_slider.value_changed.connect(_on_vol_changed)
+
+	var vs_bg := StylesUI.glass_box(Color(0.04, 0.05, 0.10, 0.50), 5.0, false)
+	vs_bg.content_margin_top = 6.0
+	vs_bg.content_margin_bottom = 6.0
+	_vol_slider.add_theme_stylebox_override("slider", vs_bg)
+
+	var vs_fill := StylesUI.glass_box(Color(0.30, 0.45, 0.75, 0.50), 5.0, false)
+	vs_fill.content_margin_top = 6.0
+	vs_fill.content_margin_bottom = 6.0
+	_vol_slider.add_theme_stylebox_override("fill", vs_fill)
+
+	var vs_grab := StylesUI.glass_box(Color(0.55, 0.70, 1.0, 0.80), 8.0, true)
+	vs_grab.content_margin_left = 4.0
+	vs_grab.content_margin_right = 4.0
+	vs_grab.content_margin_top = 4.0
+	vs_grab.content_margin_bottom = 4.0
+	_vol_slider.add_theme_stylebox_override("grabber_area", vs_grab)
+	_vol_slider.add_theme_stylebox_override("grabber_area_highlight", vs_grab)
+
+	top.add_child(_vol_slider)
 
 	top.add_child(StylesUI.make_vsep())
 
@@ -358,6 +401,45 @@ func _toggle_fullscreen() -> void:
 	Config.save()
 
 
+func _set_volume(v: float) -> void:
+	_volume = clampf(v, 0.0, 1.0)
+	AudioServer.set_bus_volume_db(0, linear_to_db(_volume))
+	AudioServer.set_bus_mute(0, _volume < 0.005)
+	_refresh_vol_icon()
+	if _vol_slider:
+		_vol_slider.set_value_no_signal(_volume)
+
+
+func _on_vol_changed(v: float) -> void:
+	_set_volume(v)
+	Config.volume = _volume
+	Config.save()
+
+
+var _volume_before_mute := 1.0
+
+
+func _on_vol_mute_toggle() -> void:
+	if _volume > 0.005:
+		_volume_before_mute = _volume
+		_set_volume(0.0)
+	else:
+		_set_volume(_volume_before_mute)
+	Config.volume = _volume
+	Config.save()
+
+
+func _refresh_vol_icon() -> void:
+	if _vol_btn == null:
+		return
+	if _volume < 0.005:
+		StylesUI.set_icon(_vol_btn, "volume_muted")
+	elif _volume < 0.4:
+		StylesUI.set_icon(_vol_btn, "volume_low")
+	else:
+		StylesUI.set_icon(_vol_btn, "volume_high")
+
+
 func _on_song_finished() -> void:
 	_paused = false
 	var path := _playlist.advance()
@@ -387,6 +469,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		_playlist_ui.toggle()
 	elif kc == Keymap.get_key("toggle_settings"):
 		_settings.toggle()
+	elif kc == Keymap.get_key("volume_up"):
+		_set_volume(_volume + 0.05)
+		Config.volume = _volume
+		Config.save()
+		_notify("Volume %d%%" % int(_volume * 100))
+	elif kc == Keymap.get_key("volume_down"):
+		_set_volume(_volume - 0.05)
+		Config.volume = _volume
+		Config.save()
+		_notify("Volume %d%%" % int(_volume * 100))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

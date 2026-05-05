@@ -16,7 +16,9 @@ const ACTIONS := {
 	"toggle_postproc": { "name": "Toggle Post-Processing",  "key": KEY_P },
 	"fullscreen":      { "name": "Toggle Fullscreen",       "key": KEY_F },
 	"toggle_playlist": { "name": "Toggle Playlist",         "key": KEY_L },
-	"toggle_settings": { "name": "Toggle Settings",         "key": KEY_COMMA },
+	"toggle_settings": { "name": "Toggle Settings",       "key": KEY_COMMA },
+	"volume_up":      { "name": "Volume Up",                "key": KEY_UP },
+	"volume_down":    { "name": "Volume Down",              "key": KEY_DOWN },
 }
 
 ## Ordered action ids (for display)
