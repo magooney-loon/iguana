@@ -171,6 +171,7 @@ func _build() -> void:
 	_tabs.add_child(_build_shaders_tab())
 	_tabs.add_child(_build_keymap_tab())
 	_tabs.add_child(_build_debug_tab())
+	_tabs.add_child(_build_about_tab())
 
 
 # ── General tab ──────────────────────────────────────────────────────────────
@@ -674,3 +675,87 @@ func _update_debug() -> void:
 			(entry.bar as ProgressBar).value = v
 			var fmt := "%.0f" if key == "bpm" else "%.3f"
 			(entry.val as Label).text = fmt % v
+
+
+# ── About tab ─────────────────────────────────────────────────────────────────
+
+func _build_about_tab() -> Control:
+	var vbox := VBoxContainer.new()
+	vbox.name = "About"
+	vbox.add_theme_constant_override("separation", 6)
+
+	# Logo
+	var logo_tex := load("res://icon.webp") as Texture2D
+	if logo_tex:
+		var logo := TextureRect.new()
+		logo.texture      = logo_tex
+		logo.expand_mode  = TextureRect.EXPAND_IGNORE_SIZE
+		logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		logo.custom_minimum_size = Vector2(80, 80)
+		logo.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		vbox.add_child(logo)
+
+	# Name
+	var name_lbl := Label.new()
+	name_lbl.text = "Iguana"
+	name_lbl.add_theme_font_size_override("font_size", 22)
+	name_lbl.modulate = Color(0.75, 0.88, 1.0)
+	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(name_lbl)
+
+	# Tagline
+	var tag_lbl := Label.new()
+	tag_lbl.text = "It really licks the eyeball, yeah..."
+	tag_lbl.add_theme_font_size_override("font_size", 12)
+	tag_lbl.modulate.a = 0.65
+	tag_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tag_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(tag_lbl)
+
+	StylesUI.win_sep(vbox)
+	StylesUI.win_section(vbox, "DEVELOPER")
+
+	_about_row(vbox, "Developer", "Magooney")
+	_about_row(vbox, "Engine",    "Godot 4")
+	_about_row(vbox, "License",   "AGPL-v3")
+
+	StylesUI.win_sep(vbox)
+	StylesUI.win_section(vbox, "LINKS")
+
+	_about_row(vbox, "GitHub", "github.com/magooney-loon/iguana")
+
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(spacer)
+
+	# Version stamp
+	var ver_lbl := Label.new()
+	ver_lbl.text = "v0.1.0"
+	ver_lbl.add_theme_font_size_override("font_size", 11)
+	ver_lbl.modulate.a = 0.35
+	ver_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ver_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(ver_lbl)
+
+	return vbox
+
+
+func _about_row(parent: VBoxContainer, label: String, value: String) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+
+	var lbl := Label.new()
+	lbl.text = label
+	lbl.add_theme_font_size_override("font_size", 12)
+	lbl.modulate.a = 0.55
+	lbl.custom_minimum_size.x = 80
+	row.add_child(lbl)
+
+	var val := Label.new()
+	val.text = value
+	val.add_theme_font_size_override("font_size", 12)
+	val.modulate = Color(0.75, 0.88, 1.0)
+	row.add_child(val)
+
+	parent.add_child(row)
