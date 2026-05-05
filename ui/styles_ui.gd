@@ -1,0 +1,76 @@
+class_name StylesUI
+
+## Aero Glass Theme — colour palette
+const C_GLASS     := Color(0.08, 0.09, 0.16, 0.68)
+const C_GLASS_LT := Color(0.14, 0.16, 0.26, 0.55)
+const C_BORDER   := Color(0.55, 0.65, 0.85, 0.18)
+const C_HILITE   := Color(0.70, 0.80, 1.00, 0.22)
+const C_SHADOW   := Color(0.0, 0.0, 0.02, 0.45)
+const C_BTN      := Color(0.16, 0.18, 0.28, 0.35)
+const C_BTN_H    := Color(0.30, 0.38, 0.55, 0.45)
+const C_BTN_P    := Color(0.08, 0.09, 0.14, 0.50)
+const C_ACCENT   := Color(0.40, 0.58, 0.92, 0.35)
+
+
+static func glass_box(bg: Color, radius: float = 10.0, highlight: bool = true) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color           = bg
+	s.border_color       = C_BORDER
+	s.set_border_width_all(1)
+	s.corner_radius_top_left     = int(radius)
+	s.corner_radius_top_right    = int(radius)
+	s.corner_radius_bottom_right = int(radius)
+	s.corner_radius_bottom_left  = int(radius)
+	s.shadow_color       = C_SHADOW
+	s.shadow_size        = 8
+	s.shadow_offset      = Vector2(0, 3)
+	if highlight:
+		s.border_color = C_HILITE
+	return s
+
+
+static func apply_glass_btn(btn: Button) -> void:
+	var n := glass_box(C_BTN, 7.0, true)
+	n.content_margin_left   = 10.0
+	n.content_margin_right  = 10.0
+	n.content_margin_top    = 4.0
+	n.content_margin_bottom = 4.0
+	var h := glass_box(C_BTN_H, 7.0, true)
+	h.content_margin_left   = 10.0
+	h.content_margin_right  = 10.0
+	h.content_margin_top    = 4.0
+	h.content_margin_bottom = 4.0
+	var p := glass_box(C_BTN_P, 7.0, true)
+	p.content_margin_left   = 10.0
+	p.content_margin_right  = 10.0
+	p.content_margin_top    = 4.0
+	p.content_margin_bottom = 4.0
+	btn.add_theme_stylebox_override("normal",  n)
+	btn.add_theme_stylebox_override("hover",   h)
+	btn.add_theme_stylebox_override("pressed", p)
+
+
+static func apply_bar_style(panel: PanelContainer) -> void:
+	var style := glass_box(Color(0.06, 0.07, 0.12, 0.72), 12.0, true)
+	style.content_margin_left   = 14.0
+	style.content_margin_right  = 14.0
+	style.content_margin_top    = 8.0
+	style.content_margin_bottom = 8.0
+	style.shadow_size = 14
+	panel.add_theme_stylebox_override("panel", style)
+
+
+static func make_vsep() -> VSeparator:
+	return VSeparator.new()
+
+
+static func win_section(parent: Control, title: String) -> void:
+	var lbl := Label.new()
+	lbl.text = title
+	lbl.add_theme_font_size_override("font_size", 10)
+	lbl.modulate = Color(0.55, 0.8, 1.0, 0.75)
+	parent.add_child(lbl)
+
+
+static func win_sep(parent: Control) -> void:
+	parent.add_child(HSeparator.new())
