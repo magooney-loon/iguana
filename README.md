@@ -1,9 +1,10 @@
 # Iguana — MilkDrop-Style Audio Visualizer
+`It really licks the eyeballs... yeah.`
 
 Godot 4 audio-reactive shader visualizer with a feedback rendering pipeline. Analyzes audio in real time, extracts frequency, transient, and mood uniforms, and feeds them into a feedback loop that accumulates visual history across frames — the core technique behind MilkDrop.
 
 **Language:** GDScript  
-**Renderer:** Compatibility  
+**Renderer:** Forward+ 
 **Target Godot:** 4.6
 
 ---
@@ -125,35 +126,6 @@ Each shader declares its preferred post-processing values in its header. The eng
 
 `loop_reinhard` is applied **inside** the feedback loop (in the shader itself) to prevent trail blow-out. The other five are applied by the external post-process layer. All are tunable live in the Settings window.
 
----
-
-## Shader Switching
-
-Shaders cycle with `E` / `Q` or via the Settings window. Auto-shuffle switches on a configurable timer (default 45 s) **or** on a strong confirmed kick (when `beat_confidence > 0.5` and `kick_envelope > 0.85`). Beat-triggered switches have a 4-second cooldown.
-
-On every switch a snapshot of the current frame is captured and faded out over 1.5 s as a crossfade overlay.
-
----
-
-## Controls
-
-| Input | Action |
-|---|---|
-| `E` | Next shader |
-| `Q` | Previous shader |
-| `S` | Toggle auto-shuffle |
-| `F` | Toggle fullscreen |
-| `P` | Toggle post-processing layer |
-| `Space` | Play / Pause |
-| `Escape` | Stop |
-
-All keys are rebindable in the **Keymap** tab of the Settings window.
-
-The player bar has Load, ▶/⏸, ⏹, seek bar, fullscreen, and settings buttons.  
-The Settings window has **General** (shuffle interval, keymap), **Post-process** (shader selector + per-shader PP sliders), **Debug** (live progress bars for all uniforms), and **Keymap** (shortcut reference) tabs.
-
----
-
 ## License
 
-MIT License.
+AGPL-v3 License.
