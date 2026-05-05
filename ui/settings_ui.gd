@@ -43,37 +43,30 @@ func setup(visualizer, analyzer: AudioAnalyzer) -> void:
 func open() -> void:
 	if _tween and _tween.is_valid():
 		_tween.kill()
-	var vp  := get_viewport().get_visible_rect().size
+	var vp     := get_viewport().get_visible_rect().size
 	var margin := 16
-	_win.position = Vector2i(
-		int(vp.x) - _win.size.x - margin,
-		int((vp.y - _win.size.y) / 2.0)
-	)
+	var target_x := int(vp.x) - _win.size.x - margin
+	var target_y := int((vp.y - _win.size.y) / 2.0)
+	_win.position = Vector2i(int(vp.x), target_y)
 	_win.show()
 	_sync()
-
-	_content.pivot_offset = _content.size / 2.0
-	_content.scale = Vector2(0.90, 0.90)
 	_content.modulate.a = 0.0
 
-	_tween = create_tween()
-	_tween.set_parallel(true)
-	_tween.tween_property(_content, "scale", Vector2.ONE, 0.32)\
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	_tween = create_tween().set_parallel(true)
+	_tween.tween_property(_win, "position:x", target_x, 0.30)\
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	_tween.tween_property(_content, "modulate:a", 1.0, 0.22)\
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
-	_tween.set_parallel(false)
 
 
 func close() -> void:
 	if _tween and _tween.is_valid():
 		_tween.kill()
-	_content.pivot_offset = _content.size / 2.0
+	var vp := get_viewport().get_visible_rect().size
 
-	_tween = create_tween()
-	_tween.set_parallel(true)
-	_tween.tween_property(_content, "scale", Vector2(0.90, 0.90), 0.18)\
-		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	_tween = create_tween().set_parallel(true)
+	_tween.tween_property(_win, "position:x", int(vp.x), 0.22)\
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 	_tween.tween_property(_content, "modulate:a", 0.0, 0.18)\
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	_tween.set_parallel(false)
