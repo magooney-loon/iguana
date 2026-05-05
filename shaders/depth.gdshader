@@ -75,7 +75,7 @@ uniform float time_val        = 0.0;                             // elapsed seco
 uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable;
 
 // ── Per-shader Reinhard · tunable in Settings UI ────────────────────
-uniform float loop_reinhard : hint_range(0.0, 3.0) = 0.9;
+uniform float loop_reinhard : hint_range(0.0, 3.0) = 0.0;
 
 // ── Utility · auto-provided ──────────────────────────────────────────
 uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
