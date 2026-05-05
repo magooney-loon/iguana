@@ -259,8 +259,8 @@ func _rebuild_list() -> void:
 		num_lbl.text = "%d." % [i + 1]
 		num_lbl.add_theme_font_size_override("font_size", 12)
 		num_lbl.modulate.a = 0.40
-		num_lbl.custom_minimum_size.x = 20
-		num_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		num_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		num_lbl.custom_minimum_size.x = 28
 		num_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hbox.add_child(num_lbl)
 
