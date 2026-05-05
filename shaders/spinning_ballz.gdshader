@@ -3,7 +3,7 @@ shader_type canvas_item;
 // ═══════════════════════════════════════════════════════════════════════
 //  @name:          Spinning Ballz
 //  @author:        TinyTexel (magooney rmx)
-//  @website:       www.shadertoy.com/view/Xljcz1
+//  @website:       shadertoy.com/view/Xljcz1
 //  @description:   Fibonacci-mapped pulsing sphere of spinning circles
 //
 //  Post-processing defaults — tune these to taste, then leave them.
