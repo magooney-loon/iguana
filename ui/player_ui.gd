@@ -30,9 +30,8 @@ func _ready() -> void:
 
 	StylesUI.apply_bar_style(self)
 
-	# ── Sub-systems (before bar so their toggle callbacks are wired) ────
+	# ── Sub-systems ────────────────────────────────────────────────────
 	_playlist = Playlist.new()
-	_playlist.track_changed.connect(_on_playlist_track_changed)
 
 	_settings = SettingsUI.new()
 	_settings.setup(_visualizer, _analyzer)
@@ -46,13 +45,21 @@ func _ready() -> void:
 	_build_bar()
 
 	_player.finished.connect(_on_song_finished)
-	_refresh_play_btn()
 
-	# Show name of the track that's already loaded in the scene
+	# Populate playlist with the default song BEFORE connecting our handler
+	# so we don't restart the already-playing autoplay track
 	if _player.stream != null:
 		var rpath := _player.stream.resource_path
 		if not rpath.is_empty():
 			_playlist.add(rpath)
+
+	# Now connect — all future track changes auto-play
+	_playlist.track_changed.connect(_on_playlist_track_changed)
+	_playlist.playlist_changed.connect(_on_playlist_changed)
+
+	_refresh_song_label()
+	_refresh_mode_buttons()
+	_refresh_play_btn()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -68,15 +75,6 @@ func _build_bar() -> void:
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 6)
 	vbox.add_child(top)
-
-	var load_btn := Button.new()
-	load_btn.text = "Load"
-	load_btn.focus_mode = Control.FOCUS_NONE
-	load_btn.pressed.connect(_on_load)
-	StylesUI.apply_glass_btn(load_btn)
-	top.add_child(load_btn)
-
-	top.add_child(StylesUI.make_vsep())
 
 	var prev_btn := Button.new()
 	prev_btn.text = "⏮"
@@ -268,15 +266,36 @@ func _refresh_song_label() -> void:
 	_song_label.text = track_name
 
 
-func _on_playlist_track_changed(_index: int) -> void:
-	_refresh_song_label()
-	_refresh_mode_buttons()
+func _on_playlist_track_changed(index: int) -> void:
+	if index < 0:
+		# Playlist emptied — stop playback
+		_player.stop()
+		_player.stream = null
+		_paused = false
+		_song_label.text = "No track loaded"
+		_time_label.text = "0:00 / 0:00"
+		_seek_bar.max_value = 1.0
+		_seek_bar.value = 0.0
+		_refresh_play_btn()
+		return
+	# Auto-play the new current track (handles remove, jump, prev, next)
+	_play_track(_playlist.get_current_track())
+
+
+func _on_playlist_changed() -> void:
+	if _playlist.is_empty():
+		_player.stop()
+		_player.stream = null
+		_paused = false
+		_song_label.text = "No track loaded"
+		_time_label.text = "0:00 / 0:00"
+		_seek_bar.max_value = 1.0
+		_seek_bar.value = 0.0
+		_refresh_play_btn()
 
 
 func _on_playlist_jump(index: int) -> void:
-	var path := _playlist.jump_to(index)
-	if not path.is_empty():
-		_play_track(path)
+	_playlist.jump_to(index)
 
 
 func _on_loop_pressed() -> void:
@@ -320,9 +339,7 @@ func _on_play_pause() -> void:
 	if _player.stream == null:
 		# If nothing loaded but playlist has tracks, play current
 		if not _playlist.is_empty():
-			var path := _playlist.get_current_track()
-			if not path.is_empty():
-				_play_track(path)
+			_play_track(_playlist.get_current_track())
 		return
 	if _player.stream_paused:
 		_player.stream_paused = false
@@ -349,17 +366,13 @@ func _on_prev() -> void:
 	if _player.stream != null and _player.get_playback_position() > 3.0:
 		_player.seek(0.0)
 		return
-	var path := _playlist.go_prev()
-	if not path.is_empty():
-		_play_track(path)
+	_playlist.go_prev()
 
 
 func _on_next() -> void:
 	if _playlist.is_empty():
 		return
-	var path := _playlist.go_next()
-	if not path.is_empty():
-		_play_track(path)
+	_playlist.go_next()
 
 
 func _on_seek_changed(val: float) -> void:
@@ -378,31 +391,12 @@ func _toggle_fullscreen() -> void:
 func _on_song_finished() -> void:
 	_paused = false
 	var path := _playlist.advance()
-	if not path.is_empty():
-		_play_track(path)
-	else:
+	if path.is_empty():
 		_refresh_play_btn()
-
-
-func _on_load() -> void:
-	var dialog := FileDialog.new()
-	dialog.access     = FileDialog.ACCESS_FILESYSTEM
-	dialog.file_mode  = FileDialog.FILE_MODE_OPEN_FILES
-	dialog.filters    = PackedStringArray(["*.mp3,*.ogg ; Audio Files"])
-	dialog.files_selected.connect(_on_files_selected)
-	dialog.canceled.connect(dialog.queue_free)
-	add_child(dialog)
-	dialog.popup_centered_ratio(0.65)
-
-
-func _on_files_selected(paths: PackedStringArray) -> void:
-	if paths.is_empty():
-		return
-	_playlist.add_many(paths)
-	# Play the first newly-added file
-	var path := _playlist.get_current_track()
-	if not path.is_empty():
+	elif _playlist.get_play_mode() == Playlist.PlayMode.LOOP_ONE:
+		# LOOP_ONE doesn't emit track_changed (same index), play manually
 		_play_track(path)
+	# else: advance() emitted track_changed → _on_playlist_track_changed auto-plays
 
 
 func _unhandled_input(event: InputEvent) -> void:
