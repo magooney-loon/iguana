@@ -53,7 +53,7 @@ var pp_grain_strength := 0.01
 var pp_loop_reinhard  := 0.0   # per-shader feedback-loop Reinhard compression
 
 # Per-shader post-processing overrides (one dict per shader).
-var _shader_pp_configs: Array[Dictionary] = []
+var _shader_pp_configs: Dictionary = {}
 const PP_DEFAULTS := {
 	"exposure":       1.42,
 	"tonemap_knee":   0.0,
@@ -139,12 +139,17 @@ func _ready() -> void:
 		_loaded_shaders.append(shader)
 
 	# Initialize per-shader PP configs: start from global defaults, override with shader header values
+	# Keyed by filename stem (e.g. "solstice") so settings survive shader list reordering.
+	var keys: Array[String] = []
 	for i in _loaded_shaders.size():
 		var cfg := PP_DEFAULTS.duplicate()
 		for key in PP_DEFAULTS.keys():
 			if SHADERS[i].has(key):
 				cfg[key] = SHADERS[i][key]
-		_shader_pp_configs.append(cfg)
+		var stem: String = SHADERS[i].path.get_file().get_basename()
+		_shader_pp_configs[stem] = cfg
+		keys.append(stem)
+	Config.shader_keys = keys
 
 	material = ShaderMaterial.new()
 	(material as ShaderMaterial).shader = _loaded_shaders[0]
@@ -223,8 +228,10 @@ func _ready() -> void:
 	shuffle_interval = Config.shuffle_interval
 	_shuffle_on = Config.shuffle_on
 	_post_display.visible = Config.post_enabled
-	# Apply loaded shader index and PP config
+	# Apply loaded shader index (resolved by Config from shader_name)
 	_shader_index = Config.shader_index
+	if _shader_index < 0 or _shader_index >= _loaded_shaders.size():
+		_shader_index = 0
 	(material as ShaderMaterial).shader = _loaded_shaders[_shader_index]
 	_apply_pp_config(_shader_index)
 
@@ -387,8 +394,17 @@ func _push_uniforms(mat: ShaderMaterial) -> void:
 
 # ── Per-shader post-processing config ──────────────────────────────
 
+func _shader_key(idx: int) -> String:
+	if idx < 0 or idx >= SHADERS.size():
+		return ""
+	return SHADERS[idx].path.get_file().get_basename()
+
+
 func _apply_pp_config(idx: int) -> void:
-	var cfg := _shader_pp_configs[idx]
+	var key := _shader_key(idx)
+	if key == "" or not _shader_pp_configs.has(key):
+		return
+	var cfg: Dictionary = _shader_pp_configs[key]
 	pp_exposure       = cfg.get("exposure",       PP_DEFAULTS["exposure"])
 	pp_tonemap_knee   = cfg.get("tonemap_knee",   PP_DEFAULTS["tonemap_knee"])
 	pp_gamma          = cfg.get("gamma",          PP_DEFAULTS["gamma"])
@@ -398,7 +414,10 @@ func _apply_pp_config(idx: int) -> void:
 
 
 func _save_current_pp_config() -> void:
-	_shader_pp_configs[_shader_index] = {
+	var key := _shader_key(_shader_index)
+	if key == "":
+		return
+	_shader_pp_configs[key] = {
 		"exposure":       pp_exposure,
 		"tonemap_knee":   pp_tonemap_knee,
 		"gamma":          pp_gamma,
@@ -416,7 +435,9 @@ func update_pp_param(param: String, value: float) -> void:
 		"vignette_dark":  pp_vignette_dark  = value
 		"grain_strength": pp_grain_strength = value
 		"loop_reinhard":  pp_loop_reinhard  = value
-	_shader_pp_configs[_shader_index][param] = value
+	var key := _shader_key(_shader_index)
+	if key != "":
+		_shader_pp_configs[key][param] = value
 
 
 # ── Settings persistence ────────────────────────────────────────────
@@ -430,6 +451,7 @@ func save_settings() -> void:
 	Config.post_enabled      = _post_display.visible if is_instance_valid(_post_display) else true
 	Config.fullscreen        = (DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN)
 	Config.shader_index      = _shader_index
+	Config.shader_name       = _shader_key(_shader_index)
 	Config.crossfade_duration = AudioSource.crossfade_duration
 	Config.save()
 	_ui.show_label("Settings saved")
