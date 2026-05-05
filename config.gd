@@ -16,7 +16,8 @@ var fullscreen        := false
 var shader_index      := 0
 var play_mode         := 1  # Playlist.PlayMode.LOOP_ALL
 var volume            := 1.0  # 0.0 – 1.0
-var crossfade_duration := 2.0  # seconds
+var crossfade_duration  := 2.0  # seconds
+var auto_hide_player   := false
 
 # Per-shader post-processing: Array of Dictionary
 # Populated externally by visualizer.gd (it owns the shader configs).
@@ -47,6 +48,7 @@ func save() -> void:
 	cfg.set_value("general", "play_mode", play_mode)
 	cfg.set_value("general", "volume", volume)
 	cfg.set_value("general", "crossfade_duration", crossfade_duration)
+	cfg.set_value("general", "auto_hide_player",  auto_hide_player)
 
 	# Per-shader PP configs
 	for i in shader_pp_configs.size():
@@ -82,6 +84,8 @@ func load_settings() -> void:
 		volume = cfg.get_value("general", "volume")
 	if cfg.has_section_key("general", "crossfade_duration"):
 		crossfade_duration = cfg.get_value("general", "crossfade_duration")
+	if cfg.has_section_key("general", "auto_hide_player"):
+		auto_hide_player = cfg.get_value("general", "auto_hide_player")
 
 	# Per-shader PP configs — merge into whatever the visualizer initialized
 	for i in shader_pp_configs.size():

@@ -223,6 +223,18 @@ func _build_general_tab() -> Control:
 	vbox.add_child(xf_row)
 
 	StylesUI.win_sep(vbox)
+	StylesUI.win_section(vbox, "PLAYER UI")
+
+	var auto_hide_check := CheckBox.new()
+	auto_hide_check.text = "Auto-hide player after 2 seconds"
+	auto_hide_check.button_pressed = Config.auto_hide_player
+	auto_hide_check.toggled.connect(func(on: bool):
+		Config.auto_hide_player = on
+		Config.save()
+	)
+	vbox.add_child(auto_hide_check)
+
+	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "SHADER SHUFFLE")
 
 	_shuffle_check = CheckBox.new()
