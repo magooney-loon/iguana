@@ -243,10 +243,19 @@ func _build_settings_window() -> void:
 	_settings_win.hide()
 	add_child(_settings_win)
 
+	# Margin so shadows don't clip against the window edges
+	var shadow_pad := MarginContainer.new()
+	shadow_pad.set_anchors_preset(Control.PRESET_FULL_RECT)
+	shadow_pad.add_theme_constant_override("margin_left",   12)
+	shadow_pad.add_theme_constant_override("margin_right",  12)
+	shadow_pad.add_theme_constant_override("margin_top",    12)
+	shadow_pad.add_theme_constant_override("margin_bottom", 12)
+	_settings_win.add_child(shadow_pad)
+
 	var col := VBoxContainer.new()
 	col.set_anchors_preset(Control.PRESET_FULL_RECT)
 	col.add_theme_constant_override("separation", 4)
-	_settings_win.add_child(col)
+	shadow_pad.add_child(col)
 
 	# ── Custom title bar ──────────────────────────────────────────────
 	var title_bar := PanelContainer.new()
@@ -294,6 +303,7 @@ func _build_settings_window() -> void:
 	_settings_tabs.add_theme_stylebox_override("tab_fg", _glass_box(_C_BTN_H, 8.0, true))
 	_settings_tabs.add_theme_stylebox_override("tab_bg", _glass_box(_C_BTN, 8.0, true))
 	_settings_tabs.add_theme_stylebox_override("tab_hover", _glass_box(_C_ACCENT, 8.0, true))
+	_settings_tabs.get_tab_bar().tab_alignment = TabBar.ALIGNMENT_CENTER
 	var tab_panel := _glass_box(Color(0.04, 0.05, 0.09, 0.60), 10.0, false)
 	tab_panel.content_margin_left   = 10.0
 	tab_panel.content_margin_right  = 10.0
