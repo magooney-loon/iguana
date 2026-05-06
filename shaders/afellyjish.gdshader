@@ -10,7 +10,7 @@ shader_type canvas_item;
 //  @exposure:       1.5
 //  @tonemap_knee:   0.0
 //  @gamma:          2.2
-//  @vignette_dark:  0.25
+//  @vignette_dark:  0.99
 //  @grain_strength: 0.008
 //  @loop_reinhard:  0.00
 // ═══════════════════════════════════════════════════════════════════════
