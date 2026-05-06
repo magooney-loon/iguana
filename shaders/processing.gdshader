@@ -171,19 +171,18 @@ void fragment() {
 	// ── 2. GEOMETRY — Flow field particles ────────────────────────────
 
 	// Decay — beats briefly preserve trails, quiet periods fade fast
-	float decay = 0.90 + energy * 0.02 + beat * 0.03;
+	float decay = 0.88 + energy * 0.02 + beat * 0.02;
 
-	// Particle noise — time offset evolves to break loops
+	// Particle noise — fewer, larger blobs (lower UV scale)
 	float noise_time = t * 0.08 + sin(t * 0.02) * 5.0;
-	float particle_noise = texture(noise_tex, uv * 7.0 + noise_time).r;
+	float particle_noise = texture(noise_tex, uv * 3.5 + noise_time).r;
 
-	// Sparse particle bands
-	float particle_mask = smoothstep(0.38, 0.42, particle_noise);
-	particle_mask *= smoothstep(0.58, 0.54, particle_noise);
-	particle_mask += smoothstep(0.78, 0.82, particle_noise) * 0.5;
+	// Thin particle band — narrow range = sparse coverage (~6% of pixels)
+	float particle_mask = smoothstep(0.44, 0.47, particle_noise)
+		* smoothstep(0.54, 0.51, particle_noise);
 
-	// Onset spikes particle density on transients
-	particle_mask *= (1.0 + onset * 1.2 + kick * 0.6);
+	// Onset gently spikes particle density on transients
+	particle_mask *= (1.0 + onset * 0.5 + kick * 0.3);
 
 	// HSB color — hue drifts with time + position, shifts per audio band
 	float hue = fract(
