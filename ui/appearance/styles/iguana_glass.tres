@@ -4,38 +4,42 @@
 
 [resource]
 script = ExtResource("1_style")
-shader_path = "res://ui/appearance/styles/aero_glass.gdshader"
-subtle_grain_strength = 0.02
-subtle_grain_speed = 0.7
-subtle_vignette_strength = 0.06
-subtle_vignette_pulse = 0.015
-subtle_vignette_pulse_spd = 0.3
-subtle_specular_strength = 0.12
-subtle_specular_y_pos = 0.05
-subtle_specular_height = 0.20
-subtle_corner_radius = 0.05
-subtle_gradient_strength = 0.04
-subtle_fresnel_strength = 0.08
-subtle_fresnel_width = 0.06
-subtle_bevel_strength = 0.08
-subtle_bevel_width = 0.03
-subtle_gloss_texture_str = 0.015
-subtle_caustic_scale = 7.0
-subtle_iridescence = 0.6
-normal_grain_strength = 0.035
-normal_grain_speed = 1.0
-normal_vignette_strength = 0.10
-normal_vignette_pulse = 0.025
-normal_vignette_pulse_spd = 0.4
-normal_specular_strength = 0.22
+shader_path = "res://ui/appearance/styles/iguana_glass.gdshader"
+
+# ── Subtle (settings panels, playlist) ──
+subtle_grain_strength = 0.018
+subtle_grain_speed = 0.5
+subtle_vignette_strength = 0.05
+subtle_vignette_pulse = 0.012
+subtle_vignette_pulse_spd = 0.2
+subtle_specular_strength = 0.10
+subtle_specular_y_pos = 0.04
+subtle_specular_height = 0.22
+subtle_corner_radius = 0.055
+subtle_gradient_strength = 0.03
+subtle_fresnel_strength = 0.06
+subtle_fresnel_width = 0.07
+subtle_bevel_strength = 0.06
+subtle_bevel_width = 0.035
+subtle_gloss_texture_str = 0.010
+subtle_caustic_scale = 5.0
+subtle_iridescence = 0.45
+
+# ── Normal (player bar) ──
+normal_grain_strength = 0.03
+normal_grain_speed = 0.8
+normal_vignette_strength = 0.08
+normal_vignette_pulse = 0.02
+normal_vignette_pulse_spd = 0.3
+normal_specular_strength = 0.20
 normal_specular_y_pos = 0.03
-normal_specular_height = 0.24
-normal_corner_radius = 0.045
-normal_gradient_strength = 0.08
-normal_fresnel_strength = 0.14
-normal_fresnel_width = 0.07
-normal_bevel_strength = 0.15
-normal_bevel_width = 0.035
-normal_gloss_texture_str = 0.025
-normal_caustic_scale = 9.0
-normal_iridescence = 0.75
+normal_specular_height = 0.26
+normal_corner_radius = 0.05
+normal_gradient_strength = 0.06
+normal_fresnel_strength = 0.10
+normal_fresnel_width = 0.08
+normal_bevel_strength = 0.12
+normal_bevel_width = 0.04
+normal_gloss_texture_str = 0.018
+normal_caustic_scale = 7.0
+normal_iridescence = 0.60
