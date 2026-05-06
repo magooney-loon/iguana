@@ -126,31 +126,42 @@ void fragment() {
 	vec2 p = uv - 0.5;
 	p.x *= aspect;
 
+	float dist = length(p);
+
 	// ── 1. FEEDBACK ──────────────────────────────────────────────────
 
-	// Flow field parameters — audio reactivity
-	float flow_scale = 2.5 + activity * 1.5;     // turbulence resolution
-	float flow_speed = t * 0.15 * (1.0 + energy * 0.5);  // time evolution
-	float step_size  = 0.0025 + bass * 0.002 + energy * 0.001;  // particle speed
+	// Evolving flow scale — cycles between tight and wide turbulence
+	float flow_scale = 2.5 + sin(t * 0.07) * 1.0 + activity * 1.2;
+	float flow_speed = t * 0.15 * (1.0 + energy * 0.4);
 
-	// Trace backward through the flow field to find where this pixel's
-	// trail came from — this creates the particle flow effect
+	// Step size pulses on kick — particles surge forward
+	float step_size = 0.0022 + bass * 0.0015 + energy * 0.0008
+		+ kick * 0.004 * smoothstep(0.4, 0.0, dist);
+
+	// Trace backward through the flow field
 	float angle = flow_angle(p, flow_speed, flow_scale);
 
-	// Add slight domain warping for organic feel
-	vec2 warp_offset = vec2(
-		sin(p.y * 3.0 + t * 0.4) * 0.003,
-		cos(p.x * 3.0 + t * 0.35) * 0.003
-	);
-	warp_offset *= (1.0 + bass * 2.0);
+	// Snare adds a rotational kick to the warp
+	float snare_rot = snare * 0.012 * sin(t * 3.0);
 
-	// Flow direction in aspect-corrected space, then convert back to UV
+	// Domain warping — bass drives amplitude, snare adds jitter
+	vec2 warp_offset = vec2(
+		sin(p.y * 3.5 + t * 0.4) * (0.004 + bass * 0.004),
+		cos(p.x * 3.0 + t * 0.35 + snare_rot) * (0.004 + bass * 0.003)
+	);
+
+	// Hi-hat adds fine turbulence to the sampling
+	warp_offset += vec2(
+		sin(p.x * 12.0 + t * 2.0) * hihat * 0.002,
+		cos(p.y * 12.0 + t * 2.3) * hihat * 0.002
+	);
+
 	vec2 flow_dir = vec2(cos(angle), sin(angle)) * step_size;
 	vec2 sample_uv = p + flow_dir + warp_offset;
 	sample_uv.x /= aspect;
 	sample_uv += 0.5;
 
-	// Edge fade to prevent trail bleeding at borders
+	// Edge fade
 	vec2 edge_d = min(sample_uv, 1.0 - sample_uv);
 	float edge_fade = smoothstep(0.0, 0.05, min(edge_d.x, edge_d.y));
 
@@ -159,40 +170,57 @@ void fragment() {
 
 	// ── 2. GEOMETRY — Flow field particles ────────────────────────────
 
-	// Decay — trails fade faster to prevent blowout
-	float decay = 0.92 + energy * 0.03;
+	// Decay — beats briefly preserve trails, quiet periods fade fast
+	float decay = 0.90 + energy * 0.02 + beat * 0.03;
 
-	// Particle emission — thin bright lines following the flow
-	// Use noise to create sparse "particle" distribution
-	float particle_noise = texture(noise_tex, uv * 8.0 + t * 0.1).r;
+	// Particle noise — time offset evolves to break loops
+	float noise_time = t * 0.08 + sin(t * 0.02) * 5.0;
+	float particle_noise = texture(noise_tex, uv * 7.0 + noise_time).r;
 
-	// Create sparse particle presence — only bright at certain noise thresholds
+	// Sparse particle bands
 	float particle_mask = smoothstep(0.38, 0.42, particle_noise);
 	particle_mask *= smoothstep(0.58, 0.54, particle_noise);
 	particle_mask += smoothstep(0.78, 0.82, particle_noise) * 0.5;
 
-	// Audio subtly boosts density
-	particle_mask *= (1.0 + onset * 0.8 + energy * 0.4);
+	// Onset spikes particle density on transients
+	particle_mask *= (1.0 + onset * 1.2 + kick * 0.6);
 
-	// HSB color — hue from position + time, saturation from warmth
+	// HSB color — hue drifts with time + position, shifts per audio band
 	float hue = fract(
-		texture(noise_tex, uv * 1.5 + t * 0.03).r * 0.6
-		+ t * 0.02
-		+ length(p) * 0.3
+		texture(noise_tex, uv * 1.2 + t * 0.025).r * 0.5
+		+ t * 0.015
+		+ dist * 0.4
+		+ snare * 0.08   // snare shifts hue suddenly
 	);
-	hue = fract(hue + warmth * 0.15);  // warmth shifts hue toward warm colors
 
-	float sat = 0.75 + brightness * 0.2;  // brightness adds saturation
-	float bri = particle_mask * (0.06 + energy * 0.04 + kick * 0.06);
+	// Warmth tilts toward warm, brightness tilts toward cool
+	hue = fract(hue + warmth * 0.12 - brightness * 0.06);
+
+	float sat = 0.45 + brightness * 0.1 + energy * 0.08;
+
+	// Base emission — quiet ambient
+	float bri = particle_mask * 0.03;
+
+	// Energy adds a steady glow proportional to loudness
+	bri += particle_mask * energy * 0.03;
+
+	// Kick pulse — bright burst centered, fades with distance
+	float kick_glow = kick * 0.1 * smoothstep(0.6, 0.0, dist);
+	bri += particle_mask * kick_glow;
+
+	// Snare flash — wide, brief, brighter at mid-distances
+	float snare_ring = snare * 0.06 * smoothstep(0.15, 0.35, dist) * smoothstep(0.65, 0.35, dist);
+	bri += particle_mask * snare_ring;
 
 	vec3 new_col = hsb2rgb(vec3(hue, sat, bri));
 
-	// Beat burst — subtle kick pulse at center
-	float beat_burst = kick * 0.04 * smoothstep(0.5, 0.0, length(p));
-	new_col += hsb2rgb(vec3(fract(hue + 0.1), 0.8, beat_burst));
+	// Hi-hat sparkles — high-frequency detail dots
+	float sparkle = smoothstep(0.93, 0.97, texture(noise_tex, uv * 20.0 + t * 0.5).r);
+	sparkle *= hihat * 0.08;
+	new_col += vec3(sparkle) * hsb2rgb(vec3(fract(hue + 0.3), 0.3, 1.0));
 
-	// Clamp per-frame emission so feedback can never exceed 1.0
-	new_col = min(new_col, vec3(0.08));
+	// Compress emission — tanh keeps dynamic range but caps accumulation
+	new_col = tanh(new_col * 1.8);
 
 	// ── 3. COMPOSITE ─────────────────────────────────────────────────
 
