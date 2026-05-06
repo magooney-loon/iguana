@@ -1,6 +1,0 @@
-[gd_resource type="Resource" script_class="UITheme" load_steps=2 format=3]
-
-[ext_resource type="Script" path="res://ui/ui_theme.gd" id="1_theme"]
-
-[resource]
-script = ExtResource("1_theme")
