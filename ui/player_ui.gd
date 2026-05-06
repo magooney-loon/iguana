@@ -9,6 +9,7 @@ var _seek_bar:   HSlider
 var _time_label: Label
 var _song_label: Label
 var _song_tween: Tween
+var _time_tween:  Tween
 var _vol_btn:    Button
 var _vol_slider: HSlider
 var _seeking := false
@@ -147,7 +148,6 @@ func _build_bar() -> void:
 
 	_time_label = Label.new()
 	_time_label.text = "0:00 / 0:00"
-	_time_label.add_theme_font_size_override("font_size", 12)
 	_time_label.modulate.a = 0.7
 	_time_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -366,14 +366,21 @@ func _refresh_song_label(crossfade: bool = false) -> void:
 	if not crossfade or _song_label.text == track_name:
 		_song_label.text = track_name
 		_song_label.modulate.a = 1.0
+		_time_label.modulate.a = 1.0
 		return
 
 	if _song_tween and _song_tween.is_valid():
 		_song_tween.kill()
+	if _time_tween and _time_tween.is_valid():
+		_time_tween.kill()
 	_song_tween = create_tween()
 	_song_tween.tween_property(_song_label, "modulate:a", 0.0, 0.2)
 	_song_tween.tween_callback(func(): _song_label.text = track_name)
 	_song_tween.tween_property(_song_label, "modulate:a", 1.0, 0.3)
+	_time_tween = create_tween()
+	_time_tween.tween_property(_time_label, "modulate:a", 0.0, 0.2)
+	_time_tween.tween_callback(func(): _time_label.text = "0:00 / 0:00")
+	_time_tween.tween_property(_time_label, "modulate:a", 1.0, 0.3)
 
 
 func _on_playlist_track_changed(index: int) -> void:
