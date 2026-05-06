@@ -120,7 +120,9 @@ func _build() -> void:
 
 	# ── Custom title bar ──────────────────────────────────────────────
 	var title_bar := PanelContainer.new()
-	title_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_title_bar, StylesUI.skin().win_title_radius, true))
+	StylesUI.track_glass_panel(title_bar, func(p: Control) -> void:
+		p.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_title_bar, StylesUI.skin().win_title_radius, true))
+	)
 	StylesUI.apply_aero(title_bar, true)
 	col.add_child(title_bar)
 
@@ -156,18 +158,20 @@ func _build() -> void:
 
 	_tabs = TabContainer.new()
 	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_tabs.add_theme_stylebox_override("tab_fg", StylesUI.glass_box(StylesUI.theme().c_btn_h, StylesUI.skin().win_tab_radius, true))
-	_tabs.add_theme_stylebox_override("tab_bg", StylesUI.glass_box(StylesUI.theme().c_btn, StylesUI.skin().win_tab_radius, true))
-	_tabs.add_theme_stylebox_override("tab_hover", StylesUI.glass_box(StylesUI.theme().c_accent, StylesUI.skin().win_tab_radius, true))
+	StylesUI.track_glass_panel(_tabs, func(p: Control) -> void:
+		var sk := StylesUI.skin()
+		p.add_theme_stylebox_override("tab_fg",    StylesUI.glass_box(StylesUI.theme().c_btn_h,  sk.win_tab_radius, true))
+		p.add_theme_stylebox_override("tab_bg",    StylesUI.glass_box(StylesUI.theme().c_btn,    sk.win_tab_radius, true))
+		p.add_theme_stylebox_override("tab_hover", StylesUI.glass_box(StylesUI.theme().c_accent, sk.win_tab_radius, true))
+		var tab_box := StylesUI.glass_box(StylesUI.theme().c_panel_bg, sk.win_tab_panel_radius, false)
+		tab_box.shadow_size = 0
+		tab_box.content_margin_left   = sk.win_tab_margin
+		tab_box.content_margin_right  = sk.win_tab_margin
+		tab_box.content_margin_top    = sk.win_tab_margin
+		tab_box.content_margin_bottom = sk.win_tab_margin
+		p.add_theme_stylebox_override("panel", tab_box)
+	)
 	_tabs.get_tab_bar().tab_alignment = TabBar.ALIGNMENT_CENTER
-	var _sk := StylesUI.skin()
-	var tab_panel := StylesUI.glass_box(StylesUI.theme().c_panel_bg, _sk.win_tab_panel_radius, false)
-	tab_panel.shadow_size = 0
-	tab_panel.content_margin_left   = _sk.win_tab_margin
-	tab_panel.content_margin_right  = _sk.win_tab_margin
-	tab_panel.content_margin_top    = _sk.win_tab_margin
-	tab_panel.content_margin_bottom = _sk.win_tab_margin
-	_tabs.add_theme_stylebox_override("panel", tab_panel)
 	StylesUI.apply_aero(_tabs, true)
 	content_margin.add_child(_tabs)
 
@@ -193,13 +197,6 @@ func _build() -> void:
 	_tabs.add_child(_build_debug_tab())
 	_tabs.add_child(_build_about_tab())
 
-	StylesUI.on_reload(func() -> void:
-		if not is_instance_valid(_tabs):
-			return
-		_tabs.add_theme_stylebox_override("tab_fg",    StylesUI.glass_box(StylesUI.theme().c_btn_h,  StylesUI.skin().win_tab_radius, true))
-		_tabs.add_theme_stylebox_override("tab_bg",    StylesUI.glass_box(StylesUI.theme().c_btn,    StylesUI.skin().win_tab_radius, true))
-		_tabs.add_theme_stylebox_override("tab_hover", StylesUI.glass_box(StylesUI.theme().c_accent, StylesUI.skin().win_tab_radius, true))
-	)
 
 
 # ── General tab ──────────────────────────────────────────────────────────────

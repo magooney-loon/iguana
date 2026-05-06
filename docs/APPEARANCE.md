@@ -275,4 +275,14 @@ The reload system works by tracking every styled control in weak-reference array
 1. `StylesUI.load_theme/skin/style/icons()` swaps the active resource.
 2. `StylesUI.reload_all()` iterates every tracked control and re-applies styles in place — shader uniforms are updated, `StyleBoxFlat` objects are recreated, icons are re-loaded from the new pack.
 
-Components can register callbacks with `StylesUI.on_reload(callable)` for parts that cannot be automatically tracked (e.g. `TabContainer` tab styles, playlist row regeneration).
+**Automatic tracking:**
+
+- `apply_bar_style()` — player bar panel
+- `apply_glass_btn()` — all icon/text buttons
+- `apply_glass_slider()` — all sliders
+- `apply_aero()` — all shader panels (material uniforms)
+- `make_vsep()` / `win_sep()` — all separators
+- `icon_btn()` — all icon buttons
+- `track_glass_panel()` — window chrome (title bars, content panels, footers, logo)
+
+**Manual reload:** Components can register callbacks with `StylesUI.on_reload(callable)` for parts that cannot be automatically tracked (e.g. playlist row regeneration).

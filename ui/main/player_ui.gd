@@ -220,17 +220,19 @@ func _setup_logo() -> void:
 
 	# Glassy pill panel — no shadow since it sits flush on the player bar
 	var panel := PanelContainer.new()
-	var style := StylesUI.glass_box(StylesUI.theme().c_logo, StylesUI.skin().logo_radius, true)
-	style.corner_radius_bottom_left  = 0
-	style.corner_radius_bottom_right = 0
-	style.set_border_width_all(1)
-	style.border_width_bottom   = 0
-	style.shadow_size           = 0
-	style.content_margin_left   = StylesUI.skin().logo_margin_h
-	style.content_margin_right  = StylesUI.skin().logo_margin_h
-	style.content_margin_top    = StylesUI.skin().logo_margin_top
-	style.content_margin_bottom = StylesUI.skin().logo_margin_bottom
-	panel.add_theme_stylebox_override("panel", style)
+	StylesUI.track_glass_panel(panel, func(p: Control) -> void:
+		var s := StylesUI.glass_box(StylesUI.theme().c_logo, StylesUI.skin().logo_radius, true)
+		s.corner_radius_bottom_left  = 0
+		s.corner_radius_bottom_right = 0
+		s.set_border_width_all(1)
+		s.border_width_bottom   = 0
+		s.shadow_size           = 0
+		s.content_margin_left   = StylesUI.skin().logo_margin_h
+		s.content_margin_right  = StylesUI.skin().logo_margin_h
+		s.content_margin_top    = StylesUI.skin().logo_margin_top
+		s.content_margin_bottom = StylesUI.skin().logo_margin_bottom
+		p.add_theme_stylebox_override("panel", s)
+	)
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.z_index = 99
 

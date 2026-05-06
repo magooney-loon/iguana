@@ -22,6 +22,8 @@ static var _sliders: Array[Dictionary] = []
 static var _bar_panels: Array[WeakRef] = []
 # WeakRef (_Sep instances)
 static var _aero_seps: Array[WeakRef] = []
+# {ref: WeakRef, rebuild: Callable}
+static var _glass_panels: Array[Dictionary] = []
 # Extra per-component refresh hooks
 static var _reload_cbs: Array[Callable] = []
 
@@ -158,6 +160,16 @@ static func reload_all() -> void:
 				btn.icon = tex
 		live_icons.append(ref)
 	_icon_btns = live_icons
+
+	# Tracked glass panels — rebuild styleboxes with current theme/skin
+	var live_gp: Array[Dictionary] = []
+	for entry in _glass_panels:
+		var panel := entry.ref.get_ref() as Control
+		if panel == null:
+			continue
+		entry.rebuild.call(panel)
+		live_gp.append(entry)
+	_glass_panels = live_gp
 
 	# Component callbacks (tabs, playlist rows, etc.)
 	for cb in _reload_cbs:
@@ -384,6 +396,13 @@ static func _apply_glass_slider_to(slider: HSlider, compact: bool) -> void:
 static func apply_glass_slider(slider: HSlider, compact := false) -> void:
 	_apply_glass_slider_to(slider, compact)
 	_sliders.append({"ref": weakref(slider), "compact": compact})
+
+
+## Register a Control for live reload. `rebuild` is a Callable
+## that receives the control and must recreate + apply its StyleBoxFlat.
+static func track_glass_panel(panel: Control, rebuild: Callable) -> void:
+	rebuild.call(panel)
+	_glass_panels.append({"ref": weakref(panel), "rebuild": rebuild})
 
 
 static func _apply_bar_style_to(panel: PanelContainer) -> void:

@@ -136,7 +136,9 @@ func _build() -> void:
 
 	# ── Title bar ─────────────────────────────────────────────────────
 	var title_bar := PanelContainer.new()
-	title_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_title_bar, StylesUI.skin().win_title_radius, true))
+	StylesUI.track_glass_panel(title_bar, func(p: Control) -> void:
+		p.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_title_bar, StylesUI.skin().win_title_radius, true))
+	)
 	StylesUI.apply_aero(title_bar, true)
 	col.add_child(title_bar)
 
@@ -173,10 +175,11 @@ func _build() -> void:
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_panel_bg, StylesUI.skin().win_tab_panel_radius, false))
-	var scroll_panel := _scroll.get_theme_stylebox("panel") as StyleBoxFlat
-	if scroll_panel:
-		scroll_panel.shadow_size = 0
+	StylesUI.track_glass_panel(_scroll, func(p: Control) -> void:
+		var box := StylesUI.glass_box(StylesUI.theme().c_panel_bg, StylesUI.skin().win_tab_panel_radius, false)
+		box.shadow_size = 0
+		p.add_theme_stylebox_override("panel", box)
+	)
 	StylesUI.apply_aero(_scroll, true)
 	list_margin.add_child(_scroll)
 
@@ -187,7 +190,9 @@ func _build() -> void:
 
 	# ── Footer bar ────────────────────────────────────────────────────
 	var footer_bar := PanelContainer.new()
-	footer_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_footer_bar, StylesUI.skin().win_footer_radius, true))
+	StylesUI.track_glass_panel(footer_bar, func(p: Control) -> void:
+		p.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_footer_bar, StylesUI.skin().win_footer_radius, true))
+	)
 	StylesUI.apply_aero(footer_bar, true)
 	col.add_child(footer_bar)
 
