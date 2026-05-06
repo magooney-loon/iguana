@@ -1,8 +1,10 @@
 @tool
 extends Control
 ## Decorative separator for the Aero glass UI.
-## Draws a wavy line with diamond end caps that react to audio —
+## Draws a wavy line with blob end caps that react to audio —
 ## waves surge on beat, caps pulse and glow.
+
+const TAU := 6.28318530718
 
 var is_vertical := false
 
@@ -113,19 +115,39 @@ func _draw_v() -> void:
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 func _draw_cap(center: Vector2) -> void:
-	var r := _base_cap + _s_beat * 1.8
+	var r := _base_cap * 0.8 + _s_beat * 1.2
+	var steps := 16
 
-	# Glow halo on beat — soft circle
+	# Wavy blob shape — sine-modulated for organic feel
+	var _wobble := func(a: float) -> float:
+		var w := 1.0
+		w += sin(a * 3.0 + _seed * 0.7) * 0.18
+		w += cos(a * 5.0 + _seed * 1.3) * 0.10
+		return w
+
+	# Radial gradient — 4 concentric layers, bright core fading to nothing
+	var layers := 4
+	for layer in range(layers, 0, -1):
+		var frac := float(layer) / float(layers)
+		var layer_r := r * frac * 1.3
+		var alpha := _base_color.a * frac * frac * 0.6
+		if layer <= 2 and _s_beat > 0.05:
+			alpha += _s_beat * 0.15 * frac
+		var pts := PackedVector2Array()
+		for i in range(steps):
+			var a := TAU * float(i) / float(steps)
+			pts.append(center + Vector2(cos(a), sin(a)) * layer_r * _wobble.call(a))
+		draw_colored_polygon(pts, Color(_base_color.r, _base_color.g, _base_color.b, alpha))
+
+	# Glow halo on beat — soft outer bloom
 	if _s_beat > 0.05:
-		var glow_r := r * 2.2
-		var glow_col := Color(_base_color.r, _base_color.g, _base_color.b,
-			_s_beat * 0.35)
-		draw_circle(center, glow_r, glow_col)
-
-	# Solid circle cap
-	var cap_col := Color(_base_color.r, _base_color.g, _base_color.b,
-		_base_color.a + _s_beat * 0.4)
-	draw_circle(center, r, cap_col)
+		var glow_r := r * 2.0
+		var glow_pts := PackedVector2Array()
+		for i in range(steps):
+			var a := TAU * float(i) / float(steps)
+			glow_pts.append(center + Vector2(cos(a), sin(a)) * glow_r * _wobble.call(a))
+		draw_colored_polygon(glow_pts,
+			Color(_base_color.r, _base_color.g, _base_color.b, _s_beat * 0.2))
 
 
 func _fit() -> void:
