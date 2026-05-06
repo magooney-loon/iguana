@@ -499,9 +499,9 @@ func _build_general_tab() -> Control:
 	_shuffle_spin.max_value = 300.0
 	_shuffle_spin.step      = 5.0
 	_shuffle_spin.value     = _visualizer.shuffle_interval
-	_shuffle_spin.custom_minimum_size.x = 60.0
+	_shuffle_spin.custom_minimum_size.x = 72.0
 	_shuffle_spin.editable  = _visualizer._shuffle_on
-	_shuffle_spin.suffix    = " seconds"
+	_shuffle_spin.suffix    = " sec"
 	_shuffle_spin.value_changed.connect(func(v: float):
 		_visualizer.shuffle_interval = v
 	)
