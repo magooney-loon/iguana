@@ -342,6 +342,7 @@ func _hide_player() -> void:
 	_hide_tween.tween_property(self, "position:y", _origin_y + slide, st.anim_autohide_duration)
 	if is_instance_valid(_logo_panel):
 		_hide_tween.tween_property(_logo_panel, "position:y", _logo_origin_y + slide, st.anim_autohide_duration)
+		_hide_tween.tween_property(_logo_panel, "modulate:a", 0.3, st.anim_autohide_duration)
 
 
 func _show_player() -> void:
@@ -355,6 +356,7 @@ func _show_player() -> void:
 	_hide_tween.tween_property(self, "position:y", _origin_y, st.anim_autohide_duration)
 	if is_instance_valid(_logo_panel):
 		_hide_tween.tween_property(_logo_panel, "position:y", _logo_origin_y, st.anim_autohide_duration)
+		_hide_tween.tween_property(_logo_panel, "modulate:a", 1.0, st.anim_autohide_duration)
 
 
 func _process(delta: float) -> void:
