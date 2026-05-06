@@ -738,34 +738,58 @@ func _build_keymap_tab() -> Control:
 	StylesUI.win_section(vbox, "KEYBOARD SHORTCUTS")
 
 	var actions: Array[String] = Keymap.get_all_actions()
-	for action_id in actions:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
+	for i in actions.size():
+		var action_id := actions[i]
+
+		# Zebra row background
+		var row := PanelContainer.new()
+		if i % 2 == 1:
+			var zebra := StylesUI.glass_box(StylesUI.theme().c_active_row, 5.0, false)
+			zebra.shadow_size  = 0
+			zebra.border_color = Color(0, 0, 0, 0)
+			zebra.set_border_width_all(0)
+			zebra.content_margin_left   = 6.0
+			zebra.content_margin_right  = 6.0
+			zebra.content_margin_top    = 3.0
+			zebra.content_margin_bottom = 3.0
+			row.add_theme_stylebox_override("panel", zebra)
+		else:
+			var m := StyleBoxFlat.new()
+			m.bg_color = Color(0, 0, 0, 0)
+			m.content_margin_left   = 6.0
+			m.content_margin_right  = 6.0
+			m.content_margin_top    = 3.0
+			m.content_margin_bottom = 3.0
+			row.add_theme_stylebox_override("panel", m)
+
+		var hbox := HBoxContainer.new()
+		hbox.add_theme_constant_override("separation", 8)
 
 		var label := Label.new()
 		label.text = Keymap.get_action_name(action_id)
 		StylesUI.track_label(label, func(l: Label) -> void:
-			l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+			l.add_theme_font_size_override("font_size", StylesUI.theme().font_title)
 			l.add_theme_color_override("font_color", StylesUI.theme().c_text_hi)
 		)
 		label.custom_minimum_size.x = 185
 		label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		row.add_child(label)
+		hbox.add_child(label)
 
 		var key_label := Label.new()
 		key_label.text = Keymap.key_to_label(Keymap.get_key(action_id))
 		StylesUI.track_label(key_label, func(l: Label) -> void:
-			l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+			l.add_theme_font_size_override("font_size", StylesUI.theme().font_title)
 			l.modulate = StylesUI.theme().c_text_hi
 		)
 		key_label.custom_minimum_size.x = 80
 		key_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		row.add_child(key_label)
+		hbox.add_child(key_label)
 
 		var spacer := Control.new()
 		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(spacer)
+		hbox.add_child(spacer)
 
+		row.add_child(hbox)
 		vbox.add_child(row)
 
 	# End for loop
