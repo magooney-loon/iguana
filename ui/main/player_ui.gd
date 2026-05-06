@@ -26,7 +26,6 @@ var _origin_y       := 0.0
 var _logo_origin_y  := 0.0
 var _origin_y_set  := false
 const AUTO_HIDE_DELAY := 2.0
-const AUTO_HIDE_SLIDE := 0.35
 const AUTO_HIDE_PEEK  := 6.0
 
 # ── Sub-systems ───────────────────────────────────────────────────────────────
@@ -43,7 +42,6 @@ func _ready() -> void:
 	_visualizer = get_tree().root.get_node("Main/VisualizerContainer/FeedbackViewport/Visualizer")
 
 	StylesUI.load_theme(Config.theme_name)
-	StylesUI.load_skin(Config.skin_name)
 	StylesUI.load_style(Config.style_name)
 	StylesUI.load_icons(Config.icon_pack_name)
 
@@ -221,24 +219,38 @@ func _build_bar() -> void:
 #  Frame update
 # ─────────────────────────────────────────────────────────────────────────────
 
+func _update_logo_position() -> void:
+	if not is_instance_valid(_logo_panel):
+		return
+	var st := StylesUI.style()
+	_logo_panel.visible = st.logo_visible
+	if not st.logo_visible:
+		return
+	var lx: float
+	match st.logo_anchor:
+		1: lx = 16.0
+		2: lx = get_parent().size.x - _logo_panel.size.x - 16.0
+		_: lx = (get_parent().size.x - _logo_panel.size.x) * 0.5
+	_logo_panel.position = Vector2(lx, position.y - _logo_panel.size.y)
+
+
 func _setup_logo() -> void:
 	var tex := load("res://icon.webp") as Texture2D
 	if tex == null:
 		return
 
-	# Glassy pill panel — no shadow since it sits flush on the player bar
 	var panel := PanelContainer.new()
 	StylesUI.track_glass_panel(panel, func(p: Control) -> void:
-		var s := StylesUI.glass_box(StylesUI.theme().c_logo, StylesUI.skin().logo_radius, true)
+		var s := StylesUI.glass_box(StylesUI.theme().c_logo, 18.0, true)
 		s.corner_radius_bottom_left  = 0
 		s.corner_radius_bottom_right = 0
 		s.set_border_width_all(1)
 		s.border_width_bottom   = 0
 		s.shadow_size           = 0
-		s.content_margin_left   = StylesUI.skin().logo_margin_h
-		s.content_margin_right  = StylesUI.skin().logo_margin_h
-		s.content_margin_top    = StylesUI.skin().logo_margin_top
-		s.content_margin_bottom = StylesUI.skin().logo_margin_bottom
+		s.content_margin_left   = 8.0
+		s.content_margin_right  = 8.0
+		s.content_margin_top    = 5.0
+		s.content_margin_bottom = 2.0
 		p.add_theme_stylebox_override("panel", s)
 	)
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -248,9 +260,8 @@ func _setup_logo() -> void:
 	img.texture      = tex
 	img.expand_mode  = TextureRect.EXPAND_IGNORE_SIZE
 	img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	var _icon_size := StylesUI.skin().logo_icon_size
-	img.custom_minimum_size = Vector2(_icon_size, _icon_size)
-	img.size         = Vector2(_icon_size, _icon_size)
+	img.custom_minimum_size = Vector2(40.0, 40.0)
+	img.size         = Vector2(40.0, 40.0)
 	img.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(img)
 
@@ -259,10 +270,7 @@ func _setup_logo() -> void:
 	get_parent().add_child(_logo_panel)
 
 	await get_tree().process_frame
-	_logo_panel.position = Vector2(
-		(get_parent().size.x - _logo_panel.size.x) * 0.5,
-		position.y - _logo_panel.size.y
-	)
+	_update_logo_position()
 
 	_logo_panel.mouse_entered.connect(func():
 		_mouse_inside = true
@@ -277,7 +285,14 @@ func _setup_logo() -> void:
 
 	get_parent().resized.connect(func():
 		if is_instance_valid(_logo_panel):
-			_logo_panel.position.x = (get_parent().size.x - _logo_panel.size.x) * 0.5
+			_origin_y_set = false
+			_update_logo_position()
+	)
+
+	StylesUI.on_reload(func() -> void:
+		if is_instance_valid(_logo_panel):
+			_origin_y_set = false
+			_update_logo_position()
 	)
 
 
@@ -315,12 +330,13 @@ func _hide_player() -> void:
 	_hidden = true
 	if _hide_tween and _hide_tween.is_valid():
 		_hide_tween.kill()
+	var st    := StylesUI.style()
 	var slide := size.y - AUTO_HIDE_PEEK
-	_hide_tween = create_tween().set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+	_hide_tween = create_tween().set_ease(Tween.EASE_IN).set_trans(st.anim_autohide_trans)
 	_hide_tween.set_parallel(true)
-	_hide_tween.tween_property(self, "position:y", _origin_y + slide, AUTO_HIDE_SLIDE)
+	_hide_tween.tween_property(self, "position:y", _origin_y + slide, st.anim_autohide_duration)
 	if is_instance_valid(_logo_panel):
-		_hide_tween.tween_property(_logo_panel, "position:y", _logo_origin_y + slide, AUTO_HIDE_SLIDE)
+		_hide_tween.tween_property(_logo_panel, "position:y", _logo_origin_y + slide, st.anim_autohide_duration)
 
 
 func _show_player() -> void:
@@ -328,11 +344,12 @@ func _show_player() -> void:
 	_hide_timer = 0.0
 	if _hide_tween and _hide_tween.is_valid():
 		_hide_tween.kill()
-	_hide_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	var st := StylesUI.style()
+	_hide_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(st.anim_autohide_trans)
 	_hide_tween.set_parallel(true)
-	_hide_tween.tween_property(self, "position:y", _origin_y, AUTO_HIDE_SLIDE)
+	_hide_tween.tween_property(self, "position:y", _origin_y, st.anim_autohide_duration)
 	if is_instance_valid(_logo_panel):
-		_hide_tween.tween_property(_logo_panel, "position:y", _logo_origin_y, AUTO_HIDE_SLIDE)
+		_hide_tween.tween_property(_logo_panel, "position:y", _logo_origin_y, st.anim_autohide_duration)
 
 
 func _process(delta: float) -> void:
@@ -387,14 +404,15 @@ func _refresh_song_label(crossfade: bool = false) -> void:
 		_song_tween.kill()
 	if _time_tween and _time_tween.is_valid():
 		_time_tween.kill()
+	var st := StylesUI.style()
 	_song_tween = create_tween()
-	_song_tween.tween_property(_song_label, "modulate:a", 0.0, 0.2)
+	_song_tween.tween_property(_song_label, "modulate:a", 0.0, st.anim_crossfade_out)
 	_song_tween.tween_callback(func(): _song_label.text = track_name)
-	_song_tween.tween_property(_song_label, "modulate:a", 1.0, 0.3)
+	_song_tween.tween_property(_song_label, "modulate:a", 1.0, st.anim_crossfade_in)
 	_time_tween = create_tween()
-	_time_tween.tween_property(_time_label, "modulate:a", 0.0, 0.2)
+	_time_tween.tween_property(_time_label, "modulate:a", 0.0, st.anim_crossfade_out)
 	_time_tween.tween_callback(func(): _time_label.text = "0:00 / 0:00")
-	_time_tween.tween_property(_time_label, "modulate:a", StylesUI.theme().a_time_label, 0.3)
+	_time_tween.tween_property(_time_label, "modulate:a", StylesUI.theme().a_time_label, st.anim_crossfade_in)
 
 
 func _on_playlist_track_changed(index: int) -> void:

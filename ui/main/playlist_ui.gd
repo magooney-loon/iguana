@@ -50,29 +50,29 @@ func open() -> void:
 	if _tween and _tween.is_valid():
 		_tween.kill()
 	_rebuild_list()
+	var st     := StylesUI.style()
 	var vp     := get_viewport().get_visible_rect().size
-	var margin := 16
-	var target_x := margin
 	var target_y := int((vp.y - _win.size.y) / 2.0)
 	_win.position = Vector2i(-_win.size.x, target_y)
 	_win.show()
 	_content.modulate.a = 0.0
 
 	_tween = create_tween().set_parallel(true)
-	_tween.tween_property(_win, "position:x", target_x, 0.30)\
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	_tween.tween_property(_content, "modulate:a", 1.0, 0.22)\
+	_tween.tween_property(_win, "position:x", 16, st.anim_win_open_duration)\
+		.set_ease(st.anim_win_open_ease).set_trans(st.anim_win_open_trans)
+	_tween.tween_property(_content, "modulate:a", 1.0, st.anim_win_fade_in)\
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 
 func close() -> void:
 	if _tween and _tween.is_valid():
 		_tween.kill()
+	var st := StylesUI.style()
 
 	_tween = create_tween().set_parallel(true)
-	_tween.tween_property(_win, "position:x", -_win.size.x, 0.22)\
-		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	_tween.tween_property(_content, "modulate:a", 0.0, 0.18)\
+	_tween.tween_property(_win, "position:x", -_win.size.x, st.anim_win_close_duration)\
+		.set_ease(st.anim_win_close_ease).set_trans(st.anim_win_close_trans)
+	_tween.tween_property(_content, "modulate:a", 0.0, st.anim_win_fade_out)\
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	_tween.set_parallel(false)
 	_tween.tween_callback(_win.hide)
@@ -85,26 +85,25 @@ func is_visible() -> bool:
 # ── Styles ────────────────────────────────────────────────────────────────────
 
 func _init_styles() -> void:
-	var sk := StylesUI.skin()
-	var t  := StylesUI.theme()
+	var t := StylesUI.theme()
 
-	_style_normal = StylesUI.glass_box(t.c_btn, sk.row_radius, true)
-	_style_normal.content_margin_left   = sk.row_margin_h
-	_style_normal.content_margin_right  = sk.row_margin_h
-	_style_normal.content_margin_top    = sk.row_margin_v
-	_style_normal.content_margin_bottom = sk.row_margin_v
+	_style_normal = StylesUI.glass_box(t.c_btn, 6.0, true)
+	_style_normal.content_margin_left   = 10.0
+	_style_normal.content_margin_right  = 10.0
+	_style_normal.content_margin_top    = 5.0
+	_style_normal.content_margin_bottom = 5.0
 
-	_style_hover = StylesUI.glass_box(t.c_btn_h, sk.row_radius, true)
-	_style_hover.content_margin_left   = sk.row_margin_h
-	_style_hover.content_margin_right  = sk.row_margin_h
-	_style_hover.content_margin_top    = sk.row_margin_v
-	_style_hover.content_margin_bottom = sk.row_margin_v
+	_style_hover = StylesUI.glass_box(t.c_btn_h, 6.0, true)
+	_style_hover.content_margin_left   = 10.0
+	_style_hover.content_margin_right  = 10.0
+	_style_hover.content_margin_top    = 5.0
+	_style_hover.content_margin_bottom = 5.0
 
-	_style_active = StylesUI.glass_box(t.c_active_row, sk.row_radius, true)
-	_style_active.content_margin_left   = sk.row_margin_h
-	_style_active.content_margin_right  = sk.row_margin_h
-	_style_active.content_margin_top    = sk.row_margin_v
-	_style_active.content_margin_bottom = sk.row_margin_v
+	_style_active = StylesUI.glass_box(t.c_active_row, 6.0, true)
+	_style_active.content_margin_left   = 10.0
+	_style_active.content_margin_right  = 10.0
+	_style_active.content_margin_top    = 5.0
+	_style_active.content_margin_bottom = 5.0
 
 
 # ── Build ─────────────────────────────────────────────────────────────────────
@@ -137,7 +136,7 @@ func _build() -> void:
 	# ── Title bar ─────────────────────────────────────────────────────
 	var title_bar := PanelContainer.new()
 	StylesUI.track_glass_panel(title_bar, func(p: Control) -> void:
-		p.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_title_bar, StylesUI.skin().win_title_radius, true))
+		p.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_title_bar, 14.0, true))
 	)
 	StylesUI.apply_aero(title_bar, true)
 	col.add_child(title_bar)
@@ -178,7 +177,7 @@ func _build() -> void:
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	StylesUI.track_glass_panel(_scroll, func(p: Control) -> void:
-		var box := StylesUI.glass_box(StylesUI.theme().c_panel_bg, StylesUI.skin().win_tab_panel_radius, false)
+		var box := StylesUI.glass_box(StylesUI.theme().c_panel_bg, 10.0, false)
 		box.shadow_size = 0
 		p.add_theme_stylebox_override("panel", box)
 	)
@@ -193,7 +192,7 @@ func _build() -> void:
 	# ── Footer bar ────────────────────────────────────────────────────
 	var footer_bar := PanelContainer.new()
 	StylesUI.track_glass_panel(footer_bar, func(p: Control) -> void:
-		p.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_footer_bar, StylesUI.skin().win_footer_radius, true))
+		p.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_footer_bar, 8.0, true))
 	)
 	StylesUI.apply_aero(footer_bar, true)
 	col.add_child(footer_bar)
@@ -298,8 +297,7 @@ func _rebuild_list() -> void:
 		name_label.anchor_top = 0.0
 		name_label.anchor_bottom = 1.0
 		name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		if is_active:
-			name_label.modulate = StylesUI.theme().c_text_hi
+		name_label.modulate = StylesUI.theme().c_text_hi if is_active else StylesUI.theme().c_text_dim
 		name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		name_clip.add_child(name_label)
 
@@ -329,13 +327,12 @@ func _rebuild_list() -> void:
 		remove_btn.mouse_filter = Control.MOUSE_FILTER_STOP
 		remove_btn.modulate.a = StylesUI.theme().a_dim_icon
 		remove_btn.tooltip_text = "Remove from playlist"
-		var _sk := StylesUI.skin()
 		var _rs := func(bg: Color) -> StyleBoxFlat:
-			var s := StylesUI.glass_box(bg, _sk.row_btn_radius, false)
-			s.content_margin_left = _sk.row_btn_margin_h
-			s.content_margin_right = _sk.row_btn_margin_h
-			s.content_margin_top = _sk.row_btn_margin_v
-			s.content_margin_bottom = _sk.row_btn_margin_v
+			var s := StylesUI.glass_box(bg, 5.0, false)
+			s.content_margin_left   = 4.0
+			s.content_margin_right  = 4.0
+			s.content_margin_top    = 3.0
+			s.content_margin_bottom = 3.0
 			return s
 		remove_btn.add_theme_stylebox_override("normal", _rs.call(StylesUI.theme().c_btn))
 		remove_btn.add_theme_stylebox_override("hover", _rs.call(StylesUI.theme().c_btn_h))

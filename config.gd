@@ -26,7 +26,6 @@ var auto_hide_player   := false
 var vsync_enabled      := true
 var max_fps            := 60
 var theme_name         := "iguana_green"
-var skin_name          := "iguana"
 var style_name         := "iguana_glass"
 var icon_pack_name     := "aero"
 
@@ -68,7 +67,6 @@ func save() -> void:
 	cfg.set_value("general", "vsync_enabled", vsync_enabled)
 	cfg.set_value("general", "max_fps", max_fps)
 	cfg.set_value("general", "theme_name", theme_name)
-	cfg.set_value("general", "skin_name", skin_name)
 	cfg.set_value("general", "style_name", style_name)
 	cfg.set_value("general", "icon_pack_name", icon_pack_name)
 
@@ -123,8 +121,6 @@ func load_settings() -> void:
 		max_fps = cfg.get_value("general", "max_fps")
 	if cfg.has_section_key("general", "theme_name"):
 		theme_name = cfg.get_value("general", "theme_name")
-	if cfg.has_section_key("general", "skin_name"):
-		skin_name = cfg.get_value("general", "skin_name")
 	if cfg.has_section_key("general", "style_name"):
 		style_name = cfg.get_value("general", "style_name")
 	if cfg.has_section_key("general", "icon_pack_name"):

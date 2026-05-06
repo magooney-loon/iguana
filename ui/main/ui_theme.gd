@@ -66,6 +66,11 @@ extends Resource
 @export var a_duration     := 0.50
 @export var a_dim_icon     := 0.50
 
+@export_group("Tabs")
+@export var c_tab_fg    := Color(0.30, 0.38, 0.55, 0.45)
+@export var c_tab_bg    := Color(0.16, 0.18, 0.28, 0.35)
+@export var c_tab_hover := Color(0.40, 0.58, 0.92, 0.35)
+
 @export_group("Debug")
 @export var c_dbg_bg      := Color(0.03, 0.04, 0.08, 0.50)
 @export var c_dbg_fill    := Color(0.35, 0.52, 0.85, 0.55)

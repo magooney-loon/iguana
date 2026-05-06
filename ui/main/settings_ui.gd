@@ -43,9 +43,9 @@ func setup(visualizer, analyzer: AudioAnalyzer) -> void:
 func open() -> void:
 	if _tween and _tween.is_valid():
 		_tween.kill()
+	var st     := StylesUI.style()
 	var vp     := get_viewport().get_visible_rect().size
-	var margin := 16
-	var target_x := int(vp.x) - _win.size.x - margin
+	var target_x := int(vp.x) - _win.size.x - 16
 	var target_y := int((vp.y - _win.size.y) / 2.0)
 	_win.position = Vector2i(int(vp.x), target_y)
 	_win.show()
@@ -53,21 +53,22 @@ func open() -> void:
 	_content.modulate.a = 0.0
 
 	_tween = create_tween().set_parallel(true)
-	_tween.tween_property(_win, "position:x", target_x, 0.30)\
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	_tween.tween_property(_content, "modulate:a", 1.0, 0.22)\
+	_tween.tween_property(_win, "position:x", target_x, st.anim_win_open_duration)\
+		.set_ease(st.anim_win_open_ease).set_trans(st.anim_win_open_trans)
+	_tween.tween_property(_content, "modulate:a", 1.0, st.anim_win_fade_in)\
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 
 func close() -> void:
 	if _tween and _tween.is_valid():
 		_tween.kill()
+	var st := StylesUI.style()
 	var vp := get_viewport().get_visible_rect().size
 
 	_tween = create_tween().set_parallel(true)
-	_tween.tween_property(_win, "position:x", int(vp.x), 0.22)\
-		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	_tween.tween_property(_content, "modulate:a", 0.0, 0.18)\
+	_tween.tween_property(_win, "position:x", int(vp.x), st.anim_win_close_duration)\
+		.set_ease(st.anim_win_close_ease).set_trans(st.anim_win_close_trans)
+	_tween.tween_property(_content, "modulate:a", 0.0, st.anim_win_fade_out)\
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	_tween.set_parallel(false)
 	_tween.tween_callback(_win.hide)
@@ -121,7 +122,7 @@ func _build() -> void:
 	# ── Custom title bar ──────────────────────────────────────────────
 	var title_bar := PanelContainer.new()
 	StylesUI.track_glass_panel(title_bar, func(p: Control) -> void:
-		p.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_title_bar, StylesUI.skin().win_title_radius, true))
+		p.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_title_bar, 14.0, true))
 	)
 	StylesUI.apply_aero(title_bar, true)
 	col.add_child(title_bar)
@@ -161,16 +162,16 @@ func _build() -> void:
 	_tabs = TabContainer.new()
 	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	StylesUI.track_glass_panel(_tabs, func(p: Control) -> void:
-		var sk := StylesUI.skin()
-		p.add_theme_stylebox_override("tab_fg",    StylesUI.glass_box(StylesUI.theme().c_btn_h,  sk.win_tab_radius, true))
-		p.add_theme_stylebox_override("tab_bg",    StylesUI.glass_box(StylesUI.theme().c_btn,    sk.win_tab_radius, true))
-		p.add_theme_stylebox_override("tab_hover", StylesUI.glass_box(StylesUI.theme().c_accent, sk.win_tab_radius, true))
-		var tab_box := StylesUI.glass_box(StylesUI.theme().c_panel_bg, sk.win_tab_panel_radius, false)
+		var t := StylesUI.theme()
+		p.add_theme_stylebox_override("tab_fg",    StylesUI.glass_box(t.c_tab_fg,    8.0, true))
+		p.add_theme_stylebox_override("tab_bg",    StylesUI.glass_box(t.c_tab_bg,    8.0, true))
+		p.add_theme_stylebox_override("tab_hover", StylesUI.glass_box(t.c_tab_hover, 8.0, true))
+		var tab_box := StylesUI.glass_box(t.c_panel_bg, 10.0, false)
 		tab_box.shadow_size = 0
-		tab_box.content_margin_left   = sk.win_tab_margin
-		tab_box.content_margin_right  = sk.win_tab_margin
-		tab_box.content_margin_top    = sk.win_tab_margin
-		tab_box.content_margin_bottom = sk.win_tab_margin
+		tab_box.content_margin_left   = 10.0
+		tab_box.content_margin_right  = 10.0
+		tab_box.content_margin_top    = 10.0
+		tab_box.content_margin_bottom = 10.0
 		p.add_theme_stylebox_override("panel", tab_box)
 	)
 	_tabs.get_tab_bar().tab_alignment = TabBar.ALIGNMENT_CENTER
@@ -290,33 +291,6 @@ func _build_general_tab() -> Control:
 	)
 	theme_row.add_child(theme_opt)
 	vbox.add_child(theme_row)
-
-	var skin_row := HBoxContainer.new()
-	skin_row.add_theme_constant_override("separation", 8)
-	var skin_pre := Label.new()
-	skin_pre.text = "Skin"
-	StylesUI.track_label(skin_pre, func(l: Label) -> void:
-		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
-	)
-	skin_pre.custom_minimum_size.x = 48
-	skin_row.add_child(skin_pre)
-	var skin_opt := OptionButton.new()
-	skin_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	skin_opt.focus_mode = Control.FOCUS_NONE
-	var _skins := _discover_tres("res://ui/appearance/skins/")
-	for _s in _skins:
-		skin_opt.add_item(_s)
-	var _si := _skins.find(Config.skin_name)
-	if _si >= 0:
-		skin_opt.selected = _si
-	skin_opt.item_selected.connect(func(idx: int) -> void:
-		Config.skin_name = _skins[idx]
-		Config.save()
-		StylesUI.load_skin(Config.skin_name)
-		StylesUI.reload_all()
-	)
-	skin_row.add_child(skin_opt)
-	vbox.add_child(skin_row)
 
 	var style_row := HBoxContainer.new()
 	style_row.add_theme_constant_override("separation", 8)

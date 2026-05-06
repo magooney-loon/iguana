@@ -8,6 +8,24 @@ extends Resource
 
 @export var shader_path: String = "res://ui/appearance/styles/aero_glass.gdshader"
 
+@export_group("Logo")
+@export var logo_visible: bool = true
+@export_enum("Center", "Left", "Right") var logo_anchor: int = 0
+
+@export_group("Animation")
+@export var anim_autohide_duration: float = 0.35
+@export_enum("Linear", "Sine", "Quint", "Quart", "Quad", "Expo", "Elastic", "Cubic", "Circ", "Bounce", "Back", "Spring") var anim_autohide_trans: int = 7
+@export var anim_win_open_duration: float = 0.30
+@export_enum("In", "Out", "In Out", "Out In") var anim_win_open_ease: int = 1
+@export_enum("Linear", "Sine", "Quint", "Quart", "Quad", "Expo", "Elastic", "Cubic", "Circ", "Bounce", "Back", "Spring") var anim_win_open_trans: int = 7
+@export var anim_win_close_duration: float = 0.22
+@export_enum("In", "Out", "In Out", "Out In") var anim_win_close_ease: int = 0
+@export_enum("Linear", "Sine", "Quint", "Quart", "Quad", "Expo", "Elastic", "Cubic", "Circ", "Bounce", "Back", "Spring") var anim_win_close_trans: int = 7
+@export var anim_win_fade_in:    float = 0.22
+@export var anim_win_fade_out:   float = 0.18
+@export var anim_crossfade_out:  float = 0.20
+@export var anim_crossfade_in:   float = 0.30
+
 @export_group("Shader — Subtle Mode")
 @export var subtle_grain_strength:     float = 0.025
 @export var subtle_grain_speed:        float = 0.8

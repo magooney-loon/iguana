@@ -1,8 +1,7 @@
 class_name StylesUI
 
-# ── Active theme / skin / style / icon pack ──────────────────────────────────
+# ── Active theme / style / icon pack ─────────────────────────────────────────
 static var active_theme: UITheme
-static var active_skin: UISkin
 static var active_style: UIStyle
 static var _icon_pack: String = "aero"
 
@@ -36,12 +35,6 @@ static func theme() -> UITheme:
 	return active_theme
 
 
-static func skin() -> UISkin:
-	if active_skin == null:
-		active_skin = UISkin.new()
-	return active_skin
-
-
 static func style() -> UIStyle:
 	if active_style == null:
 		active_style = UIStyle.new()
@@ -58,16 +51,6 @@ static func load_theme(name: String) -> void:
 			active_theme = t
 			return
 	active_theme = UITheme.new()
-
-
-static func load_skin(name: String) -> void:
-	var path := "res://ui/appearance/skins/%s.tres" % name
-	if ResourceLoader.exists(path):
-		var s := ResourceLoader.load(path) as UISkin
-		if s != null:
-			active_skin = s
-			return
-	active_skin = UISkin.new()
 
 
 static func load_style(name: String) -> void:
@@ -140,15 +123,13 @@ static func reload_all() -> void:
 		live_aero.append(entry)
 	_aero_panels = live_aero
 
-	# Separators — update color and wave/cap from skin
+	# Separators — update draw color from theme (wave/cap are hardcoded)
 	var live_seps: Array[WeakRef] = []
 	for ref in _aero_seps:
 		var sep := ref.get_ref() as _Sep
 		if sep == null:
 			continue
 		sep._base_color = theme().c_sep_draw
-		sep._base_wave  = skin().sep_base_wave
-		sep._base_cap   = skin().sep_base_cap
 		live_seps.append(ref)
 	_aero_seps = live_seps
 
@@ -308,26 +289,24 @@ static func glass_box(bg: Color, radius: float = 10.0, highlight: bool = true) -
 
 
 static func _apply_glass_btn_to(btn: Button) -> void:
-	var t  := theme()
-	var sk := skin()
-	var r  := sk.btn_radius
-	var n := glass_box(t.c_btn, r, true)
-	n.content_margin_left   = sk.btn_margin_h
-	n.content_margin_right  = sk.btn_margin_h
-	n.content_margin_top    = sk.btn_margin_top
-	n.content_margin_bottom = sk.btn_margin_bottom
-	var h := glass_box(t.c_btn_h, r, true)
-	h.content_margin_left   = sk.btn_margin_h
-	h.content_margin_right  = sk.btn_margin_h
-	h.content_margin_top    = sk.btn_margin_top
-	h.content_margin_bottom = sk.btn_margin_bottom
-	h.shadow_size = sk.btn_hover_shadow
-	var p := glass_box(t.c_btn_p, r, true)
-	p.content_margin_left   = sk.btn_margin_h
-	p.content_margin_right  = sk.btn_margin_h
-	p.content_margin_top    = sk.btn_pressed_margin_top
-	p.content_margin_bottom = sk.btn_pressed_margin_bottom
-	p.shadow_size   = sk.btn_pressed_shadow
+	var t := theme()
+	var n := glass_box(t.c_btn, 7.0, true)
+	n.content_margin_left   = 10.0
+	n.content_margin_right  = 10.0
+	n.content_margin_top    = 4.0
+	n.content_margin_bottom = 4.0
+	var h := glass_box(t.c_btn_h, 7.0, true)
+	h.content_margin_left   = 10.0
+	h.content_margin_right  = 10.0
+	h.content_margin_top    = 4.0
+	h.content_margin_bottom = 4.0
+	h.shadow_size = 14
+	var p := glass_box(t.c_btn_p, 7.0, true)
+	p.content_margin_left   = 10.0
+	p.content_margin_right  = 10.0
+	p.content_margin_top    = 5.0
+	p.content_margin_bottom = 3.0
+	p.shadow_size   = 4
 	p.shadow_offset = Vector2(0, 1)
 	btn.add_theme_stylebox_override("normal",  n)
 	btn.add_theme_stylebox_override("hover",   h)
@@ -340,11 +319,10 @@ static func apply_glass_btn(btn: Button) -> void:
 
 
 static func _apply_glass_slider_to(slider: HSlider, compact: bool) -> void:
-	var t  := theme()
-	var sk := skin()
-	var track_h   := sk.slider_track_compact if compact else sk.slider_track_normal
-	var grab_size := sk.slider_grab_compact  if compact else sk.slider_grab_normal
-	var radius    := sk.slider_radius_compact if compact else sk.slider_radius_normal
+	var t         := theme()
+	var track_h   := 4.0 if compact else 6.0
+	var grab_size := 12.0 if compact else 14.0
+	var radius    := 4.0 if compact else 5.0
 
 	var bg := StyleBoxFlat.new()
 	bg.bg_color     = t.c_slider_bg
@@ -379,7 +357,7 @@ static func _apply_glass_slider_to(slider: HSlider, compact: bool) -> void:
 	grab.corner_radius_bottom_right = int(grab_size / 2.0)
 	grab.corner_radius_bottom_left  = int(grab_size / 2.0)
 	grab.shadow_color   = t.c_shadow
-	grab.shadow_size    = sk.slider_grabber_shadow
+	grab.shadow_size    = 4
 	grab.shadow_offset  = Vector2(0, 2)
 	grab.anti_aliasing_size   = 2.0
 	grab.content_margin_left  = grab_size
@@ -397,7 +375,7 @@ static func _apply_glass_slider_to(slider: HSlider, compact: bool) -> void:
 	grab_h.corner_radius_bottom_right = int(grab_size / 2.0)
 	grab_h.corner_radius_bottom_left  = int(grab_size / 2.0)
 	grab_h.shadow_color   = t.c_shadow
-	grab_h.shadow_size    = sk.slider_grabber_h_shadow
+	grab_h.shadow_size    = 6
 	grab_h.shadow_offset  = Vector2(0, 3)
 	grab_h.anti_aliasing_size    = 2.0
 	grab_h.content_margin_left   = grab_size + 1.0
@@ -427,16 +405,14 @@ static func track_label(lbl: Label, refresh: Callable) -> void:
 
 
 static func _apply_bar_style_to(panel: PanelContainer) -> void:
-	var t  := theme()
-	var sk := skin()
-	var box := glass_box(t.c_glass_dark, sk.bar_radius, true)
+	var box := glass_box(theme().c_glass_dark, 12.0, true)
 	box.corner_radius_bottom_left  = 0
 	box.corner_radius_bottom_right = 0
-	box.content_margin_left   = sk.bar_padding_h
-	box.content_margin_right  = sk.bar_padding_h
-	box.content_margin_top    = sk.bar_padding_v
-	box.content_margin_bottom = sk.bar_padding_v
-	box.shadow_size = sk.bar_shadow_size
+	box.content_margin_left   = 14.0
+	box.content_margin_right  = 14.0
+	box.content_margin_top    = 8.0
+	box.content_margin_bottom = 8.0
+	box.shadow_size = 16
 	panel.add_theme_stylebox_override("panel", box)
 
 
@@ -550,8 +526,8 @@ class _Sep extends Control:
 
 	func _ready() -> void:
 		_base_color = StylesUI.theme().c_sep_draw
-		_base_wave  = StylesUI.skin().sep_base_wave
-		_base_cap   = StylesUI.skin().sep_base_cap
+		_base_wave  = 0.5
+		_base_cap   = 1.8
 		if is_vertical:
 			custom_minimum_size    = Vector2(10.0, 0.0)
 			size_flags_vertical    = Control.SIZE_EXPAND_FILL
@@ -576,7 +552,7 @@ class _Sep extends Control:
 
 	func _draw_h() -> void:
 		var mid_y  := size.y * 0.5
-		var margin := StylesUI.skin().sep_h_margin
+		var margin := 10.0
 		var left   := margin
 		var right  := maxf(size.x - margin, left + 6.0)
 		var w      := right - left
@@ -604,7 +580,7 @@ class _Sep extends Control:
 
 	func _draw_v() -> void:
 		var mid_x  := size.x * 0.5
-		var margin := StylesUI.skin().sep_v_margin
+		var margin := 5.0
 		var top    := margin
 		var bot    := maxf(size.y - margin, top + 6.0)
 		var h      := bot - top

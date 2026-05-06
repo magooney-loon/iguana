@@ -7,6 +7,24 @@ script = ExtResource("1_style")
 
 shader_path = "res://ui/appearance/styles/aero_glass.gdshader"
 
+# ── Logo ──
+logo_visible = true
+logo_anchor = 0
+
+# ── Animation ──
+anim_autohide_duration = 0.45
+anim_autohide_trans = 10
+anim_win_open_duration = 0.38
+anim_win_open_ease = 1
+anim_win_open_trans = 10
+anim_win_close_duration = 0.16
+anim_win_close_ease = 0
+anim_win_close_trans = 4
+anim_win_fade_in = 0.30
+anim_win_fade_out = 0.10
+anim_crossfade_out = 0.15
+anim_crossfade_in = 0.40
+
 # ── Shader — Subtle Mode ──
 subtle_grain_strength = 0.025
 subtle_grain_speed = 0.8
