@@ -184,45 +184,46 @@ func _build_general_tab() -> Control:
 	vbox.name = "General"
 	vbox.add_theme_constant_override("separation", 5)
 
-	StylesUI.win_section(vbox, "AUDIO SOURCE")
+	# ── Audio settings ─────────────────────────────────────────────────
+	StylesUI.win_section(vbox, "AUDIO SETTINGS")
+
+	var audio_row := HBoxContainer.new()
+	audio_row.add_theme_constant_override("separation", 8)
 
 	var source_opt := OptionButton.new()
 	source_opt.add_item("File Playback", 0)
-	source_opt.add_item("Audio Loopback (Coming Soon)", 1)
+	source_opt.add_item("Audio Loopback", 1)
 	source_opt.set_item_disabled(1, true)
 	source_opt.tooltip_text = "Audio Loopback will be available in a future update"
-	source_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	source_opt.custom_minimum_size.x = 130.0
 	source_opt.focus_mode = Control.FOCUS_NONE
 	source_opt.item_selected.connect(func(idx: int) -> void:
 		if idx == 1:
 			source_opt.selected = 0  # Revert — not implemented yet
 	)
-	vbox.add_child(source_opt)
-
-	StylesUI.win_sep(vbox)
-	StylesUI.win_section(vbox, "CROSSFADE")
+	audio_row.add_child(source_opt)
 
 	var xf_row := HBoxContainer.new()
 	xf_row.add_theme_constant_override("separation", 4)
 	var xf_pre := Label.new()
-	xf_pre.text = "Duration"
+	xf_pre.text = "Crossfade"
 	xf_row.add_child(xf_pre)
 	var xf_spin := SpinBox.new()
 	xf_spin.min_value = 0.5
 	xf_spin.max_value = 10.0
 	xf_spin.step      = 0.5
 	xf_spin.value     = AudioSource.crossfade_duration
-	xf_spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	xf_spin.custom_minimum_size.x = 60.0
+	xf_spin.suffix    = " sec"
 	xf_spin.value_changed.connect(func(v: float):
 		AudioSource.crossfade_duration = v
 		Config.crossfade_duration = v
 		Config.save()
 	)
 	xf_row.add_child(xf_spin)
-	var xf_sfx := Label.new()
-	xf_sfx.text = "seconds"
-	xf_row.add_child(xf_sfx)
-	vbox.add_child(xf_row)
+	audio_row.add_child(xf_row)
+
+	vbox.add_child(audio_row)
 
 	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "PLAYER UI")
@@ -239,14 +240,16 @@ func _build_general_tab() -> Control:
 	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "DISPLAY")
 
+	var disp_row := HBoxContainer.new()
+	disp_row.add_theme_constant_override("separation", 8)
+
 	var vsync_check := CheckBox.new()
 	vsync_check.text = "VSync"
 	vsync_check.button_pressed = Config.vsync_enabled
-	vbox.add_child(vsync_check)
+	disp_row.add_child(vsync_check)
 
 	var fps_cap_row := HBoxContainer.new()
 	fps_cap_row.add_theme_constant_override("separation", 4)
-	fps_cap_row.visible = not Config.vsync_enabled
 	var fps_cap_pre := Label.new()
 	fps_cap_pre.text = "Max FPS"
 	fps_cap_row.add_child(fps_cap_pre)
@@ -255,15 +258,18 @@ func _build_general_tab() -> Control:
 	fps_cap_spin.max_value = 960.0
 	fps_cap_spin.step = 1.0
 	fps_cap_spin.value = Config.max_fps
-	fps_cap_spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fps_cap_spin.custom_minimum_size.x = 60.0
 	fps_cap_spin.focus_mode = Control.FOCUS_NONE
+	fps_cap_spin.editable = not Config.vsync_enabled
 	fps_cap_spin.value_changed.connect(func(v: float) -> void:
 		Config.max_fps = int(v)
 		Engine.max_fps = Config.max_fps
 		Config.save()
 	)
 	fps_cap_row.add_child(fps_cap_spin)
-	vbox.add_child(fps_cap_row)
+	disp_row.add_child(fps_cap_row)
+
+	vbox.add_child(disp_row)
 
 	vsync_check.toggled.connect(func(on: bool) -> void:
 		Config.vsync_enabled = on
@@ -273,40 +279,40 @@ func _build_general_tab() -> Control:
 		else:
 			DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 			Engine.max_fps = Config.max_fps
-		fps_cap_row.visible = not on
+		fps_cap_spin.editable = not on
 		Config.save()
 	)
 
 	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "SHADER SHUFFLE")
 
+	var shuffle_row := HBoxContainer.new()
+	shuffle_row.add_theme_constant_override("separation", 8)
+
 	_shuffle_check = CheckBox.new()
 	_shuffle_check.text = "Shader shuffle"
-	_shuffle_check.toggled.connect(func(on: bool):
-		_visualizer._shuffle_on    = on
-		_visualizer._shuffle_timer = 0.0
-	)
-	vbox.add_child(_shuffle_check)
+	shuffle_row.add_child(_shuffle_check)
 
-	var spin_row := HBoxContainer.new()
-	spin_row.add_theme_constant_override("separation", 4)
-	var spin_pre := Label.new()
-	spin_pre.text = "Switch every"
-	spin_row.add_child(spin_pre)
 	_shuffle_spin = SpinBox.new()
 	_shuffle_spin.min_value = 10.0
 	_shuffle_spin.max_value = 300.0
 	_shuffle_spin.step      = 5.0
 	_shuffle_spin.value     = _visualizer.shuffle_interval
-	_shuffle_spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_shuffle_spin.custom_minimum_size.x = 60.0
+	_shuffle_spin.editable  = _visualizer._shuffle_on
+	_shuffle_spin.suffix    = " seconds"
 	_shuffle_spin.value_changed.connect(func(v: float):
 		_visualizer.shuffle_interval = v
 	)
-	spin_row.add_child(_shuffle_spin)
-	var spin_sfx := Label.new()
-	spin_sfx.text = "seconds"
-	spin_row.add_child(spin_sfx)
-	vbox.add_child(spin_row)
+	shuffle_row.add_child(_shuffle_spin)
+
+	vbox.add_child(shuffle_row)
+
+	_shuffle_check.toggled.connect(func(on: bool):
+		_visualizer._shuffle_on    = on
+		_visualizer._shuffle_timer = 0.0
+		_shuffle_spin.editable = on
+	)
 
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
