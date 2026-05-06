@@ -143,8 +143,9 @@ static func glass_box(bg: Color, radius: float = 10.0, highlight: bool = true) -
 	s.corner_radius_bottom_right = int(radius)
 	s.corner_radius_bottom_left  = int(radius)
 	s.shadow_color       = C_SHADOW
-	s.shadow_size        = 12
-	s.shadow_offset      = Vector2(0, 4)
+	s.shadow_size        = maxi(int(radius * 0.9), 4)
+	s.shadow_offset      = Vector2(0, maxf(radius * 0.3, 1.5))
+	s.anti_aliasing_size  = 2.0
 	if highlight:
 		s.border_color = C_HILITE
 	return s
@@ -224,6 +225,7 @@ static func apply_glass_slider(slider: HSlider, compact := false) -> void:
 	grab.shadow_color = C_SHADOW
 	grab.shadow_size = 4
 	grab.shadow_offset = Vector2(0, 2)
+	grab.anti_aliasing_size = 2.0
 	grab.content_margin_left = grab_size
 	grab.content_margin_right = grab_size
 	grab.content_margin_top = grab_size
@@ -242,6 +244,7 @@ static func apply_glass_slider(slider: HSlider, compact := false) -> void:
 	grab_h.shadow_color = C_SHADOW
 	grab_h.shadow_size = 6
 	grab_h.shadow_offset = Vector2(0, 3)
+	grab_h.anti_aliasing_size = 2.0
 	grab_h.content_margin_left = grab_size + 1.0
 	grab_h.content_margin_right = grab_size + 1.0
 	grab_h.content_margin_top = grab_size + 1.0
