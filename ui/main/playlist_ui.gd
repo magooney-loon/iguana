@@ -402,20 +402,25 @@ func _animate_remove(idx: int) -> void:
 		_rebuild_list()
 		return
 
-	# Animate collapse + fade
+	# Phase 1: fade out + slide right (row is still visible)
 	var tw := create_tween().set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUART)
 	tw.set_parallel(true)
-	tw.tween_property(row, "modulate:a", 0.0, 0.18)
-	tw.tween_property(row, "custom_minimum_size:y", 0.0, 0.18)
-	# Slide out to the right
-	tw.tween_property(row, "position:x", 30.0, 0.18)
+	tw.tween_property(row, "modulate:a", 0.0, 0.15)
+	tw.tween_property(row, "position:x", 30.0, 0.15)
 
-	tw.chain().tween_callback(func() -> void:
+	# Phase 2: row is now invisible — collapse height smoothly
+	tw.set_parallel(false)
+	tw.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUART)
+	tw.tween_property(row, "custom_minimum_size:y", 0.0, 0.12)
+
+	# Phase 3: free, reindex, and re-highlight the now-current track
+	tw.tween_callback(func() -> void:
 		if is_instance_valid(row):
 			row.queue_free()
 		_track_rows.remove_at(idx)
 		_reindex_rows()
 		_update_footer()
+		_highlight_current()
 		_setup_marquees.call_deferred()
 	)
 
