@@ -185,7 +185,7 @@ func _ready() -> void:
 	# a tone-mapped/gamma-corrected version. It reads _feedback_vp.get_texture() as
 	# a plain uniform — it is NEVER the render target, so nothing feeds back through it.
 	_post_mat = ShaderMaterial.new()
-	_post_mat.shader = load("res://shaders/post_process.gdshader")
+	_post_mat.shader = load("res://shaders/utils/post_process.gdshader")
 	_post_display = ColorRect.new()
 	_post_display.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_post_display.mouse_filter = Control.MOUSE_FILTER_IGNORE
