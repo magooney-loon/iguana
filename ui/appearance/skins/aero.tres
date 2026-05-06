@@ -4,3 +4,58 @@
 
 [resource]
 script = ExtResource("1_skin")
+
+# ── Shape ──
+btn_radius = 7.0
+panel_radius = 10.0
+bar_radius = 12.0
+logo_radius = 18.0
+bar_shadow_size = 16
+bar_padding_h = 14.0
+bar_padding_v = 8.0
+
+# ── Buttons ──
+btn_margin_h = 10.0
+btn_margin_top = 4.0
+btn_margin_bottom = 4.0
+btn_hover_shadow = 14
+btn_pressed_margin_top = 5.0
+btn_pressed_margin_bottom = 3.0
+btn_pressed_shadow = 4
+
+# ── Sliders ──
+slider_track_compact = 4.0
+slider_track_normal = 6.0
+slider_grab_compact = 12.0
+slider_grab_normal = 14.0
+slider_radius_compact = 4.0
+slider_radius_normal = 5.0
+slider_grabber_shadow = 4
+slider_grabber_h_shadow = 6
+
+# ── Windows ──
+win_title_radius = 14.0
+win_tab_radius = 8.0
+win_tab_panel_radius = 10.0
+win_tab_margin = 10.0
+win_footer_radius = 8.0
+
+# ── Playlist Rows ──
+row_radius = 6.0
+row_margin_h = 10.0
+row_margin_v = 5.0
+row_btn_radius = 5.0
+row_btn_margin_h = 4.0
+row_btn_margin_v = 3.0
+
+# ── Logo ──
+logo_margin_h = 8.0
+logo_margin_top = 5.0
+logo_margin_bottom = 2.0
+logo_icon_size = 40.0
+
+# ── Separator ──
+sep_base_wave = 0.5
+sep_base_cap = 1.8
+sep_h_margin = 10.0
+sep_v_margin = 5.0

@@ -4,3 +4,43 @@
 
 [resource]
 script = ExtResource("1_style")
+
+shader_path = "res://ui/appearance/styles/aero_glass.gdshader"
+
+# ── Shader — Subtle Mode ──
+subtle_grain_strength = 0.025
+subtle_grain_speed = 0.8
+subtle_vignette_strength = 0.05
+subtle_vignette_pulse = 0.012
+subtle_vignette_pulse_spd = 0.35
+subtle_specular_strength = 0.15
+subtle_specular_y_pos = 0.02
+subtle_specular_height = 0.18
+subtle_corner_radius = 0.04
+subtle_gradient_strength = 0.05
+subtle_fresnel_strength = 0.06
+subtle_fresnel_width = 0.05
+subtle_bevel_strength = 0.10
+subtle_bevel_width = 0.025
+subtle_gloss_texture_str = 0.012
+subtle_caustic_scale = 8.0
+subtle_iridescence = 0.5
+
+# ── Shader — Normal Mode ──
+normal_grain_strength = 0.04
+normal_grain_speed = 1.2
+normal_vignette_strength = 0.09
+normal_vignette_pulse = 0.02
+normal_vignette_pulse_spd = 0.5
+normal_specular_strength = 0.25
+normal_specular_y_pos = 0.01
+normal_specular_height = 0.22
+normal_corner_radius = 0.035
+normal_gradient_strength = 0.10
+normal_fresnel_strength = 0.12
+normal_fresnel_width = 0.06
+normal_bevel_strength = 0.18
+normal_bevel_width = 0.03
+normal_gloss_texture_str = 0.02
+normal_caustic_scale = 10.0
+normal_iridescence = 0.65
