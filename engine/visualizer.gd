@@ -320,6 +320,9 @@ func _process(delta: float) -> void:
 
 	_ui.process_ui(delta)
 
+	# Push audio to all aero-glass UI panels so they pulse with the beat
+	StylesUI.update_audio(_analyzer._beat_envelope, _analyzer._energy, _analyzer._bass)
+
 	# Fade the transition overlay out
 	if _transitioning:
 		_transition_time += delta

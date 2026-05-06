@@ -3,6 +3,8 @@ class_name StylesUI
 ## ── Shared noise shader ──────────────────────────────────────────────────────
 ## Loaded once and reused for every panel that requests a material overlay.
 static var _noise_shader: Shader
+## Panels with aero material that need per-frame audio updates.
+static var _aero_panels: Array[WeakRef] = []
 
 
 static func _get_noise_shader() -> Shader:
@@ -57,7 +59,7 @@ static func apply_aero(panel: Control, subtle := true) -> void:
 		mat.set_shader_parameter("specular_strength", 0.15)
 		mat.set_shader_parameter("specular_y_pos", 0.02)
 		mat.set_shader_parameter("specular_height", 0.18)
-		mat.set_shader_parameter("specular_curve", 1.8)
+		mat.set_shader_parameter("corner_radius", 0.04)
 		# Lighting gradient
 		mat.set_shader_parameter("gradient_strength", 0.05)
 		# Fresnel edge bloom
@@ -75,7 +77,7 @@ static func apply_aero(panel: Control, subtle := true) -> void:
 		mat.set_shader_parameter("specular_strength", 0.25)
 		mat.set_shader_parameter("specular_y_pos", 0.01)
 		mat.set_shader_parameter("specular_height", 0.22)
-		mat.set_shader_parameter("specular_curve", 1.5)
+		mat.set_shader_parameter("corner_radius", 0.035)
 		# Lighting gradient
 		mat.set_shader_parameter("gradient_strength", 0.10)
 		# Fresnel edge bloom
@@ -88,6 +90,28 @@ static func apply_aero(panel: Control, subtle := true) -> void:
 		mat.set_shader_parameter("gloss_texture_str", 0.02)
 		mat.set_shader_parameter("caustic_scale", 10.0)
 		mat.set_shader_parameter("iridescence", 0.65)
+	# Track for per-frame audio updates
+	_aero_panels.append(WeakRef.new())
+	_aero_panels[-1] = weakref(panel)
+
+
+## Push audio data to all active aero panels.  Call every frame from
+## the visualizer's _process — keeps the glass gloss in sync with the
+## music without each panel needing its own script.
+static func update_audio(beat_val: float, energy_val: float, bass_val: float) -> void:
+	var alive: Array[WeakRef] = []
+	for ref in _aero_panels:
+		var panel := ref.get_ref() as Control
+		if panel == null:
+			continue  # panel was freed — drop it
+		var mat := panel.material as ShaderMaterial
+		if mat == null:
+			continue
+		mat.set_shader_parameter("beat", beat_val)
+		mat.set_shader_parameter("energy", energy_val)
+		mat.set_shader_parameter("bass", bass_val)
+		alive.append(ref)
+	_aero_panels = alive
 
 
 ## ── Aero Glass Theme ──────────────────────────────────────────────────────────
