@@ -259,10 +259,59 @@ void fragment() {
 	float core_glow = exp(-r_p * r_p * 10.0) * beat * 0.08;
 	glow += vec3(0.3, 0.5, 0.9) * core_glow;
 
+	// ══════════════════════════════════════════════════════════════════
+	//  2b. PLANKTON — drifting bioluminescent particles
+	//
+	//  Tiny scattered dots that fill the outer screen, like
+	//  bioluminescent plankton drifting around the jellyfish.
+	//  • Multiple noise layers at different scales for depth
+	//  • High threshold picks out discrete bright specks
+	//  • Outer mask keeps them away from the central jellyfish
+	//  • Gentle drift + twinkle + audio reactivity
+	// ══════════════════════════════════════════════════════════════════
+
+	float plankton = 0.0;
+
+	for (int layer = 0; layer < 3; layer++) {
+		float fl = float(layer);
+
+		// Different scale per layer — finer dots in front, coarser behind
+		float layer_scale = 4.0 + fl * 3.0;
+
+		// Gentle drifting — each layer moves at its own speed
+		float drift = 0.015 + fl * 0.008;
+		vec2 drift_uv = uv * layer_scale
+		               + vec2(t * drift, t * drift * 0.6 + fl * 1.3);
+
+		float n = texture(noise_tex, drift_uv).r;
+
+		// Threshold to isolate discrete bright specks
+		float thresh = 0.72 - energy * 0.04 - bass * 0.02;
+		float dot = smoothstep(thresh, thresh + 0.04, n);
+
+		// Twinkle — phase offset per layer and noise position
+		float twinkle = 0.65 + 0.35 * sin(t * (1.8 + fl * 0.5) + n * 25.0);
+
+		plankton += dot * twinkle;
+	}
+
+	// Fade near center — plankton lives in the outer regions
+	float outer_mask = smoothstep(0.2, 0.55, r_p);
+
+	// Brightness — subtle, scaled by audio
+	float plankton_brightness = plankton * outer_mask
+	                           * (0.012 + energy * 0.008 + treble * 0.004);
+
+	// Color — cool blue-green bioluminescence with warmth tint
+	vec3 plankton_col = plankton_brightness
+	                  * vec3(0.3 + warmth * 0.15,
+	                         0.55 + brightness * 0.1,
+	                         0.85 + activity * 0.1);
+
 	// Tanh tonemap — clamps per-frame output, then scale low for
 	// safe feedback equilibrium.  With decay ~0.88:
 	//   equilibrium = 0.10 / 0.12 ≈ 0.83  (stays ≤ 1.0)
-	vec3 new_col = tanh(glow * 0.5) * 0.10;
+	vec3 new_col = tanh(glow * 0.5) * 0.10 + plankton_col;
 
 	// ══════════════════════════════════════════════════════════════════
 	//  3. COMPOSITE — blend trail + new geometry, apply loop_reinhard
