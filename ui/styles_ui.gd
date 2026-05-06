@@ -1,8 +1,9 @@
 class_name StylesUI
 
-# ── Active theme / skin ───────────────────────────────────────────────────────
+# ── Active theme / skin / style ───────────────────────────────────────────────
 static var active_theme: UITheme
 static var active_skin: UISkin
+static var active_style: UIStyle
 
 # ── Shared noise shader ───────────────────────────────────────────────────────
 static var _noise_shader: Shader
@@ -23,8 +24,13 @@ static func skin() -> UISkin:
 	return active_skin
 
 
+static func style() -> UIStyle:
+	if active_style == null:
+		active_style = UIStyle.new()
+	return active_style
+
+
 ## Load a named theme from ui/themes/<name>.tres.
-## Falls back to UITheme defaults if the file is missing or invalid.
 static func load_theme(name: String) -> void:
 	var path := "res://ui/themes/%s.tres" % name
 	if ResourceLoader.exists(path):
@@ -36,23 +42,33 @@ static func load_theme(name: String) -> void:
 
 
 ## Load a named skin from ui/skins/<name>.tres.
-## Falls back to UISkin defaults if the file is missing or invalid.
-## Invalidates the cached noise shader so the new shader_path is picked up.
 static func load_skin(name: String) -> void:
 	var path := "res://ui/skins/%s.tres" % name
 	if ResourceLoader.exists(path):
 		var s := ResourceLoader.load(path) as UISkin
 		if s != null:
 			active_skin = s
-			_noise_shader = null
 			return
 	active_skin = UISkin.new()
+
+
+## Load a named style from ui/styles/<name>.tres.
+## Invalidates the cached shader so the new shader_path is picked up.
+static func load_style(name: String) -> void:
+	var path := "res://ui/styles/%s.tres" % name
+	if ResourceLoader.exists(path):
+		var st := ResourceLoader.load(path) as UIStyle
+		if st != null:
+			active_style = st
+			_noise_shader = null
+			return
+	active_style = UIStyle.new()
 	_noise_shader = null
 
 
 static func _get_noise_shader() -> Shader:
 	if _noise_shader == null:
-		var shader_path := skin().shader_path
+		var shader_path := style().shader_path
 		_noise_shader = load(shader_path) as Shader
 		if _noise_shader == null:
 			push_warning("StylesUI: failed to load shader: %s" % shader_path)
@@ -64,21 +80,21 @@ static func apply_noise(panel: Control, subtle := true) -> void:
 	var shader := _get_noise_shader()
 	if shader == null:
 		return
-	var s := skin()
+	var st := style()
 	var mat := ShaderMaterial.new()
 	mat.shader = shader
 	if subtle:
-		mat.set_shader_parameter("grain_strength",      s.subtle_grain_strength)
-		mat.set_shader_parameter("grain_speed",         s.subtle_grain_speed)
-		mat.set_shader_parameter("vignette_strength",   s.subtle_vignette_strength)
-		mat.set_shader_parameter("vignette_pulse",      s.subtle_vignette_pulse)
-		mat.set_shader_parameter("vignette_pulse_spd",  s.subtle_vignette_pulse_spd)
+		mat.set_shader_parameter("grain_strength",      st.subtle_grain_strength)
+		mat.set_shader_parameter("grain_speed",         st.subtle_grain_speed)
+		mat.set_shader_parameter("vignette_strength",   st.subtle_vignette_strength)
+		mat.set_shader_parameter("vignette_pulse",      st.subtle_vignette_pulse)
+		mat.set_shader_parameter("vignette_pulse_spd",  st.subtle_vignette_pulse_spd)
 	else:
-		mat.set_shader_parameter("grain_strength",      s.normal_grain_strength)
-		mat.set_shader_parameter("grain_speed",         s.normal_grain_speed)
-		mat.set_shader_parameter("vignette_strength",   s.normal_vignette_strength)
-		mat.set_shader_parameter("vignette_pulse",      s.normal_vignette_pulse)
-		mat.set_shader_parameter("vignette_pulse_spd",  s.normal_vignette_pulse_spd)
+		mat.set_shader_parameter("grain_strength",      st.normal_grain_strength)
+		mat.set_shader_parameter("grain_speed",         st.normal_grain_speed)
+		mat.set_shader_parameter("vignette_strength",   st.normal_vignette_strength)
+		mat.set_shader_parameter("vignette_pulse",      st.normal_vignette_pulse)
+		mat.set_shader_parameter("vignette_pulse_spd",  st.normal_vignette_pulse_spd)
 	panel.material = mat
 
 
@@ -88,35 +104,35 @@ static func apply_aero(panel: Control, subtle := true) -> void:
 	var mat := panel.material as ShaderMaterial
 	if mat == null:
 		return
-	var s := skin()
+	var st := style()
 	if subtle:
-		mat.set_shader_parameter("specular_strength",   s.subtle_specular_strength)
-		mat.set_shader_parameter("specular_y_pos",      s.subtle_specular_y_pos)
-		mat.set_shader_parameter("specular_height",     s.subtle_specular_height)
-		mat.set_shader_parameter("corner_radius",       s.subtle_corner_radius)
+		mat.set_shader_parameter("specular_strength",   st.subtle_specular_strength)
+		mat.set_shader_parameter("specular_y_pos",      st.subtle_specular_y_pos)
+		mat.set_shader_parameter("specular_height",     st.subtle_specular_height)
+		mat.set_shader_parameter("corner_radius",       st.subtle_corner_radius)
 		mat.set_shader_parameter("wave_seed",           randf() * 100.0)
-		mat.set_shader_parameter("gradient_strength",   s.subtle_gradient_strength)
-		mat.set_shader_parameter("fresnel_strength",    s.subtle_fresnel_strength)
-		mat.set_shader_parameter("fresnel_width",       s.subtle_fresnel_width)
-		mat.set_shader_parameter("bevel_strength",      s.subtle_bevel_strength)
-		mat.set_shader_parameter("bevel_width",         s.subtle_bevel_width)
-		mat.set_shader_parameter("gloss_texture_str",   s.subtle_gloss_texture_str)
-		mat.set_shader_parameter("caustic_scale",       s.subtle_caustic_scale)
-		mat.set_shader_parameter("iridescence",         s.subtle_iridescence)
+		mat.set_shader_parameter("gradient_strength",   st.subtle_gradient_strength)
+		mat.set_shader_parameter("fresnel_strength",    st.subtle_fresnel_strength)
+		mat.set_shader_parameter("fresnel_width",       st.subtle_fresnel_width)
+		mat.set_shader_parameter("bevel_strength",      st.subtle_bevel_strength)
+		mat.set_shader_parameter("bevel_width",         st.subtle_bevel_width)
+		mat.set_shader_parameter("gloss_texture_str",   st.subtle_gloss_texture_str)
+		mat.set_shader_parameter("caustic_scale",       st.subtle_caustic_scale)
+		mat.set_shader_parameter("iridescence",         st.subtle_iridescence)
 	else:
-		mat.set_shader_parameter("specular_strength",   s.normal_specular_strength)
-		mat.set_shader_parameter("specular_y_pos",      s.normal_specular_y_pos)
-		mat.set_shader_parameter("specular_height",     s.normal_specular_height)
-		mat.set_shader_parameter("corner_radius",       s.normal_corner_radius)
+		mat.set_shader_parameter("specular_strength",   st.normal_specular_strength)
+		mat.set_shader_parameter("specular_y_pos",      st.normal_specular_y_pos)
+		mat.set_shader_parameter("specular_height",     st.normal_specular_height)
+		mat.set_shader_parameter("corner_radius",       st.normal_corner_radius)
 		mat.set_shader_parameter("wave_seed",           randf() * 100.0)
-		mat.set_shader_parameter("gradient_strength",   s.normal_gradient_strength)
-		mat.set_shader_parameter("fresnel_strength",    s.normal_fresnel_strength)
-		mat.set_shader_parameter("fresnel_width",       s.normal_fresnel_width)
-		mat.set_shader_parameter("bevel_strength",      s.normal_bevel_strength)
-		mat.set_shader_parameter("bevel_width",         s.normal_bevel_width)
-		mat.set_shader_parameter("gloss_texture_str",   s.normal_gloss_texture_str)
-		mat.set_shader_parameter("caustic_scale",       s.normal_caustic_scale)
-		mat.set_shader_parameter("iridescence",         s.normal_iridescence)
+		mat.set_shader_parameter("gradient_strength",   st.normal_gradient_strength)
+		mat.set_shader_parameter("fresnel_strength",    st.normal_fresnel_strength)
+		mat.set_shader_parameter("fresnel_width",       st.normal_fresnel_width)
+		mat.set_shader_parameter("bevel_strength",      st.normal_bevel_strength)
+		mat.set_shader_parameter("bevel_width",         st.normal_bevel_width)
+		mat.set_shader_parameter("gloss_texture_str",   st.normal_gloss_texture_str)
+		mat.set_shader_parameter("caustic_scale",       st.normal_caustic_scale)
+		mat.set_shader_parameter("iridescence",         st.normal_iridescence)
 	_aero_panels.append(WeakRef.new())
 	_aero_panels[-1] = weakref(panel)
 
@@ -264,15 +280,15 @@ static func apply_glass_slider(slider: HSlider, compact := false) -> void:
 static func apply_bar_style(panel: PanelContainer) -> void:
 	var t  := theme()
 	var sk := skin()
-	var style := glass_box(t.c_glass_dark, sk.bar_radius, true)
-	style.corner_radius_bottom_left  = 0
-	style.corner_radius_bottom_right = 0
-	style.content_margin_left   = sk.bar_padding_h
-	style.content_margin_right  = sk.bar_padding_h
-	style.content_margin_top    = sk.bar_padding_v
-	style.content_margin_bottom = sk.bar_padding_v
-	style.shadow_size = sk.bar_shadow_size
-	panel.add_theme_stylebox_override("panel", style)
+	var box := glass_box(t.c_glass_dark, sk.bar_radius, true)
+	box.corner_radius_bottom_left  = 0
+	box.corner_radius_bottom_right = 0
+	box.content_margin_left   = sk.bar_padding_h
+	box.content_margin_right  = sk.bar_padding_h
+	box.content_margin_top    = sk.bar_padding_v
+	box.content_margin_bottom = sk.bar_padding_v
+	box.shadow_size = sk.bar_shadow_size
+	panel.add_theme_stylebox_override("panel", box)
 
 
 static func make_vsep() -> Control:

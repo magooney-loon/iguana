@@ -44,6 +44,7 @@ func _ready() -> void:
 
 	StylesUI.load_theme(Config.theme_name)
 	StylesUI.load_skin(Config.skin_name)
+	StylesUI.load_style(Config.style_name)
 
 	StylesUI.apply_bar_style(self)
 

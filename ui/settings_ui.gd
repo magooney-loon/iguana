@@ -13,6 +13,7 @@ var _tween:        Tween
 # Tabs
 var _tabs:            TabContainer
 var _shader_dropdown: OptionButton
+var _tab_idx:         int = 0
 var _last_shader_idx := -1
 
 # General tab
@@ -21,7 +22,6 @@ var _shuffle_spin:  SpinBox
 
 # Post-process tab
 var _pp_sliders:            Dictionary = {}
-var _pp_shader_label:       Label
 var _shader_author_label:   Label
 var _shader_website_label:  Label
 var _shader_desc_label:     Label
@@ -171,7 +171,7 @@ func _build() -> void:
 	content_margin.add_child(_tabs)
 
 	# Smooth eased fade on tab content switch
-	var _tab_idx := _tabs.current_tab
+	_tab_idx = _tabs.current_tab
 	_tabs.tab_changed.connect(func(idx: int):
 		if idx == _tab_idx:
 			return
@@ -252,6 +252,84 @@ func _build_general_tab() -> Control:
 		Config.save()
 	)
 	vbox.add_child(auto_hide_check)
+
+	StylesUI.win_sep(vbox)
+	StylesUI.win_section(vbox, "APPEARANCE")
+
+	var theme_row := HBoxContainer.new()
+	theme_row.add_theme_constant_override("separation", 8)
+	var theme_pre := Label.new()
+	theme_pre.text = "Theme"
+	theme_pre.add_theme_font_size_override("font_size", 12)
+	theme_pre.custom_minimum_size.x = 48
+	theme_row.add_child(theme_pre)
+	var theme_opt := OptionButton.new()
+	theme_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	theme_opt.focus_mode = Control.FOCUS_NONE
+	var _themes := _discover_tres("res://ui/themes/")
+	for _t in _themes:
+		theme_opt.add_item(_t)
+	var _ti := _themes.find(Config.theme_name)
+	if _ti >= 0:
+		theme_opt.selected = _ti
+	theme_opt.item_selected.connect(func(idx: int) -> void:
+		Config.theme_name = _themes[idx]
+		Config.save()
+	)
+	theme_row.add_child(theme_opt)
+	vbox.add_child(theme_row)
+
+	var skin_row := HBoxContainer.new()
+	skin_row.add_theme_constant_override("separation", 8)
+	var skin_pre := Label.new()
+	skin_pre.text = "Skin"
+	skin_pre.add_theme_font_size_override("font_size", 12)
+	skin_pre.custom_minimum_size.x = 48
+	skin_row.add_child(skin_pre)
+	var skin_opt := OptionButton.new()
+	skin_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	skin_opt.focus_mode = Control.FOCUS_NONE
+	var _skins := _discover_tres("res://ui/skins/")
+	for _s in _skins:
+		skin_opt.add_item(_s)
+	var _si := _skins.find(Config.skin_name)
+	if _si >= 0:
+		skin_opt.selected = _si
+	skin_opt.item_selected.connect(func(idx: int) -> void:
+		Config.skin_name = _skins[idx]
+		Config.save()
+	)
+	skin_row.add_child(skin_opt)
+	vbox.add_child(skin_row)
+
+	var style_row := HBoxContainer.new()
+	style_row.add_theme_constant_override("separation", 8)
+	var style_pre := Label.new()
+	style_pre.text = "Style"
+	style_pre.add_theme_font_size_override("font_size", 12)
+	style_pre.custom_minimum_size.x = 48
+	style_row.add_child(style_pre)
+	var style_opt := OptionButton.new()
+	style_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	style_opt.focus_mode = Control.FOCUS_NONE
+	var _styles := _discover_tres("res://ui/styles/")
+	for _st in _styles:
+		style_opt.add_item(_st)
+	var _sti := _styles.find(Config.style_name)
+	if _sti >= 0:
+		style_opt.selected = _sti
+	style_opt.item_selected.connect(func(idx: int) -> void:
+		Config.style_name = _styles[idx]
+		Config.save()
+	)
+	style_row.add_child(style_opt)
+	vbox.add_child(style_row)
+
+	var restart_note := Label.new()
+	restart_note.text = "Changes take effect on restart"
+	restart_note.add_theme_font_size_override("font_size", 10)
+	restart_note.modulate.a = 0.45
+	vbox.add_child(restart_note)
 
 	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "DISPLAY")
@@ -895,3 +973,19 @@ func _about_row(parent: VBoxContainer, label: String, value: String) -> void:
 	row.add_child(val)
 
 	parent.add_child(row)
+
+
+func _discover_tres(dir_path: String) -> Array[String]:
+	var names: Array[String] = []
+	var dir := DirAccess.open(dir_path)
+	if dir == null:
+		return names
+	dir.list_dir_begin()
+	var f := dir.get_next()
+	while f != "":
+		if not dir.current_is_dir() and f.ends_with(".tres"):
+			names.append(f.get_basename())
+		f = dir.get_next()
+	dir.list_dir_end()
+	names.sort()
+	return names
