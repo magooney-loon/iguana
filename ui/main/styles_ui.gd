@@ -45,8 +45,33 @@ static func style() -> UIStyle:
 
 # ── Loaders ───────────────────────────────────────────────────────────────────
 
+## Discover available skin folders (any folder in ui/appearance/ containing theme.tres)
+static func discover_skins() -> Array[String]:
+	var skins: Array[String] = []
+	var dir := DirAccess.open("res://ui/appearance")
+	if dir == null:
+		return skins
+	dir.list_dir_begin()
+	var f := dir.get_next()
+	while f != "":
+		if dir.current_is_dir() and not f.begins_with("."):
+			if ResourceLoader.exists("res://ui/appearance/%s/theme.tres" % f):
+				skins.append(f)
+		f = dir.get_next()
+	dir.list_dir_end()
+	skins.sort()
+	return skins
+
+
+## Load a complete skin (theme + style + icons) by folder name.
+static func load_skin(name: String) -> void:
+	load_theme(name)
+	load_style(name)
+	load_icons(name)
+
+
 static func load_theme(name: String) -> void:
-	var path := "res://ui/appearance/themes/%s.tres" % name
+	var path := "res://ui/appearance/%s/theme.tres" % name
 	if ResourceLoader.exists(path):
 		var t := ResourceLoader.load(path) as UITheme
 		if t != null:
@@ -56,7 +81,7 @@ static func load_theme(name: String) -> void:
 
 
 static func load_style(name: String) -> void:
-	var path := "res://ui/appearance/styles/%s.tres" % name
+	var path := "res://ui/appearance/%s/style.tres" % name
 	if ResourceLoader.exists(path):
 		var st := ResourceLoader.load(path) as UIStyle
 		if st != null:
@@ -523,7 +548,7 @@ static func make_vsep() -> Control:
 
 
 static func load_icon(name: String) -> Texture2D:
-	var path := "res://ui/appearance/icons/%s/%s.svg" % [_icon_pack, name]
+	var path := "res://ui/appearance/%s/icons/%s.svg" % [_icon_pack, name]
 	var tex := load(path) as Texture2D
 	if tex == null:
 		push_warning("StylesUI: icon not found: %s" % path)

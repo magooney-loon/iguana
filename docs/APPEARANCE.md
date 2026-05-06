@@ -1,13 +1,30 @@
 # Appearance System
 
-Iguana's visual style is split across three independent axes. Each can be swapped live in Settings without restarting the engine. Mix and match freely — a "dracula" theme works with any style and any icon pack.
+Iguana's visual style is organized into **skins** — self-contained folders that bundle a theme, style, and icon pack together. Select a complete skin in Settings to apply everything at once, or mix and match individual components for a custom look.
 
 ```
 ui/appearance/
-├── themes/    ← color palettes        (.tres → UITheme)
-├── styles/    ← UI shader + params    (.tres → UIStyle)
-└── icons/     ← icon packs            (one subfolder per pack)
+├── aero/              ← complete skin folder
+│   ├── theme.tres     ← color palette (UITheme)
+│   ├── style.tres     ← shader params + animation (UIStyle)
+│   ├── style.gdshader ← optional custom UI overlay shader
+│   └── icons/         ← SVG icon set
+├── iguana/
+└── kitty/
 ```
+
+---
+
+## Creating a New Skin
+
+1. Duplicate an existing skin folder (e.g. `ui/appearance/aero/`) and rename it.
+2. Edit `theme.tres` colors in the Godot Inspector.
+3. Optionally edit `style.tres` shader parameters and animation timing.
+4. Optionally add a custom `style.gdshader` and update `shader_path` in `style.tres`.
+5. Replace the SVGs in `icons/` with your own designs.
+6. It appears in Settings → Appearance → Skin automatically.
+
+If you only want to change colors, you only need to edit `theme.tres`.
 
 ---
 
@@ -15,11 +32,7 @@ ui/appearance/
 
 A theme is a `UITheme` resource. It controls every color used to build UI panels, buttons, sliders, borders, and separators.
 
-**To create a new theme:**
-
-1. Duplicate `ui/appearance/themes/aero_blue.tres` and rename it (e.g. `dracula.tres`).
-2. Open it in the Godot editor Inspector and adjust the exported color properties.
-3. Drop it into `ui/appearance/themes/`. It will appear in the Settings → Appearance → Theme dropdown automatically.
+**To edit a theme:** open the skin's `theme.tres` in the Godot Inspector and adjust the exported color properties.
 
 **Glass panel colors:**
 
@@ -142,11 +155,11 @@ A style is a `UIStyle` resource. It points at a `.gdshader` file and carries two
 
 **To create a new style:**
 
-1. Write or copy a `canvas_item` shader into `ui/appearance/styles/`. The shader must accept the uniforms listed in the *Shader Uniforms* section below.
-2. Duplicate `ui/appearance/styles/aero_glass.tres` and rename it.
-3. Set `shader_path` to point at your new shader file.
+1. Write or copy a `canvas_item` shader as `style.gdshader` inside your skin folder.
+2. Duplicate an existing `style.tres` from another skin and place it in your skin folder.
+3. Set `shader_path` to `"res://ui/appearance/<your_skin>/style.gdshader"`.
 4. Tune the exported parameters.
-5. Drop the `.tres` into `ui/appearance/styles/`. It appears in Settings → Appearance → Style.
+5. The skin appears in Settings → Appearance → Skin automatically.
 
 **Logo properties:**
 
@@ -234,7 +247,7 @@ uniform float wave_seed;
 
 ## Icon Packs
 
-Icon packs are plain folders — no `.tres` file needed. Drop a folder into `ui/appearance/icons/` and it appears in Settings → Appearance → Icons.
+Each skin has its own `icons/` subfolder containing SVG files. Replace them to customize the look.
 
 **Required icons** (one `.svg` per name, any resolution):
 
@@ -254,11 +267,11 @@ Missing icons fall back to an empty texture with a console warning, so you can s
 
 ## Live Reload
 
-All three axes apply instantly when changed in Settings. No restart required.
+All changes apply instantly when changed in Settings. No restart required.
 
-The reload system works by tracking every styled control in weak-reference arrays inside `StylesUI`. When a new theme/style/icons is selected:
+The reload system works by tracking every styled control in weak-reference arrays inside `StylesUI`. When a new skin is selected or individual components are changed:
 
-1. `StylesUI.load_theme/style/icons()` swaps the active resource.
+1. `StylesUI.load_skin()` (or `load_theme/style/icons()` for overrides) swaps the active resource(s).
 2. `StylesUI.reload_all()` iterates every tracked control and re-applies styles in place — shader uniforms are updated, `StyleBoxFlat` objects are recreated, icons are re-loaded from the new pack.
 
 **Automatic tracking:**

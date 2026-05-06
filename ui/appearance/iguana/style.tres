@@ -1,0 +1,63 @@
+[gd_resource type="Resource" script_class="UIStyle" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/main/ui_style.gd" id="1_style"]
+
+[resource]
+script = ExtResource("1_style")
+shader_path = "res://ui/appearance/iguana/style.gdshader"
+
+# ── Logo ──
+logo_visible = true
+logo_anchor = 1
+
+# ── Animation ──
+anim_autohide_duration = 0.35
+anim_autohide_trans = 3
+anim_win_open_duration = 0.30
+anim_win_open_ease = 1
+anim_win_open_trans = 2
+anim_win_close_duration = 0.18
+anim_win_close_ease = 0
+anim_win_close_trans = 4
+anim_win_fade_in = 0.22
+anim_win_fade_out = 0.12
+anim_crossfade_out = 0.18
+anim_crossfade_in = 0.30
+
+# ── Subtle (settings panels, playlist) ──
+subtle_grain_strength = 0.018
+subtle_grain_speed = 0.5
+subtle_vignette_strength = 0.05
+subtle_vignette_pulse = 0.012
+subtle_vignette_pulse_spd = 0.2
+subtle_specular_strength = 0.10
+subtle_specular_y_pos = 0.04
+subtle_specular_height = 0.22
+subtle_corner_radius = 0.055
+subtle_gradient_strength = 0.03
+subtle_fresnel_strength = 0.06
+subtle_fresnel_width = 0.07
+subtle_bevel_strength = 0.06
+subtle_bevel_width = 0.035
+subtle_gloss_texture_str = 0.010
+subtle_caustic_scale = 5.0
+subtle_iridescence = 0.45
+
+# ── Normal (player bar) ──
+normal_grain_strength = 0.03
+normal_grain_speed = 0.8
+normal_vignette_strength = 0.08
+normal_vignette_pulse = 0.02
+normal_vignette_pulse_spd = 0.3
+normal_specular_strength = 0.20
+normal_specular_y_pos = 0.03
+normal_specular_height = 0.26
+normal_corner_radius = 0.05
+normal_gradient_strength = 0.06
+normal_fresnel_strength = 0.10
+normal_fresnel_width = 0.08
+normal_bevel_strength = 0.12
+normal_bevel_width = 0.04
+normal_gloss_texture_str = 0.018
+normal_caustic_scale = 7.0
+normal_iridescence = 0.60

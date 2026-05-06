@@ -300,6 +300,51 @@ func _build_general_tab() -> Control:
 	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "APPEARANCE")
 
+	# ── Skin preset ─────────────────────────────────────────────────
+	var skin_row := HBoxContainer.new()
+	skin_row.add_theme_constant_override("separation", 8)
+	var skin_pre := Label.new()
+	skin_pre.text = "Skin"
+	StylesUI.track_label(skin_pre, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", StylesUI.theme().font_title)
+		l.add_theme_color_override("font_color", StylesUI.theme().c_text_hi)
+	)
+	skin_pre.custom_minimum_size.x = 48
+	skin_row.add_child(skin_pre)
+	var skin_opt := OptionButton.new()
+	skin_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	skin_opt.focus_mode = Control.FOCUS_NONE
+	var _skins := StylesUI.discover_skins()
+	var _is_custom := Config.skin_name == "custom" or not (Config.skin_name in _skins)
+	if _is_custom:
+		skin_opt.add_item("Custom")
+	for _sk in _skins:
+		skin_opt.add_item(_sk)
+	if _is_custom:
+		skin_opt.selected = 0
+	else:
+		var _ski := _skins.find(Config.skin_name)
+		if _ski >= 0:
+			skin_opt.selected = _ski + (1 if _is_custom else 0)
+	skin_opt.item_selected.connect(func(idx: int) -> void:
+		if _is_custom and idx == 0:
+			return  # "Custom" placeholder selected — do nothing
+		var actual_idx := idx - (1 if _is_custom else 0)
+		var chosen := _skins[actual_idx]
+		Config.skin_name      = chosen
+		Config.theme_name     = chosen
+		Config.style_name     = chosen
+		Config.icon_pack_name = chosen
+		Config.save()
+		StylesUI.load_skin(chosen)
+		StylesUI.reload_all()
+	)
+	StylesUI.apply_dropdown(skin_opt)
+	skin_row.add_child(skin_opt)
+	vbox.add_child(skin_row)
+
+	# ── Individual overrides ────────────────────────────────────────
+
 	var theme_row := HBoxContainer.new()
 	theme_row.add_theme_constant_override("separation", 8)
 	var theme_pre := Label.new()
@@ -313,14 +358,14 @@ func _build_general_tab() -> Control:
 	var theme_opt := OptionButton.new()
 	theme_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	theme_opt.focus_mode = Control.FOCUS_NONE
-	var _themes := _discover_tres("res://ui/appearance/themes/")
-	for _t in _themes:
-		theme_opt.add_item(_t)
-	var _ti := _themes.find(Config.theme_name)
+	for _sk in _skins:
+		theme_opt.add_item(_sk)
+	var _ti := _skins.find(Config.theme_name)
 	if _ti >= 0:
 		theme_opt.selected = _ti
 	theme_opt.item_selected.connect(func(idx: int) -> void:
-		Config.theme_name = _themes[idx]
+		Config.theme_name = _skins[idx]
+		_update_custom_state()
 		Config.save()
 		StylesUI.load_theme(Config.theme_name)
 		StylesUI.reload_all()
@@ -342,14 +387,14 @@ func _build_general_tab() -> Control:
 	var style_opt := OptionButton.new()
 	style_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	style_opt.focus_mode = Control.FOCUS_NONE
-	var _styles := _discover_tres("res://ui/appearance/styles/")
-	for _st in _styles:
-		style_opt.add_item(_st)
-	var _sti := _styles.find(Config.style_name)
+	for _sk in _skins:
+		style_opt.add_item(_sk)
+	var _sti := _skins.find(Config.style_name)
 	if _sti >= 0:
 		style_opt.selected = _sti
 	style_opt.item_selected.connect(func(idx: int) -> void:
-		Config.style_name = _styles[idx]
+		Config.style_name = _skins[idx]
+		_update_custom_state()
 		Config.save()
 		StylesUI.load_style(Config.style_name)
 		StylesUI.reload_all()
@@ -371,14 +416,14 @@ func _build_general_tab() -> Control:
 	var icons_opt := OptionButton.new()
 	icons_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	icons_opt.focus_mode = Control.FOCUS_NONE
-	var _icon_packs := _discover_dirs("res://ui/appearance/icons/")
-	for _ip in _icon_packs:
-		icons_opt.add_item(_ip)
-	var _ipi := _icon_packs.find(Config.icon_pack_name)
+	for _sk in _skins:
+		icons_opt.add_item(_sk)
+	var _ipi := _skins.find(Config.icon_pack_name)
 	if _ipi >= 0:
 		icons_opt.selected = _ipi
 	icons_opt.item_selected.connect(func(idx: int) -> void:
-		Config.icon_pack_name = _icon_packs[idx]
+		Config.icon_pack_name = _skins[idx]
+		_update_custom_state()
 		Config.save()
 		StylesUI.load_icons(Config.icon_pack_name)
 		StylesUI.reload_all()
@@ -1134,3 +1179,11 @@ func _discover_dirs(dir_path: String) -> Array[String]:
 	dir.list_dir_end()
 	names.sort()
 	return names
+
+
+## Check if individual settings differ from the skin preset and update skin_name.
+func _update_custom_state() -> void:
+	if Config.theme_name == Config.style_name and Config.style_name == Config.icon_pack_name:
+		Config.skin_name = Config.theme_name
+	else:
+		Config.skin_name = "custom"

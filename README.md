@@ -58,10 +58,14 @@ PostProcessDisplay (ColorRect)   — tonemap / gamma / vignette / grain on top
 │   │   ├── notification_ui.gd
 │   │   ├── ui_theme.gd
 │   │   └── ui_style.gd
-│   └── appearance/            # Swappable appearance assets
-│       ├── themes/            # Color schemes (.tres → UITheme)
-│       ├── styles/            # Shader + params (.tres → UIStyle)
-│       └── icons/             # Icon packs (one subfolder per pack)
+│   └── appearance/            # Swappable skins
+│       ├── aero/              # Aero Blue skin
+│       │   ├── theme.tres     # Color scheme
+│       │   ├── style.tres     # Glass shader params + animation
+│       │   ├── style.gdshader # UI overlay shader
+│       │   └── icons/         # SVG icon set
+│       ├── iguana/            # Iguana Green skin
+│       └── kitty/            # Kitty skin
 ├── docs/
 │   ├── APPEARANCE.md          # Theme / Style / Icon pack authoring
 │   ├── SHADER.md              # Writing and adding visualizer shaders
@@ -73,7 +77,7 @@ PostProcessDisplay (ColorRect)   — tonemap / gamma / vignette / grain on top
 
 Shaders are discovered automatically by scanning `res://shaders/` at startup. Any `.gdshader` file with valid `@meta` tags is loaded. See [docs/SHADER.md](docs/SHADER.md) for how to add one.
 
-The appearance system (themes, styles, icon packs) is swappable at runtime without restart. See [docs/APPEARANCE.md](docs/APPEARANCE.md) for how to author and publish custom appearance packs.
+The appearance system uses self-contained skin folders — each with its own theme, style, and icon pack. Skins are swappable at runtime without restart. Individual components can also be mixed and matched. See [docs/APPEARANCE.md](docs/APPEARANCE.md) for how to author custom skins.
 
 ---
 

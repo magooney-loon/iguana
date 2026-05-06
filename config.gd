@@ -25,9 +25,10 @@ var crossfade_duration  := 2.0  # seconds
 var auto_hide_player   := false
 var vsync_enabled      := true
 var max_fps            := 60
-var theme_name         := "iguana_green"
-var style_name         := "iguana_glass"
-var icon_pack_name     := "aero"
+var skin_name          := "iguana"
+var theme_name         := "iguana"
+var style_name         := "iguana"
+var icon_pack_name     := "iguana"
 
 # Per-shader post-processing: Dictionary keyed by filename stem
 # e.g. { "solstice": { "exposure": 1.4, ... }, "mars": { ... } }
@@ -66,6 +67,7 @@ func save() -> void:
 	cfg.set_value("general", "auto_hide_player",  auto_hide_player)
 	cfg.set_value("general", "vsync_enabled", vsync_enabled)
 	cfg.set_value("general", "max_fps", max_fps)
+	cfg.set_value("general", "skin_name", skin_name)
 	cfg.set_value("general", "theme_name", theme_name)
 	cfg.set_value("general", "style_name", style_name)
 	cfg.set_value("general", "icon_pack_name", icon_pack_name)
@@ -119,12 +121,27 @@ func load_settings() -> void:
 		vsync_enabled = cfg.get_value("general", "vsync_enabled")
 	if cfg.has_section_key("general", "max_fps"):
 		max_fps = cfg.get_value("general", "max_fps")
+
+	# Skin loading with migration from old naming
+	if cfg.has_section_key("general", "skin_name"):
+		skin_name = cfg.get_value("general", "skin_name")
+		# skin_name drives all three; also load individual for custom override detection
+		theme_name     = skin_name
+		style_name     = skin_name
+		icon_pack_name = skin_name
+	# Individual overrides (if user manually mixed and matched)
 	if cfg.has_section_key("general", "theme_name"):
 		theme_name = cfg.get_value("general", "theme_name")
 	if cfg.has_section_key("general", "style_name"):
 		style_name = cfg.get_value("general", "style_name")
 	if cfg.has_section_key("general", "icon_pack_name"):
 		icon_pack_name = cfg.get_value("general", "icon_pack_name")
+	# Migration: if no skin_name but old names exist, guess the skin
+	if not cfg.has_section_key("general", "skin_name"):
+		if theme_name == style_name and style_name == icon_pack_name:
+			skin_name = theme_name
+		else:
+			skin_name = "custom"
 
 	# Resolve shader_name → shader_index
 	shader_index = 0  # default

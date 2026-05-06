@@ -2,11 +2,9 @@ class_name UIStyle
 extends Resource
 
 ## Shader + effect parameters for the Iguana player UI.
-## To create a custom style: duplicate this file, point shader_path at your
-## own .gdshader, adjust the params, save as ui/styles/<your_name>.tres,
-## then set style_name in Settings.
+## To customize: edit the style.tres inside a skin folder in the Godot Inspector.
 
-@export var shader_path: String = "res://ui/appearance/styles/aero_glass.gdshader"
+@export var shader_path: String = "res://ui/appearance/aero/style.gdshader"
 
 @export_group("Logo")
 @export var logo_visible: bool = true

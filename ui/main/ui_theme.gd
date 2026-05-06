@@ -2,8 +2,7 @@ class_name UITheme
 extends Resource
 
 ## Color scheme for the Iguana player UI.
-## To create a custom theme: duplicate this file, adjust the colors, save as
-## ui/themes/<your_name>.tres, then set theme_name in Settings.
+## To customize: edit the theme.tres inside a skin folder in the Godot Inspector.
 
 @export_group("Glass Panels")
 @export var c_glass      := Color(0.08, 0.09, 0.16, 0.68)
