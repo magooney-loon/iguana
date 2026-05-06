@@ -1,21 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <defs>
     <linearGradient id="iguana" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#7ed87e"/>
-      <stop offset="100%" stop-color="#3d8c40"/>
+      <stop offset="0%" stop-color="#c8f5ce"/>
+      <stop offset="100%" stop-color="#3a7a48"/>
     </linearGradient>
     <filter id="shadow" x="-10%" y="-10%" width="130%" height="140%">
       <feDropShadow dx="0.5" dy="1" stdDeviation="0.8" flood-color="#000" flood-opacity="0.35"/>
     </filter>
   </defs>
-  <path d="M16 8h-2" stroke="url(#iguana)" stroke-width="1.5" filter="url(#shadow)"/>
-  <path d="M16 16h-2" stroke="url(#iguana)" stroke-width="1.5" filter="url(#shadow)"/>
-  <path d="M8 12c0-1.5 1-2.5 2.5-2.5" stroke="url(#iguana)" stroke-width="1.5" fill="none" filter="url(#shadow)"/>
-  <path d="M8 12c0 1.5 1 2.5 2.5 2.5" stroke="url(#iguana)" stroke-width="1.5" fill="none" filter="url(#shadow)"/>
-  <path d="M12 8c1.5 0 2.5 1 2.5 2.5" stroke="url(#iguana)" stroke-width="1.5" fill="none" filter="url(#shadow)"/>
-  <path d="M12 16c-1.5 0-2.5-1-2.5-2.5" stroke="url(#iguana)" stroke-width="1.5" fill="none" filter="url(#shadow)"/>
-  <path d="M6 10l3-2" stroke="url(#iguana)" stroke-width="1.5" filter="url(#shadow)"/>
-  <path d="M6 14l3 2" stroke="url(#iguana)" stroke-width="1.5" filter="url(#shadow)"/>
-  <path d="M18 10l-3-2" stroke="url(#iguana)" stroke-width="1.5" filter="url(#shadow)"/>
-  <path d="M18 14l3 2" stroke="url(#iguana)" stroke-width="1.5" filter="url(#shadow)"/>
+  <polyline points="16 3 21 3 21 8" stroke="url(#iguana)" stroke-width="2.5" filter="url(#shadow)"/>
+  <line x1="4" y1="20" x2="21" y2="3" stroke="url(#iguana)" stroke-width="2.5" filter="url(#shadow)"/>
+  <polyline points="21 16 21 21 16 21" stroke="url(#iguana)" stroke-width="2.5" filter="url(#shadow)"/>
+  <line x1="15" y1="15" x2="21" y2="21" stroke="url(#iguana)" stroke-width="2.5" filter="url(#shadow)"/>
+  <line x1="4" y1="4" x2="9" y2="9" stroke="url(#iguana)" stroke-width="2.5" filter="url(#shadow)"/>
 </svg>

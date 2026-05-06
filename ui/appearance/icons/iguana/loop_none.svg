@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <defs>
     <linearGradient id="iguana" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#7ed87e"/>
-      <stop offset="100%" stop-color="#3d8c40"/>
+      <stop offset="0%" stop-color="#c8f5ce"/>
+      <stop offset="100%" stop-color="#3a7a48"/>
     </linearGradient>
     <filter id="shadow" x="-10%" y="-10%" width="130%" height="140%">
       <feDropShadow dx="0.5" dy="1" stdDeviation="0.8" flood-color="#000" flood-opacity="0.35"/>
     </filter>
   </defs>
-  <path d="M17 8c0-2-2.5-3-5-3-4 0-6 3-6 6" stroke="url(#iguana)" stroke-width="1.5" fill="none" filter="url(#shadow)"/>
-  <path d="M7 16c0 2 2.5 3 5 3 4 0 6-3 6-6" stroke="url(#iguana)" stroke-width="1.5" fill="none" filter="url(#shadow)"/>
-  <path d="M7 10l-2 2 2 2" stroke="url(#iguana)" stroke-width="1.5" fill="none" filter="url(#shadow)"/>
-  <path d="M17 14l2-2-2-2" stroke="url(#iguana)" stroke-width="1.5" fill="none" filter="url(#shadow)"/>
-  <line x1="5" y1="5" x2="19" y2="19" stroke="url(#iguana)" stroke-width="1.5" filter="url(#shadow)"/>
+  <polyline points="17 1 21 5 17 9" stroke="url(#iguana)" stroke-width="2.5" filter="url(#shadow)"/>
+  <path d="M3 11V9a4 4 0 0 1 4-4h14" stroke="url(#iguana)" stroke-width="2.5" filter="url(#shadow)"/>
+  <polyline points="7 23 3 19 7 15" stroke="url(#iguana)" stroke-width="2.5" filter="url(#shadow)"/>
+  <path d="M21 13v2a4 4 0 0 1-4 4H3" stroke="url(#iguana)" stroke-width="2.5" filter="url(#shadow)"/>
+  <line x1="4" y1="4" x2="20" y2="20" stroke="url(#iguana)" stroke-width="2.5" filter="url(#shadow)"/>
 </svg>

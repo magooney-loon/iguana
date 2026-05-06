@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
   <defs>
     <linearGradient id="iguana" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#7ed87e"/>
-      <stop offset="100%" stop-color="#3d8c40"/>
+      <stop offset="0%" stop-color="#c8f5ce"/>
+      <stop offset="100%" stop-color="#3a7a48"/>
     </linearGradient>
     <filter id="shadow" x="-10%" y="-10%" width="130%" height="140%">
       <feDropShadow dx="0.5" dy="1" stdDeviation="0.8" flood-color="#000" flood-opacity="0.35"/>
     </filter>
   </defs>
-  <path d="M3 12a9 9 0 0118 0" stroke="url(#iguana)" stroke-width="1.5" fill="none" filter="url(#shadow)"/>
-  <path d="M3 12h4l2-3 2 3h4" stroke="url(#iguana)" stroke-width="1.5" fill="none" filter="url(#shadow)"/>
+  <polyline points="1 4 1 10 7 10" stroke="url(#iguana)" stroke-width="2.5" filter="url(#shadow)"/>
+  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" stroke="url(#iguana)" stroke-width="2.5" filter="url(#shadow)"/>
 </svg>
