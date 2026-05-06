@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="UIStyle" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/main/ui_style.gd" id="1_style"]
+
+[resource]
+script = ExtResource("1_style")
+
+shader_path = "res://ui/appearance/styles/aero_glass.gdshader"
+
+# ── Logo ──
+logo_visible = true
+logo_anchor = 0
+
+# ── Animation ──
+anim_autohide_duration = 0.40
+anim_autohide_trans = 7
+anim_win_open_duration = 0.32
+anim_win_open_ease = 1
+anim_win_open_trans = 1
+anim_win_close_duration = 0.18
+anim_win_close_ease = 0
+anim_win_close_trans = 4
+anim_win_fade_in = 0.25
+anim_win_fade_out = 0.12
+anim_crossfade_out = 0.18
+anim_crossfade_in = 0.30
+
+# ── Shader — Subtle Mode ──
+subtle_grain_strength = 0.020
+subtle_grain_speed = 0.6
+subtle_vignette_strength = 0.04
+subtle_vignette_pulse = 0.010
+subtle_vignette_pulse_spd = 0.25
+subtle_specular_strength = 0.18
+subtle_specular_y_pos = 0.03
+subtle_specular_height = 0.20
+subtle_corner_radius = 0.045
+subtle_gradient_strength = 0.04
+subtle_fresnel_strength = 0.08
+subtle_fresnel_width = 0.06
+subtle_bevel_strength = 0.08
+subtle_bevel_width = 0.030
+subtle_gloss_texture_str = 0.015
+subtle_caustic_scale = 6.0
+subtle_iridescence = 0.55
+
+# ── Shader — Normal Mode ──
+normal_grain_strength = 0.035
+normal_grain_speed = 1.0
+normal_vignette_strength = 0.07
+normal_vignette_pulse = 0.018
+normal_vignette_pulse_spd = 0.4
+normal_specular_strength = 0.28
+normal_specular_y_pos = 0.02
+normal_specular_height = 0.24
+normal_corner_radius = 0.04
+normal_gradient_strength = 0.08
+normal_fresnel_strength = 0.14
+normal_fresnel_width = 0.07
+normal_bevel_strength = 0.15
+normal_bevel_width = 0.035
+normal_gloss_texture_str = 0.022
+normal_caustic_scale = 9.0
+normal_iridescence = 0.70
