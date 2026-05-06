@@ -779,7 +779,7 @@ func _build_keymap_tab() -> Control:
 	var pad := MarginContainer.new()
 	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pad.add_theme_constant_override("margin_left", 2)
-	pad.add_theme_constant_override("margin_right", 4)
+	pad.add_theme_constant_override("margin_right", 2)
 	pad.add_theme_constant_override("margin_bottom", 8)
 	scroll.add_child(pad)
 
@@ -861,7 +861,7 @@ func _build_debug_tab() -> Control:
 
 	var pad := MarginContainer.new()
 	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pad.add_theme_constant_override("margin_right", 4)
+	pad.add_theme_constant_override("margin_right", 2)
 	pad.add_theme_constant_override("margin_bottom", 8)
 	scroll.add_child(pad)
 

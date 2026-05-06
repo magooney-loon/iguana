@@ -184,7 +184,7 @@ func _build() -> void:
 
 	var list_pad := MarginContainer.new()
 	list_pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	list_pad.add_theme_constant_override("margin_right", 4)
+	list_pad.add_theme_constant_override("margin_right", 2)
 	list_pad.add_theme_constant_override("margin_bottom", 8)
 	_scroll.add_child(list_pad)
 
