@@ -5,6 +5,7 @@ class_name StylesUI
 static var _noise_shader: Shader
 ## Panels with aero material that need per-frame audio updates.
 static var _aero_panels: Array[WeakRef] = []
+static var _aero_seps: Array[WeakRef] = []
 static var _aero_sep_script: GDScript
 
 
@@ -100,6 +101,7 @@ static func apply_aero(panel: Control, subtle := true) -> void:
 ## the visualizer's _process — keeps the glass gloss in sync with the
 ## music without each panel needing its own script.
 static func update_audio(beat_val: float, energy_val: float, bass_val: float) -> void:
+	# Panels — shader uniforms
 	var alive: Array[WeakRef] = []
 	for ref in _aero_panels:
 		var panel := ref.get_ref() as Control
@@ -113,6 +115,18 @@ static func update_audio(beat_val: float, energy_val: float, bass_val: float) ->
 		mat.set_shader_parameter("bass", bass_val)
 		alive.append(ref)
 	_aero_panels = alive
+
+	# Separators — script variables
+	var live: Array[WeakRef] = []
+	for ref in _aero_seps:
+		var sep := ref.get_ref() as Control
+		if sep == null:
+			continue
+		sep.set("beat", beat_val)
+		sep.set("energy", energy_val)
+		sep.set("bass", bass_val)
+		live.append(ref)
+	_aero_seps = live
 
 
 ## ── Aero Glass Theme ──────────────────────────────────────────────────────────
@@ -270,6 +284,7 @@ static func make_vsep() -> Control:
 	var sep := Control.new()
 	sep.set_script(_aero_sep_script)
 	sep.set("is_vertical", true)
+	_aero_seps.append(weakref(sep))
 	return sep
 
 
@@ -348,4 +363,5 @@ static func win_sep(parent: Control) -> void:
 	var sep := Control.new()
 	sep.set_script(_aero_sep_script)
 	sep.set("is_vertical", false)
+	_aero_seps.append(weakref(sep))
 	parent.add_child(sep)

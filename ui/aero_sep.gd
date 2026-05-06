@@ -1,16 +1,33 @@
 @tool
 extends Control
 ## Decorative separator for the Aero glass UI.
-## Draws a thin gently-wavy line with small diamond end caps.
+## Draws a wavy line with diamond end caps that react to audio —
+## waves surge on beat, caps pulse and glow.
 
 var is_vertical := false
-var sep_color   := Color(0.45, 0.55, 0.75, 0.22)
-var wave_amp    := 0.6
-var cap_size    := 2.0
+
+# ── Audio input (set per frame by StylesUI.update_audio) ────────────────
+var beat   := 0.0
+var energy := 0.0
+var bass   := 0.0
+
+# ── Smoothing ───────────────────────────────────────────────────────────
+var _s_beat   := 0.0
+var _s_energy := 0.0
+
+# ── Base values ─────────────────────────────────────────────────────────
+var _base_color := Color(0.45, 0.55, 0.75, 0.22)
+var _base_wave  := 0.5
+var _base_cap   := 1.8
 
 
 func _ready() -> void:
 	_fit()
+
+
+func _process(_delta: float) -> void:
+	_s_beat   = lerpf(_s_beat,   beat,   0.18)
+	_s_energy = lerpf(_s_energy, energy, 0.12)
 	queue_redraw()
 
 
@@ -33,18 +50,23 @@ func _draw_h() -> void:
 	var w      := right - left
 	var steps  := 28
 
-	# Gentle wavy line
+	var live_wave := _base_wave + _s_beat * 2.5 + _s_energy * 0.6
+	var live_color := _base_color
+	live_color.a = _base_color.a + _s_energy * 0.15
+	var line_w := 1.0 + _s_beat * 0.8
+
+	# Wavy line — amplitude surges with beat
 	var pts := PackedVector2Array()
 	for i in range(steps + 1):
 		var t := float(i) / float(steps)
 		var x := left + t * w
-		var y := mid_y + sin(t * PI * 3.0) * wave_amp
+		var y := mid_y + sin(t * PI * 3.0) * live_wave
 		pts.append(Vector2(x, y))
-	draw_polyline(pts, sep_color, 1.0, true)
+	draw_polyline(pts, live_color, line_w, true)
 
-	# Diamond end caps
-	_draw_diamond(Vector2(left - 1.0, mid_y))
-	_draw_diamond(Vector2(right + 1.0, mid_y))
+	# Diamond end caps — pulse and glow on beat
+	_draw_cap(Vector2(left - 1.0, mid_y))
+	_draw_cap(Vector2(right + 1.0, mid_y))
 
 
 # ── Vertical ────────────────────────────────────────────────────────────────
@@ -57,31 +79,53 @@ func _draw_v() -> void:
 	var h      := bot - top
 	var steps  := 14
 
-	# Gentle wavy line
+	var live_wave := _base_wave + _s_beat * 2.0 + _s_energy * 0.4
+	var live_color := _base_color
+	live_color.a = _base_color.a + _s_energy * 0.15
+	var line_w := 1.0 + _s_beat * 0.6
+
+	# Wavy line — amplitude surges with beat
 	var pts := PackedVector2Array()
 	for i in range(steps + 1):
 		var t := float(i) / float(steps)
 		var y := top + t * h
-		var x := mid_x + sin(t * PI * 3.0) * wave_amp
+		var x := mid_x + sin(t * PI * 3.0) * live_wave
 		pts.append(Vector2(x, y))
-	draw_polyline(pts, sep_color, 1.0, true)
+	draw_polyline(pts, live_color, line_w, true)
 
-	# Diamond end caps
-	_draw_diamond(Vector2(mid_x, top - 1.0))
-	_draw_diamond(Vector2(mid_x, bot + 1.0))
+	# Diamond end caps — pulse and glow on beat
+	_draw_cap(Vector2(mid_x, top - 1.0))
+	_draw_cap(Vector2(mid_x, bot + 1.0))
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
-func _draw_diamond(center: Vector2) -> void:
-	var r := cap_size
+func _draw_cap(center: Vector2) -> void:
+	var r := _base_cap + _s_beat * 1.8
+
+	# Glow halo on beat — soft, transparent, larger
+	if _s_beat > 0.05:
+		var glow_r := r * 2.2
+		var glow_col := Color(_base_color.r, _base_color.g, _base_color.b,
+			_s_beat * 0.35)
+		var glow_pts := PackedVector2Array([
+			center + Vector2(0.0, -glow_r),
+			center + Vector2(glow_r,  0.0),
+			center + Vector2(0.0,  glow_r),
+			center + Vector2(-glow_r, 0.0),
+		])
+		draw_colored_polygon(glow_pts, glow_col)
+
+	# Solid diamond
+	var cap_col := Color(_base_color.r, _base_color.g, _base_color.b,
+		_base_color.a + _s_beat * 0.4)
 	var pts := PackedVector2Array([
 		center + Vector2(0.0, -r),
 		center + Vector2(r,  0.0),
 		center + Vector2(0.0,  r),
 		center + Vector2(-r, 0.0),
 	])
-	draw_colored_polygon(pts, sep_color)
+	draw_colored_polygon(pts, cap_col)
 
 
 func _fit() -> void:
