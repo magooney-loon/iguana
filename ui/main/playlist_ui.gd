@@ -11,10 +11,6 @@ var _track_rows: Array[Dictionary] = []  # {row, name_clip, name_label, dur_labe
 var _duration_cache: Dictionary = {}     # path → float seconds
 var _marquee_tweens: Array[Tween] = []
 
-# Animation queue — prevents overlapping mutations
-var _animating := false
-var _pending_ops: Array[Callable] = []
-
 # Footer
 var _footer_stats: Label
 var _add_btn: Button
@@ -281,11 +277,11 @@ func _detect_diff(old: Array[String], new: Array[String]) -> Dictionary:
 	# Same size — check for reorder
 	if old.size() == new.size():
 		var diffs := 0
-		var diff_idx := -1
+		var _diff_idx := -1
 		for i in old.size():
 			if old[i] != new[i]:
 				diffs += 1
-				diff_idx = i
+				_diff_idx = i
 		if diffs == 0:
 			return {"type": "none"}
 		if diffs <= 2:
