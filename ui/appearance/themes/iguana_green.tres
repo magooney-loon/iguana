@@ -39,6 +39,12 @@ c_tab_fg    = Color(0.40, 0.38, 0.15, 0.60)
 c_tab_bg    = Color(0.18, 0.16, 0.07, 0.30)
 c_tab_hover = Color(0.58, 0.52, 0.22, 0.50)
 
+# ── Dropdown ──
+c_drop_bg = Color(0.07, 0.11, 0.05, 0.88)
+c_drop_border = Color(0.35, 0.60, 0.25, 0.25)
+c_drop_hover = Color(0.25, 0.38, 0.15, 0.50)
+c_drop_pressed = Color(0.18, 0.28, 0.10, 0.60)
+
 # ── Separators & Text ──
 c_sep = Color(0.30, 0.50, 0.20, 0.15)
 c_sep_draw = Color(0.40, 0.55, 0.22, 0.25)

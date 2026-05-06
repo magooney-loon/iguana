@@ -8,21 +8,21 @@ shader_path = "res://ui/appearance/styles/iguana_glass.gdshader"
 
 # ── Logo ──
 logo_visible = true
-logo_anchor = 0
+logo_anchor = 1
 
 # ── Animation ──
-anim_autohide_duration = 0.38
-anim_autohide_trans = 2
-anim_win_open_duration = 0.42
+anim_autohide_duration = 0.35
+anim_autohide_trans = 3
+anim_win_open_duration = 0.30
 anim_win_open_ease = 1
-anim_win_open_trans = 6
-anim_win_close_duration = 0.20
+anim_win_open_trans = 2
+anim_win_close_duration = 0.18
 anim_win_close_ease = 0
-anim_win_close_trans = 3
-anim_win_fade_in = 0.28
-anim_win_fade_out = 0.14
-anim_crossfade_out = 0.22
-anim_crossfade_in = 0.35
+anim_win_close_trans = 4
+anim_win_fade_in = 0.22
+anim_win_fade_out = 0.12
+anim_crossfade_out = 0.18
+anim_crossfade_in = 0.30
 
 # ── Subtle (settings panels, playlist) ──
 subtle_grain_strength = 0.018

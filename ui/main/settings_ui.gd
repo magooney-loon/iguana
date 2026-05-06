@@ -217,6 +217,10 @@ func _apply_engine_theme() -> void:
 	var t := StylesUI.theme()
 	_engine_theme.set_color("font_color", "CheckBox", t.c_text_hi)
 	_engine_theme.set_color("font_color", "OptionButton", t.c_text_hi)
+	_engine_theme.set_color("font_hover_color", "OptionButton", t.c_text_hi)
+	_engine_theme.set_color("font_pressed_color", "OptionButton", t.c_text_hi)
+	_engine_theme.set_color("font_color", "PopupMenu", t.c_text_hi)
+	_engine_theme.set_color("font_hover_color", "PopupMenu", t.c_text_hi)
 
 
 # ── General tab ──────────────────────────────────────────────────────────────
@@ -243,6 +247,7 @@ func _build_general_tab() -> Control:
 		if idx == 1:
 			source_opt.selected = 0  # Revert — not implemented yet
 	)
+	StylesUI.apply_dropdown(source_opt)
 	audio_row.add_child(source_opt)
 
 	var xf_row := HBoxContainer.new()
@@ -310,6 +315,7 @@ func _build_general_tab() -> Control:
 		StylesUI.load_theme(Config.theme_name)
 		StylesUI.reload_all()
 	)
+	StylesUI.apply_dropdown(theme_opt)
 	theme_row.add_child(theme_opt)
 	vbox.add_child(theme_row)
 
@@ -338,6 +344,7 @@ func _build_general_tab() -> Control:
 		StylesUI.load_style(Config.style_name)
 		StylesUI.reload_all()
 	)
+	StylesUI.apply_dropdown(style_opt)
 	style_row.add_child(style_opt)
 	vbox.add_child(style_row)
 
@@ -366,6 +373,7 @@ func _build_general_tab() -> Control:
 		StylesUI.load_icons(Config.icon_pack_name)
 		StylesUI.reload_all()
 	)
+	StylesUI.apply_dropdown(icons_opt)
 	icons_row.add_child(icons_opt)
 	vbox.add_child(icons_row)
 
@@ -477,6 +485,7 @@ func _build_shaders_tab() -> Control:
 		_update_pp_sliders()
 		_update_shader_info()
 	)
+	StylesUI.apply_dropdown(_shader_dropdown)
 	vbox.add_child(_shader_dropdown)
 
 	StylesUI.win_sep(vbox)

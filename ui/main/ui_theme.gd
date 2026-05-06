@@ -71,6 +71,12 @@ extends Resource
 @export var c_tab_bg    := Color(0.16, 0.18, 0.28, 0.35)
 @export var c_tab_hover := Color(0.40, 0.58, 0.92, 0.35)
 
+@export_group("Dropdown")
+@export var c_drop_bg       := Color(0.10, 0.12, 0.20, 0.85)
+@export var c_drop_border   := Color(0.55, 0.65, 0.85, 0.25)
+@export var c_drop_hover    := Color(0.25, 0.35, 0.55, 0.50)
+@export var c_drop_pressed  := Color(0.15, 0.20, 0.35, 0.60)
+
 @export_group("Debug")
 @export var c_dbg_bg      := Color(0.03, 0.04, 0.08, 0.50)
 @export var c_dbg_fill    := Color(0.35, 0.52, 0.85, 0.55)

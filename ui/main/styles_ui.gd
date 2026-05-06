@@ -25,6 +25,8 @@ static var _aero_seps: Array[WeakRef] = []
 static var _glass_panels: Array[Dictionary] = []
 # {ref: WeakRef, refresh: Callable}
 static var _tracked_labels: Array[Dictionary] = []
+# {ref: WeakRef} — tracked OptionButtons for live reload
+static var _dropdowns: Array[WeakRef] = []
 # Extra per-component refresh hooks
 static var _reload_cbs: Array[Callable] = []
 
@@ -165,6 +167,16 @@ static func reload_all() -> void:
 		entry.refresh.call(lbl)
 		live_lbl.append(entry)
 	_tracked_labels = live_lbl
+
+	# Dropdowns — re-apply themed popup + button styles
+	var live_dd: Array[WeakRef] = []
+	for ref in _dropdowns:
+		var opt := ref.get_ref() as OptionButton
+		if opt == null:
+			continue
+		_apply_dropdown_to(opt)
+		live_dd.append(ref)
+	_dropdowns = live_dd
 
 	# Component callbacks (tabs, playlist rows, etc.)
 	for cb in _reload_cbs:
@@ -402,6 +414,88 @@ static func track_glass_panel(panel: Control, rebuild: Callable) -> void:
 static func track_label(lbl: Label, refresh: Callable) -> void:
 	refresh.call(lbl)
 	_tracked_labels.append({"ref": weakref(lbl), "refresh": refresh})
+
+
+## Style an OptionButton with the current theme colors.
+## Styles the button face, hover, pressed states, and the popup list.
+static func _apply_dropdown_to(opt: OptionButton) -> void:
+	var t := theme()
+
+	# Button face styles
+	var n := glass_box(t.c_btn, 6.0, true)
+	n.content_margin_left   = 8.0
+	n.content_margin_right  = 22.0  # room for arrow indicator
+	n.content_margin_top    = 4.0
+	n.content_margin_bottom = 4.0
+
+	var h := glass_box(t.c_btn_h, 6.0, true)
+	h.content_margin_left   = 8.0
+	h.content_margin_right  = 22.0
+	h.content_margin_top    = 4.0
+	h.content_margin_bottom = 4.0
+	h.shadow_size = 12
+
+	var p := glass_box(t.c_btn_p, 6.0, true)
+	p.content_margin_left   = 8.0
+	p.content_margin_right  = 22.0
+	p.content_margin_top    = 5.0
+	p.content_margin_bottom = 3.0
+	p.shadow_size   = 4
+	p.shadow_offset = Vector2(0, 1)
+
+	opt.add_theme_stylebox_override("normal",  n)
+	opt.add_theme_stylebox_override("hover",   h)
+	opt.add_theme_stylebox_override("pressed", p)
+
+	# Popup list (ItemList behind the scenes)
+	var popup := opt.get_popup() as PopupMenu
+	if popup:
+		var item_n := StyleBoxFlat.new()
+		item_n.bg_color        = t.c_drop_bg
+		item_n.border_color    = t.c_drop_border
+		item_n.set_border_width_all(1)
+		item_n.corner_radius_top_left     = 6
+		item_n.corner_radius_top_right    = 6
+		item_n.corner_radius_bottom_right = 6
+		item_n.corner_radius_bottom_left  = 6
+		item_n.shadow_color   = t.c_shadow
+		item_n.shadow_size    = 8
+		item_n.shadow_offset  = Vector2(0, 4)
+		item_n.content_margin_left   = 6.0
+		item_n.content_margin_right  = 6.0
+		item_n.content_margin_top    = 4.0
+		item_n.content_margin_bottom = 4.0
+
+		var item_h := StyleBoxFlat.new()
+		item_h.bg_color        = t.c_drop_hover
+		item_h.border_color    = Color(t.c_drop_border.r, t.c_drop_border.g, t.c_drop_border.b, 0.0)
+		item_h.set_border_width_all(0)
+		item_h.corner_radius_top_left     = 4
+		item_h.corner_radius_top_right    = 4
+		item_h.corner_radius_bottom_right = 4
+		item_h.corner_radius_bottom_left  = 4
+
+		var item_p := StyleBoxFlat.new()
+		item_p.bg_color        = t.c_drop_pressed
+		item_p.border_color    = Color(t.c_drop_border.r, t.c_drop_border.g, t.c_drop_border.b, 0.0)
+		item_p.set_border_width_all(0)
+		item_p.corner_radius_top_left     = 4
+		item_p.corner_radius_top_right    = 4
+		item_p.corner_radius_bottom_right = 4
+		item_p.corner_radius_bottom_left  = 4
+
+		popup.add_theme_stylebox_override("panel",         item_n)
+		popup.add_theme_stylebox_override("hover",         item_h)
+		popup.add_theme_stylebox_override("pressed",       item_p)
+		popup.add_theme_color_override("font_color",       t.c_text_hi)
+		popup.add_theme_color_override("font_hover_color", t.c_text_hi)
+
+
+## Register an OptionButton for themed dropdown styling + live reload.
+static func apply_dropdown(opt: OptionButton) -> void:
+	_apply_dropdown_to(opt)
+	_dropdowns.append(weakref(opt))
+
 
 
 static func _apply_bar_style_to(panel: PanelContainer) -> void:
