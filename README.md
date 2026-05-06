@@ -44,8 +44,8 @@ PostProcessDisplay (ColorRect)   — tonemap / gamma / vignette / grain on top
 │   ├── keymap.gd              # Rebindable key action registry
 │   └── visualizer.gd          # Shader switching, feedback buffer, uniform push
 ├── shaders/
-│   ├── post_process.gdshader  # External tonemap/gamma/grain/vignette layer
 │   ├── utils/
+│   │   ├── post_process.gdshader  # External tonemap/gamma/grain/vignette layer
 │   │   └── shader_template.gdshader  # Starter template for new shaders
 │   └── *.gdshader             # Visualizer shaders (auto-discovered at runtime)
 ├── ui/
@@ -57,15 +57,13 @@ PostProcessDisplay (ColorRect)   — tonemap / gamma / vignette / grain on top
 │   │   ├── styles_ui.gd
 │   │   ├── notification_ui.gd
 │   │   ├── ui_theme.gd
-│   │   ├── ui_skin.gd
 │   │   └── ui_style.gd
 │   └── appearance/            # Swappable appearance assets
 │       ├── themes/            # Color schemes (.tres → UITheme)
-│       ├── skins/             # Shape/radius sets (.tres → UISkin)
 │       ├── styles/            # Shader + params (.tres → UIStyle)
 │       └── icons/             # Icon packs (one subfolder per pack)
 ├── docs/
-│   ├── APPEARANCE.md          # Theme / Skin / Style / Icon pack authoring
+│   ├── APPEARANCE.md          # Theme / Style / Icon pack authoring
 │   ├── SHADER.md              # Writing and adding visualizer shaders
 │   └── MILKDROP.md            # How to achieve the MilkDrop feel in Iguana
 ├── config.gd                  # Persistent settings (ConfigFile, user://)
@@ -75,7 +73,7 @@ PostProcessDisplay (ColorRect)   — tonemap / gamma / vignette / grain on top
 
 Shaders are discovered automatically by scanning `res://shaders/` at startup. Any `.gdshader` file with valid `@meta` tags is loaded. See [docs/SHADER.md](docs/SHADER.md) for how to add one.
 
-The appearance system (themes, skins, styles, icon packs) is swappable at runtime without restart. See [docs/APPEARANCE.md](docs/APPEARANCE.md) for how to author and publish custom appearance packs.
+The appearance system (themes, styles, icon packs) is swappable at runtime without restart. See [docs/APPEARANCE.md](docs/APPEARANCE.md) for how to author and publish custom appearance packs.
 
 ---
 
