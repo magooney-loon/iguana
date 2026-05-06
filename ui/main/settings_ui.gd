@@ -171,6 +171,16 @@ func _build() -> void:
 		p.add_theme_stylebox_override("tab_fg",    StylesUI.glass_box(t.c_tab_fg,    8.0, true))
 		p.add_theme_stylebox_override("tab_bg",    StylesUI.glass_box(t.c_tab_bg,    8.0, true))
 		p.add_theme_stylebox_override("tab_hover", StylesUI.glass_box(t.c_tab_hover, 8.0, true))
+		p.add_theme_color_override("font_color",          t.c_text_dim)
+		p.add_theme_color_override("font_hover_color",     t.c_text_hi)
+		p.add_theme_color_override("font_selected_color",  t.c_text_hi)
+		p.add_theme_font_size_override("font_size", t.font_title)
+		var tab_bar := p.get_tab_bar() as TabBar
+		if tab_bar:
+			tab_bar.add_theme_color_override("font_color",          t.c_text_dim)
+			tab_bar.add_theme_color_override("font_hover_color",     t.c_text_hi)
+			tab_bar.add_theme_color_override("font_selected_color",  t.c_text_hi)
+			tab_bar.add_theme_font_size_override("font_size", t.font_title)
 		var tab_box := StylesUI.glass_box(t.c_panel_bg, 10.0, false)
 		tab_box.shadow_size = 0
 		tab_box.content_margin_left   = 10.0
