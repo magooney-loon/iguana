@@ -304,17 +304,18 @@ func _process(delta: float) -> void:
 
 	if _analyzer.is_sounding:
 		# Beat-triggered switching: fires on a strong confirmed kick.
-		# Only active when shuffle is on; cooldown prevents rapid switches.
+		# Only after shuffle_interval has elapsed; cooldown prevents rapid switches.
 		_switch_cooldown = maxf(0.0, _switch_cooldown - delta)
-		if _shuffle_on and _switch_cooldown <= 0.0 \
+		_shuffle_timer += delta
+		if _shuffle_on and _shuffle_timer >= shuffle_interval \
+				and _switch_cooldown <= 0.0 \
 				and _analyzer._beat_confidence > 0.5 \
 				and _analyzer._kick_envelope > 0.85:
 			_shuffle()
 			_switch_cooldown = SWITCH_COOLDOWN_MIN
 
-		# Timer-based fallback (fires when beat confidence is too low to trigger above)
-		_shuffle_timer += delta
-		if _shuffle_on and _shuffle_timer >= shuffle_interval:
+		# Timer-based fallback (fires when no strong beat is detected)
+		if _shuffle_on and _shuffle_timer >= shuffle_interval * 1.5:
 			_shuffle()
 			_switch_cooldown = SWITCH_COOLDOWN_MIN
 
