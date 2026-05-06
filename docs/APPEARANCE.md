@@ -63,7 +63,8 @@ A theme is a `UITheme` resource. It controls every color used to build UI panels
 | `c_title_bar` | Window title bar background |
 | `c_panel_bg` | Content panel background |
 | `c_footer_bar` | Footer bar background |
-| `c_active_row` | Active / selected playlist row + keymap zebra stripe |
+| `c_active_row` | Active / selected playlist row |
+| `c_zebra` | Alternating row stripe (keymap tab) |
 
 **Tab colors:**
 

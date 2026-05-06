@@ -33,6 +33,7 @@ extends Resource
 @export var c_panel_bg     := Color(0.04, 0.05, 0.09, 0.60)
 @export var c_footer_bar   := Color(0.08, 0.09, 0.15, 0.55)
 @export var c_active_row   := Color(0.22, 0.34, 0.56, 0.50)
+@export var c_zebra        := Color(0.15, 0.18, 0.30, 0.25)
 
 @export_group("Separators & Text")
 @export var c_sep      := Color(0.45, 0.55, 0.75, 0.15)

@@ -740,19 +740,21 @@ func _build_keymap_tab() -> Control:
 	var actions: Array[String] = Keymap.get_all_actions()
 	for i in actions.size():
 		var action_id := actions[i]
+		var is_zebra := i % 2 == 1
 
-		# Zebra row background
 		var row := PanelContainer.new()
-		if i % 2 == 1:
-			var zebra := StylesUI.glass_box(StylesUI.theme().c_active_row, 5.0, false)
-			zebra.shadow_size  = 0
-			zebra.border_color = Color(0, 0, 0, 0)
-			zebra.set_border_width_all(0)
-			zebra.content_margin_left   = 6.0
-			zebra.content_margin_right  = 6.0
-			zebra.content_margin_top    = 3.0
-			zebra.content_margin_bottom = 3.0
-			row.add_theme_stylebox_override("panel", zebra)
+		if is_zebra:
+			StylesUI.track_glass_panel(row, func(p: Control) -> void:
+				var zebra := StylesUI.glass_box(StylesUI.theme().c_zebra, 5.0, false)
+				zebra.shadow_size  = 0
+				zebra.border_color = Color(0, 0, 0, 0)
+				zebra.set_border_width_all(0)
+				zebra.content_margin_left   = 6.0
+				zebra.content_margin_right  = 6.0
+				zebra.content_margin_top    = 3.0
+				zebra.content_margin_bottom = 3.0
+				p.add_theme_stylebox_override("panel", zebra)
+			)
 		else:
 			var m := StyleBoxFlat.new()
 			m.bg_color = Color(0, 0, 0, 0)
