@@ -8,8 +8,22 @@ static var _icon_pack: String = "aero"
 
 # ── Shared noise shader ───────────────────────────────────────────────────────
 static var _noise_shader: Shader
-static var _aero_panels: Array[WeakRef] = []
+
+# ── Tracked controls for live reload ─────────────────────────────────────────
+# {ref: WeakRef, subtle: bool}
+static var _aero_panels: Array[Dictionary] = []
+# WeakRef — reads icon_name from node metadata
+static var _icon_btns: Array[WeakRef] = []
+# WeakRef
+static var _glass_btns: Array[WeakRef] = []
+# {ref: WeakRef, compact: bool}
+static var _sliders: Array[Dictionary] = []
+# WeakRef
+static var _bar_panels: Array[WeakRef] = []
+# WeakRef (_Sep instances)
 static var _aero_seps: Array[WeakRef] = []
+# Extra per-component refresh hooks
+static var _reload_cbs: Array[Callable] = []
 
 
 static func theme() -> UITheme:
@@ -30,7 +44,8 @@ static func style() -> UIStyle:
 	return active_style
 
 
-## Load a named theme from ui/themes/<name>.tres.
+# ── Loaders ───────────────────────────────────────────────────────────────────
+
 static func load_theme(name: String) -> void:
 	var path := "res://ui/themes/%s.tres" % name
 	if ResourceLoader.exists(path):
@@ -41,7 +56,6 @@ static func load_theme(name: String) -> void:
 	active_theme = UITheme.new()
 
 
-## Load a named skin from ui/skins/<name>.tres.
 static func load_skin(name: String) -> void:
 	var path := "res://ui/skins/%s.tres" % name
 	if ResourceLoader.exists(path):
@@ -52,13 +66,6 @@ static func load_skin(name: String) -> void:
 	active_skin = UISkin.new()
 
 
-## Set the active icon pack — folder name under ui/icons/.
-static func load_icons(pack: String) -> void:
-	_icon_pack = pack
-
-
-## Load a named style from ui/styles/<name>.tres.
-## Invalidates the cached shader so the new shader_path is picked up.
 static func load_style(name: String) -> void:
 	var path := "res://ui/styles/%s.tres" % name
 	if ResourceLoader.exists(path):
@@ -71,6 +78,95 @@ static func load_style(name: String) -> void:
 	_noise_shader = null
 
 
+static func load_icons(pack: String) -> void:
+	_icon_pack = pack
+
+
+# ── Live reload ───────────────────────────────────────────────────────────────
+
+## Register a callback that fires on every reload_all().
+## Use a weak-ref guard inside the callable to handle freed nodes safely.
+static func on_reload(cb: Callable) -> void:
+	_reload_cbs.append(cb)
+
+
+## Re-apply the current theme/skin/style/icons to every tracked control.
+static func reload_all() -> void:
+	# Bar panels
+	var live_bar: Array[WeakRef] = []
+	for ref in _bar_panels:
+		var panel := ref.get_ref() as PanelContainer
+		if panel == null:
+			continue
+		_apply_bar_style_to(panel)
+		live_bar.append(ref)
+	_bar_panels = live_bar
+
+	# Glass buttons
+	var live_btns: Array[WeakRef] = []
+	for ref in _glass_btns:
+		var btn := ref.get_ref() as Button
+		if btn == null:
+			continue
+		_apply_glass_btn_to(btn)
+		live_btns.append(ref)
+	_glass_btns = live_btns
+
+	# Sliders
+	var live_sliders: Array[Dictionary] = []
+	for entry in _sliders:
+		var slider := entry.ref.get_ref() as HSlider
+		if slider == null:
+			continue
+		_apply_glass_slider_to(slider, entry.compact)
+		live_sliders.append(entry)
+	_sliders = live_sliders
+
+	# Aero shader panels — re-apply material params
+	var live_aero: Array[Dictionary] = []
+	for entry in _aero_panels:
+		var panel := entry.ref.get_ref() as Control
+		if panel == null:
+			continue
+		var mat := panel.material as ShaderMaterial
+		if mat:
+			_apply_aero_params(mat, entry.subtle)
+		live_aero.append(entry)
+	_aero_panels = live_aero
+
+	# Separators — update color and wave/cap from skin
+	var live_seps: Array[WeakRef] = []
+	for ref in _aero_seps:
+		var sep := ref.get_ref() as _Sep
+		if sep == null:
+			continue
+		sep._base_color = theme().c_sep_draw
+		sep._base_wave  = skin().sep_base_wave
+		sep._base_cap   = skin().sep_base_cap
+		live_seps.append(ref)
+	_aero_seps = live_seps
+
+	# Icon buttons — swap icons from current pack
+	var live_icons: Array[WeakRef] = []
+	for ref in _icon_btns:
+		var btn := ref.get_ref() as Button
+		if btn == null:
+			continue
+		if btn.has_meta("icon_name"):
+			var tex := load_icon(btn.get_meta("icon_name"))
+			if tex:
+				btn.icon = tex
+		live_icons.append(ref)
+	_icon_btns = live_icons
+
+	# Component callbacks (tabs, playlist rows, etc.)
+	for cb in _reload_cbs:
+		if cb.is_valid():
+			cb.call()
+
+
+# ── Shader helpers ────────────────────────────────────────────────────────────
+
 static func _get_noise_shader() -> Shader:
 	if _noise_shader == null:
 		var shader_path := style().shader_path
@@ -80,42 +176,18 @@ static func _get_noise_shader() -> Shader:
 	return _noise_shader
 
 
-## Apply a grain + vignette material directly to a panel Control.
-static func apply_noise(panel: Control, subtle := true) -> void:
-	var shader := _get_noise_shader()
-	if shader == null:
-		return
+static func _apply_aero_params(mat: ShaderMaterial, subtle: bool) -> void:
 	var st := style()
-	var mat := ShaderMaterial.new()
-	mat.shader = shader
 	if subtle:
 		mat.set_shader_parameter("grain_strength",      st.subtle_grain_strength)
 		mat.set_shader_parameter("grain_speed",         st.subtle_grain_speed)
 		mat.set_shader_parameter("vignette_strength",   st.subtle_vignette_strength)
 		mat.set_shader_parameter("vignette_pulse",      st.subtle_vignette_pulse)
 		mat.set_shader_parameter("vignette_pulse_spd",  st.subtle_vignette_pulse_spd)
-	else:
-		mat.set_shader_parameter("grain_strength",      st.normal_grain_strength)
-		mat.set_shader_parameter("grain_speed",         st.normal_grain_speed)
-		mat.set_shader_parameter("vignette_strength",   st.normal_vignette_strength)
-		mat.set_shader_parameter("vignette_pulse",      st.normal_vignette_pulse)
-		mat.set_shader_parameter("vignette_pulse_spd",  st.normal_vignette_pulse_spd)
-	panel.material = mat
-
-
-## Apply Frutiger Aero gloss + bevel on top of the noise.
-static func apply_aero(panel: Control, subtle := true) -> void:
-	apply_noise(panel, subtle)
-	var mat := panel.material as ShaderMaterial
-	if mat == null:
-		return
-	var st := style()
-	if subtle:
 		mat.set_shader_parameter("specular_strength",   st.subtle_specular_strength)
 		mat.set_shader_parameter("specular_y_pos",      st.subtle_specular_y_pos)
 		mat.set_shader_parameter("specular_height",     st.subtle_specular_height)
 		mat.set_shader_parameter("corner_radius",       st.subtle_corner_radius)
-		mat.set_shader_parameter("wave_seed",           randf() * 100.0)
 		mat.set_shader_parameter("gradient_strength",   st.subtle_gradient_strength)
 		mat.set_shader_parameter("fresnel_strength",    st.subtle_fresnel_strength)
 		mat.set_shader_parameter("fresnel_width",       st.subtle_fresnel_width)
@@ -125,11 +197,15 @@ static func apply_aero(panel: Control, subtle := true) -> void:
 		mat.set_shader_parameter("caustic_scale",       st.subtle_caustic_scale)
 		mat.set_shader_parameter("iridescence",         st.subtle_iridescence)
 	else:
+		mat.set_shader_parameter("grain_strength",      st.normal_grain_strength)
+		mat.set_shader_parameter("grain_speed",         st.normal_grain_speed)
+		mat.set_shader_parameter("vignette_strength",   st.normal_vignette_strength)
+		mat.set_shader_parameter("vignette_pulse",      st.normal_vignette_pulse)
+		mat.set_shader_parameter("vignette_pulse_spd",  st.normal_vignette_pulse_spd)
 		mat.set_shader_parameter("specular_strength",   st.normal_specular_strength)
 		mat.set_shader_parameter("specular_y_pos",      st.normal_specular_y_pos)
 		mat.set_shader_parameter("specular_height",     st.normal_specular_height)
 		mat.set_shader_parameter("corner_radius",       st.normal_corner_radius)
-		mat.set_shader_parameter("wave_seed",           randf() * 100.0)
 		mat.set_shader_parameter("gradient_strength",   st.normal_gradient_strength)
 		mat.set_shader_parameter("fresnel_strength",    st.normal_fresnel_strength)
 		mat.set_shader_parameter("fresnel_width",       st.normal_fresnel_width)
@@ -138,15 +214,33 @@ static func apply_aero(panel: Control, subtle := true) -> void:
 		mat.set_shader_parameter("gloss_texture_str",   st.normal_gloss_texture_str)
 		mat.set_shader_parameter("caustic_scale",       st.normal_caustic_scale)
 		mat.set_shader_parameter("iridescence",         st.normal_iridescence)
-	_aero_panels.append(WeakRef.new())
-	_aero_panels[-1] = weakref(panel)
 
 
-## Push audio data to all active aero panels and separators every frame.
+# ── Public style API ──────────────────────────────────────────────────────────
+
+static func apply_noise(panel: Control, subtle := true) -> void:
+	var shader := _get_noise_shader()
+	if shader == null:
+		return
+	var mat := ShaderMaterial.new()
+	mat.shader = shader
+	_apply_aero_params(mat, subtle)
+	panel.material = mat
+
+
+static func apply_aero(panel: Control, subtle := true) -> void:
+	apply_noise(panel, subtle)
+	var mat := panel.material as ShaderMaterial
+	if mat == null:
+		return
+	mat.set_shader_parameter("wave_seed", randf() * 100.0)
+	_aero_panels.append({"ref": weakref(panel), "subtle": subtle})
+
+
 static func update_audio(beat_val: float, energy_val: float, bass_val: float) -> void:
-	var alive: Array[WeakRef] = []
-	for ref in _aero_panels:
-		var panel := ref.get_ref() as Control
+	var alive: Array[Dictionary] = []
+	for entry in _aero_panels:
+		var panel := entry.ref.get_ref() as Control
 		if panel == null:
 			continue
 		var mat := panel.material as ShaderMaterial
@@ -155,7 +249,7 @@ static func update_audio(beat_val: float, energy_val: float, bass_val: float) ->
 		mat.set_shader_parameter("beat",   beat_val)
 		mat.set_shader_parameter("energy", energy_val)
 		mat.set_shader_parameter("bass",   bass_val)
-		alive.append(ref)
+		alive.append(entry)
 	_aero_panels = alive
 
 	var live: Array[WeakRef] = []
@@ -187,7 +281,7 @@ static func glass_box(bg: Color, radius: float = 10.0, highlight: bool = true) -
 	return s
 
 
-static func apply_glass_btn(btn: Button) -> void:
+static func _apply_glass_btn_to(btn: Button) -> void:
 	var t  := theme()
 	var sk := skin()
 	var r  := sk.btn_radius
@@ -214,7 +308,12 @@ static func apply_glass_btn(btn: Button) -> void:
 	btn.add_theme_stylebox_override("pressed", p)
 
 
-static func apply_glass_slider(slider: HSlider, compact := false) -> void:
+static func apply_glass_btn(btn: Button) -> void:
+	_apply_glass_btn_to(btn)
+	_glass_btns.append(weakref(btn))
+
+
+static func _apply_glass_slider_to(slider: HSlider, compact: bool) -> void:
 	var t  := theme()
 	var sk := skin()
 	var track_h   := sk.slider_track_compact if compact else sk.slider_track_normal
@@ -282,7 +381,12 @@ static func apply_glass_slider(slider: HSlider, compact := false) -> void:
 	slider.add_theme_stylebox_override("grabber_area_highlight", grab_h)
 
 
-static func apply_bar_style(panel: PanelContainer) -> void:
+static func apply_glass_slider(slider: HSlider, compact := false) -> void:
+	_apply_glass_slider_to(slider, compact)
+	_sliders.append({"ref": weakref(slider), "compact": compact})
+
+
+static func _apply_bar_style_to(panel: PanelContainer) -> void:
 	var t  := theme()
 	var sk := skin()
 	var box := glass_box(t.c_glass_dark, sk.bar_radius, true)
@@ -294,6 +398,11 @@ static func apply_bar_style(panel: PanelContainer) -> void:
 	box.content_margin_bottom = sk.bar_padding_v
 	box.shadow_size = sk.bar_shadow_size
 	panel.add_theme_stylebox_override("panel", box)
+
+
+static func apply_bar_style(panel: PanelContainer) -> void:
+	_apply_bar_style_to(panel)
+	_bar_panels.append(weakref(panel))
 
 
 static func make_vsep() -> Control:
@@ -319,16 +428,19 @@ static func icon_btn(icon_name: String, tooltip: String = "",
 		btn.icon = tex
 		btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		btn.expand_icon = true
+	btn.set_meta("icon_name", icon_name)
 	btn.tooltip_text = tooltip
 	btn.custom_minimum_size = min_size
 	btn.focus_mode = Control.FOCUS_NONE
 	if callback.is_valid():
 		btn.pressed.connect(callback)
 	apply_glass_btn(btn)
+	_icon_btns.append(weakref(btn))
 	return btn
 
 
 static func set_icon(btn: Button, icon_name: String) -> void:
+	btn.set_meta("icon_name", icon_name)
 	var tex := load_icon(icon_name)
 	if tex:
 		btn.icon = tex
@@ -372,9 +484,8 @@ static func win_sep(parent: Control) -> void:
 	parent.add_child(sep)
 
 
-# ── Separator — inner class ───────────────────────────────────────────────────
-## Wavy audio-reactive separator drawn entirely in code.
-## Reads color from UITheme.c_sep_draw and wave/cap from UISkin on _ready.
+# ── Separator inner class ─────────────────────────────────────────────────────
+
 class _Sep extends Control:
 	const _TAU := 6.28318530718
 

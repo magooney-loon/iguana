@@ -31,6 +31,12 @@ func setup(playlist: Playlist) -> void:
 	_playlist.playlist_changed.connect(_rebuild_list)
 	_init_styles()
 	_build()
+	StylesUI.on_reload(func() -> void:
+		if not is_instance_valid(_win):
+			return
+		_init_styles()
+		_rebuild_list()
+	)
 
 
 func toggle() -> void:

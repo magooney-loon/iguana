@@ -192,6 +192,14 @@ func _build() -> void:
 	_tabs.add_child(_build_debug_tab())
 	_tabs.add_child(_build_about_tab())
 
+	StylesUI.on_reload(func() -> void:
+		if not is_instance_valid(_tabs):
+			return
+		_tabs.add_theme_stylebox_override("tab_fg",    StylesUI.glass_box(StylesUI.theme().c_btn_h,  8.0, true))
+		_tabs.add_theme_stylebox_override("tab_bg",    StylesUI.glass_box(StylesUI.theme().c_btn,    8.0, true))
+		_tabs.add_theme_stylebox_override("tab_hover", StylesUI.glass_box(StylesUI.theme().c_accent, 8.0, true))
+	)
+
 
 # ── General tab ──────────────────────────────────────────────────────────────
 
@@ -275,6 +283,8 @@ func _build_general_tab() -> Control:
 	theme_opt.item_selected.connect(func(idx: int) -> void:
 		Config.theme_name = _themes[idx]
 		Config.save()
+		StylesUI.load_theme(Config.theme_name)
+		StylesUI.reload_all()
 	)
 	theme_row.add_child(theme_opt)
 	vbox.add_child(theme_row)
@@ -298,6 +308,8 @@ func _build_general_tab() -> Control:
 	skin_opt.item_selected.connect(func(idx: int) -> void:
 		Config.skin_name = _skins[idx]
 		Config.save()
+		StylesUI.load_skin(Config.skin_name)
+		StylesUI.reload_all()
 	)
 	skin_row.add_child(skin_opt)
 	vbox.add_child(skin_row)
@@ -321,6 +333,8 @@ func _build_general_tab() -> Control:
 	style_opt.item_selected.connect(func(idx: int) -> void:
 		Config.style_name = _styles[idx]
 		Config.save()
+		StylesUI.load_style(Config.style_name)
+		StylesUI.reload_all()
 	)
 	style_row.add_child(style_opt)
 	vbox.add_child(style_row)
@@ -344,15 +358,11 @@ func _build_general_tab() -> Control:
 	icons_opt.item_selected.connect(func(idx: int) -> void:
 		Config.icon_pack_name = _icon_packs[idx]
 		Config.save()
+		StylesUI.load_icons(Config.icon_pack_name)
+		StylesUI.reload_all()
 	)
 	icons_row.add_child(icons_opt)
 	vbox.add_child(icons_row)
-
-	var restart_note := Label.new()
-	restart_note.text = "Changes take effect on restart"
-	restart_note.add_theme_font_size_override("font_size", 10)
-	restart_note.modulate.a = 0.45
-	vbox.add_child(restart_note)
 
 	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "DISPLAY")
