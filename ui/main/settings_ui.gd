@@ -268,7 +268,9 @@ func _build_general_tab() -> Control:
 	theme_row.add_theme_constant_override("separation", 8)
 	var theme_pre := Label.new()
 	theme_pre.text = "Theme"
-	theme_pre.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	StylesUI.track_label(theme_pre, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	)
 	theme_pre.custom_minimum_size.x = 48
 	theme_row.add_child(theme_pre)
 	var theme_opt := OptionButton.new()
@@ -293,7 +295,9 @@ func _build_general_tab() -> Control:
 	skin_row.add_theme_constant_override("separation", 8)
 	var skin_pre := Label.new()
 	skin_pre.text = "Skin"
-	skin_pre.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	StylesUI.track_label(skin_pre, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	)
 	skin_pre.custom_minimum_size.x = 48
 	skin_row.add_child(skin_pre)
 	var skin_opt := OptionButton.new()
@@ -318,7 +322,9 @@ func _build_general_tab() -> Control:
 	style_row.add_theme_constant_override("separation", 8)
 	var style_pre := Label.new()
 	style_pre.text = "Style"
-	style_pre.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	StylesUI.track_label(style_pre, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	)
 	style_pre.custom_minimum_size.x = 48
 	style_row.add_child(style_pre)
 	var style_opt := OptionButton.new()
@@ -343,7 +349,9 @@ func _build_general_tab() -> Control:
 	icons_row.add_theme_constant_override("separation", 8)
 	var icons_pre := Label.new()
 	icons_pre.text = "Icons"
-	icons_pre.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	StylesUI.track_label(icons_pre, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	)
 	icons_pre.custom_minimum_size.x = 48
 	icons_row.add_child(icons_pre)
 	var icons_opt := OptionButton.new()
