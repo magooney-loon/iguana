@@ -166,12 +166,6 @@ func _build() -> void:
 	title_row.add_child(title_lbl)
 
 	# ── Track list ────────────────────────────────────────────────────
-	var list_margin := MarginContainer.new()
-	list_margin.add_theme_constant_override("margin_left",   8)
-	list_margin.add_theme_constant_override("margin_right",  8)
-	list_margin.add_theme_constant_override("margin_top",    4)
-	list_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(list_margin)
 
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -179,15 +173,25 @@ func _build() -> void:
 	StylesUI.track_glass_panel(_scroll, func(p: Control) -> void:
 		var box := StylesUI.glass_box(StylesUI.theme().c_panel_bg, 10.0, false)
 		box.shadow_size = 0
+		box.content_margin_left   = 8.0
+		box.content_margin_right  = 8.0
+		box.content_margin_top    = 6.0
+		box.content_margin_bottom = 6.0
 		p.add_theme_stylebox_override("panel", box)
 	)
 	StylesUI.apply_aero(_scroll, true)
-	list_margin.add_child(_scroll)
+	col.add_child(_scroll)
+
+	var list_pad := MarginContainer.new()
+	list_pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list_pad.add_theme_constant_override("margin_right", 4)
+	list_pad.add_theme_constant_override("margin_bottom", 8)
+	_scroll.add_child(list_pad)
 
 	_track_container = VBoxContainer.new()
 	_track_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_track_container.add_theme_constant_override("separation", 2)
-	_scroll.add_child(_track_container)
+	list_pad.add_child(_track_container)
 
 	# ── Footer bar ────────────────────────────────────────────────────
 	var footer_bar := PanelContainer.new()
