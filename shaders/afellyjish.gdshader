@@ -298,9 +298,9 @@ void fragment() {
 	// Fade near center — plankton lives in the outer regions
 	float outer_mask = smoothstep(0.2, 0.55, r_p);
 
-	// Brightness — subtle, scaled by audio
+	// Brightness — visible but not overpowering, scaled by audio
 	float plankton_brightness = plankton * outer_mask
-	                           * (0.012 + energy * 0.008 + treble * 0.004);
+	                           * (0.06 + energy * 0.04 + treble * 0.02);
 
 	// Color — cool blue-green bioluminescence with warmth tint
 	vec3 plankton_col = plankton_brightness
@@ -308,10 +308,44 @@ void fragment() {
 	                         0.55 + brightness * 0.1,
 	                         0.85 + activity * 0.1);
 
+	// ══════════════════════════════════════════════════════════════════
+	//  2c. EDGE AURA — flowing glow hugging the screen border
+	//
+	//  Lives exclusively in the vignette zone (outermost rim).
+	//  • Distance-from-edge metric confines it to the perimeter
+	//  • Noise texture adds organic flowing variation
+	//  • Pulses gently with the beat, swells with bass/energy
+	// ══════════════════════════════════════════════════════════════════
+
+	// Distance from nearest screen edge (0 at border, ~0.5 at center)
+	float rim_d = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
+
+	// Two noise samples at different scales for organic edge flow
+	float edge_n1 = texture(noise_tex, uv * 2.5 + vec2(t * 0.04, t * 0.02)).r;
+	float edge_n2 = texture(noise_tex, uv * 5.0 - vec2(t * 0.06, t * 0.03)).r;
+	float edge_flow = edge_n1 * 0.6 + edge_n2 * 0.4;
+
+	// Mask: only the outermost ~10–12% of the screen
+	float edge_mask = smoothstep(0.12, 0.01, rim_d);
+
+	// Breathing pulse — slow ambient + beat transient
+	float edge_pulse = 1.0 + beat * 0.4 + bass * 0.2;
+
+	// Intensity — visible rim glow, boosted by audio
+	float edge_intensity = edge_mask * edge_flow * edge_pulse
+	                     * (0.08 + energy * 0.06);
+
+	// Color — warm-cool blend that shifts with audio mood
+	vec3 edge_col = edge_intensity
+	              * mix(vec3(0.2, 0.35, 0.7),   // cool blue
+	                    vec3(0.5, 0.25, 0.6),    // warm violet
+	                    warmth)
+	              * (1.0 + presence * 0.3);
+
 	// Tanh tonemap — clamps per-frame output, then scale low for
 	// safe feedback equilibrium.  With decay ~0.88:
 	//   equilibrium = 0.10 / 0.12 ≈ 0.83  (stays ≤ 1.0)
-	vec3 new_col = tanh(glow * 0.5) * 0.10 + plankton_col;
+	vec3 new_col = tanh(glow * 0.5) * 0.10 + plankton_col + edge_col;
 
 	// ══════════════════════════════════════════════════════════════════
 	//  3. COMPOSITE — blend trail + new geometry, apply loop_reinhard
