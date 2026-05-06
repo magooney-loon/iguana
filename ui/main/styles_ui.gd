@@ -1,9 +1,10 @@
 class_name StylesUI
 
-# ── Active theme / style / icon pack ─────────────────────────────────────────
+# ── Active theme / style / icon pack / font ──────────────────────────────────
 static var active_theme: UITheme
 static var active_style: UIStyle
 static var _icon_pack: String = "aero"
+static var active_font: FontFile   # null = engine default
 
 # ── Shared noise shader ───────────────────────────────────────────────────────
 static var _noise_shader: Shader
@@ -63,11 +64,12 @@ static func discover_skins() -> Array[String]:
 	return skins
 
 
-## Load a complete skin (theme + style + icons) by folder name.
+## Load a complete skin (theme + style + icons + font) by folder name.
 static func load_skin(name: String) -> void:
 	load_theme(name)
 	load_style(name)
 	load_icons(name)
+	load_font(name)
 
 
 static func load_theme(name: String) -> void:
@@ -94,6 +96,30 @@ static func load_style(name: String) -> void:
 
 static func load_icons(pack: String) -> void:
 	_icon_pack = pack
+
+
+## Load a font (.ttf / .otf) from the skin folder if one exists.
+## Skin authors drop a font file alongside theme.tres — the first
+## .ttf or .otf found is used for all UI labels. If none is found,
+## active_font stays null and the engine default (Inter) is used.
+static func load_font(name: String) -> void:
+	active_font = null
+	var dir := DirAccess.open("res://ui/appearance/%s" % name)
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	var f := dir.get_next()
+	while f != "":
+		var lower := f.to_lower()
+		if lower.ends_with(".ttf") or lower.ends_with(".otf"):
+			var font_path := "res://ui/appearance/%s/%s" % [name, f]
+			var loaded := ResourceLoader.load(font_path) as FontFile
+			if loaded != null:
+				active_font = loaded
+				dir.list_dir_end()
+				return
+		f = dir.get_next()
+	dir.list_dir_end()
 
 
 # ── Live reload ───────────────────────────────────────────────────────────────
@@ -183,13 +209,14 @@ static func reload_all() -> void:
 		live_gp.append(entry)
 	_glass_panels = live_gp
 
-	# Tracked labels — re-apply colors and font sizes
+	# Tracked labels — re-apply colors, font sizes, and font
 	var live_lbl: Array[Dictionary] = []
 	for entry in _tracked_labels:
 		var lbl := entry.ref.get_ref() as Label
 		if lbl == null:
 			continue
 		entry.refresh.call(lbl)
+		apply_font(lbl)
 		live_lbl.append(entry)
 	_tracked_labels = live_lbl
 
@@ -438,7 +465,16 @@ static func track_glass_panel(panel: Control, rebuild: Callable) -> void:
 ## should re-apply modulate, font_size, etc from the current theme.
 static func track_label(lbl: Label, refresh: Callable) -> void:
 	refresh.call(lbl)
+	apply_font(lbl)
 	_tracked_labels.append({"ref": weakref(lbl), "refresh": refresh})
+
+
+## Apply the active skin font to a label (or reset to default).
+static func apply_font(lbl: Label) -> void:
+	if active_font != null:
+		lbl.add_theme_font_override("font", active_font)
+	else:
+		lbl.remove_theme_font_override("font")
 
 
 ## Style an OptionButton with the current theme colors.

@@ -236,6 +236,11 @@ func _apply_engine_theme() -> void:
 	_engine_theme.set_color("font_pressed_color", "OptionButton", t.c_text_hi)
 	_engine_theme.set_color("font_color", "PopupMenu", t.c_text_hi)
 	_engine_theme.set_color("font_hover_color", "PopupMenu", t.c_text_hi)
+	# Apply skin font to all built-in controls, or clear back to default
+	if StylesUI.active_font != null:
+		_engine_theme.default_font = StylesUI.active_font
+	else:
+		_engine_theme.default_font = null
 
 
 # ── General tab ──────────────────────────────────────────────────────────────

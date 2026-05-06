@@ -472,6 +472,7 @@ func _rebuild_list() -> void:
 		empty_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
 		empty_lbl.modulate.a = StylesUI.theme().a_empty_msg
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		StylesUI.apply_font(empty_lbl)
 		_track_container.add_child(empty_lbl)
 		_update_footer()
 		return
@@ -519,6 +520,7 @@ func _create_row(idx: int, force_active: int = -2) -> Dictionary:
 	num_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	num_lbl.custom_minimum_size.x = 28
 	num_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	StylesUI.apply_font(num_lbl)
 	hbox.add_child(num_lbl)
 
 	# ── Name (clipped, with marquee if needed) ────────────────────
@@ -536,6 +538,7 @@ func _create_row(idx: int, force_active: int = -2) -> Dictionary:
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	name_label.modulate = StylesUI.theme().c_text_hi if is_active else StylesUI.theme().c_text_dim
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	StylesUI.apply_font(name_label)
 	name_clip.add_child(name_label)
 
 	# ── Duration ──────────────────────────────────────────────────
@@ -546,6 +549,7 @@ func _create_row(idx: int, force_active: int = -2) -> Dictionary:
 	dur_lbl.custom_minimum_size.x = 44
 	dur_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	dur_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	StylesUI.apply_font(dur_lbl)
 	hbox.add_child(dur_lbl)
 
 	# ── Spacer ─────────────────────────────────────────────────────

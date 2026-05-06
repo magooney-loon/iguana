@@ -158,6 +158,7 @@ func _build_bar() -> void:
 	_song_label.text = "No track loaded"
 	_song_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_song_label.clip_text = true
+	StylesUI.track_label(_song_label, func(_l: Label) -> void: pass)
 	top.add_child(_song_label)
 
 	_time_label = Label.new()
