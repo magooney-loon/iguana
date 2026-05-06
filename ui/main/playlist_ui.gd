@@ -11,6 +11,10 @@ var _track_rows: Array[Dictionary] = []  # {row, name_clip, name_label, dur_labe
 var _duration_cache: Dictionary = {}     # path → float seconds
 var _marquee_tweens: Array[Tween] = []
 
+# Animation queue — prevents overlapping mutations
+var _animating := false
+var _pending_ops: Array[Callable] = []
+
 # Footer
 var _footer_stats: Label
 var _add_btn: Button
@@ -28,7 +32,7 @@ var on_track_selected: Callable
 func setup(playlist: Playlist) -> void:
 	_playlist = playlist
 	_playlist.track_changed.connect(_on_track_changed)
-	_playlist.playlist_changed.connect(_rebuild_list)
+	_playlist.playlist_changed.connect(_on_playlist_changed)
 	_init_styles()
 	_build()
 	StylesUI.on_reload(func() -> void:
@@ -231,6 +235,221 @@ func _build() -> void:
 	_rebuild_list()
 
 
+# ── Mutation routing ──────────────────────────────────────────────────────────
+# Instead of _rebuild_list on every playlist_changed, we detect what changed
+# and animate surgically. Falls back to full rebuild for bulk/clear operations.
+
+var _last_track_list: Array[String] = []
+var _last_current: int = -1
+
+func _on_playlist_changed() -> void:
+	var new_list := _playlist.get_tracks()
+	var new_current := _playlist.get_current_index()
+
+	# If the list is empty or we don't have rows yet, full rebuild
+	if _track_rows.is_empty() or new_list.is_empty():
+		_rebuild_list()
+		_last_track_list = new_list.duplicate()
+		_last_current = new_current
+		return
+
+	# Detect what changed
+	var diff := _detect_diff(_last_track_list, new_list)
+
+	match diff.type:
+		"add_one":
+			_animate_add(diff.index)
+		"add_many":
+			_animate_add_many(diff.indices)
+		"remove_one":
+			_animate_remove(diff.index)
+		"clear":
+			_animate_clear()
+		"reorder", _:
+			# For reorder or unknown, do a full animated rebuild
+			_rebuild_list()
+
+	_last_track_list = new_list.duplicate()
+	_last_current = new_current
+
+
+func _detect_diff(old: Array[String], new: Array[String]) -> Dictionary:
+	# Clear
+	if new.is_empty() and not old.is_empty():
+		return {"type": "clear"}
+
+	# Same size — check for reorder
+	if old.size() == new.size():
+		var diffs := 0
+		var diff_idx := -1
+		for i in old.size():
+			if old[i] != new[i]:
+				diffs += 1
+				diff_idx = i
+		if diffs == 0:
+			return {"type": "none"}
+		if diffs <= 2:
+			return {"type": "reorder"}
+		return {"type": "reorder"}
+
+	# One item added
+	if new.size() == old.size() + 1:
+		# Find where the new item was inserted
+		for i in new.size():
+			var check_old := new.duplicate()
+			check_old.remove_at(i)
+			if check_old == old:
+				return {"type": "add_one", "index": i}
+		return {"type": "add_one", "index": new.size() - 1}
+
+	# Many items added (batch add)
+	if new.size() > old.size() + 1:
+		# Check if all old items are a prefix of new
+		var is_append := true
+		for i in old.size():
+			if old[i] != new[i]:
+				is_append = false
+				break
+		if is_append:
+			var indices: Array[int] = []
+			for i in range(old.size(), new.size()):
+				indices.append(i)
+			return {"type": "add_many", "indices": indices}
+		# Otherwise full rebuild
+		return {"type": "reorder"}
+
+	# One item removed
+	if new.size() == old.size() - 1:
+		for i in old.size():
+			var check_new := old.duplicate()
+			check_new.remove_at(i)
+			if check_new == new:
+				return {"type": "remove_one", "index": i}
+		return {"type": "reorder"}
+
+	return {"type": "reorder"}
+
+
+# ── Animated mutations ─────────────────────────────────────────────────────────
+
+func _animate_add(idx: int) -> void:
+	_cache_durations()
+	_insert_row_anim(idx)
+	_update_footer()
+	_setup_marquees.call_deferred()
+
+
+func _animate_add_many(indices: Array[int]) -> void:
+	_cache_durations()
+	# Animate each new row appearing one after another with stagger
+	for i in indices.size():
+		var row_idx := indices[i]
+		# Use call_deferred to stagger
+		var delay := i * 0.04
+		get_tree().create_timer(delay).timeout.connect(func() -> void:
+			if not is_instance_valid(self):
+				return
+			_insert_row_anim(row_idx)
+		)
+	_update_footer()
+	_setup_marquees.call_deferred()
+
+
+func _insert_row_anim(idx: int) -> void:
+	# Build the row (same as _create_row but returns it)
+	var row_data := _create_row(idx)
+	var row: PanelContainer = row_data["row"]
+
+	# Insert at the right position in the container
+	if idx >= _track_container.get_child_count():
+		_track_container.add_child(row)
+	else:
+		_track_container.add_child(row)
+		_track_container.move_child(row, idx)
+
+	# Insert into _track_rows at the right position
+	_track_rows.insert(idx, row_data)
+	# Re-index all rows after this point
+	_reindex_rows()
+
+	# Start collapsed + invisible, then animate open
+	row.custom_minimum_size.y = 0.0
+	row.modulate.a = 0.0
+	# Force a layout update to get the natural size
+	await get_tree().process_frame
+
+	var target_y := row.get_combined_minimum_size().y
+	if target_y < 10.0:
+		target_y = 36.0  # fallback height
+
+	var tw := create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUART)
+	tw.set_parallel(true)
+	tw.tween_property(row, "custom_minimum_size:y", target_y, 0.25)
+	tw.tween_property(row, "modulate:a", 1.0, 0.20)
+	# Also animate a subtle slide-in from the right
+	row.position.x = 20.0
+	tw.tween_property(row, "position:x", 0.0, 0.25)
+
+
+func _animate_remove(idx: int) -> void:
+	if idx < 0 or idx >= _track_rows.size():
+		return
+	var entry: Dictionary = _track_rows[idx]
+	var row: PanelContainer = entry["row"]
+
+	if not is_instance_valid(row):
+		_track_rows.remove_at(idx)
+		_rebuild_list()
+		return
+
+	# Animate collapse + fade
+	var tw := create_tween().set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUART)
+	tw.set_parallel(true)
+	tw.tween_property(row, "modulate:a", 0.0, 0.18)
+	tw.tween_property(row, "custom_minimum_size:y", 0.0, 0.18)
+	# Slide out to the right
+	tw.tween_property(row, "position:x", 30.0, 0.18)
+
+	tw.chain().tween_callback(func() -> void:
+		if is_instance_valid(row):
+			row.queue_free()
+		_track_rows.remove_at(idx)
+		_reindex_rows()
+		_update_footer()
+		_setup_marquees.call_deferred()
+	)
+
+
+func _animate_clear() -> void:
+	if _track_rows.is_empty():
+		_rebuild_list()
+		return
+
+	_kill_marquees()
+	var row_count := _track_rows.size()
+	var delay_per := 0.03
+	var total_delay := row_count * delay_per
+
+	# Stagger collapse from top to bottom
+	for i in row_count:
+		var entry: Dictionary = _track_rows[i]
+		var row: PanelContainer = entry["row"]
+		if not is_instance_valid(row):
+			continue
+		var tw := create_tween()
+		tw.tween_interval(i * delay_per)
+		tw.set_parallel(true).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUART)
+		tw.tween_property(row, "modulate:a", 0.0, 0.15)
+		tw.tween_property(row, "custom_minimum_size:y", 0.0, 0.15)
+
+	# After all animations complete, do the actual rebuild (shows empty state)
+	get_tree().create_timer(total_delay + 0.20).timeout.connect(func() -> void:
+		if not is_instance_valid(self):
+			return
+		_rebuild_list()
+	)
+
+
 # ── Track list ────────────────────────────────────────────────────────────────
 
 func _kill_marquees() -> void:
@@ -261,120 +480,154 @@ func _rebuild_list() -> void:
 	var current_idx := _playlist.get_current_index()
 
 	for i in _playlist.size():
-		var track_path: String = _playlist.get_track(i)
-		var track_name := track_path.get_file().get_basename()
-		var dur: float = _duration_cache.get(track_path, 0.0)
-		var is_active := (i == current_idx)
-
-		# Row container (PanelContainer for background styling)
-		var row := PanelContainer.new()
-		row.add_theme_stylebox_override("panel", _style_active.duplicate() if is_active else _style_normal.duplicate())
-		row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		StylesUI.apply_aero(row, true)
-		var idx := i
-
-		# Inner HBox for layout
-		var hbox := HBoxContainer.new()
-		hbox.add_theme_constant_override("separation", 2)
-		row.add_child(hbox)
-
-		# ── Number ────────────────────────────────────────────────────
-		var num_lbl := Label.new()
-		num_lbl.text = "%d." % [i + 1]
-		num_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
-		num_lbl.modulate.a = StylesUI.theme().a_track_num
-		num_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-		num_lbl.custom_minimum_size.x = 28
-		num_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		hbox.add_child(num_lbl)
-
-		# ── Name (clipped, with marquee if needed) ────────────────────
-		var name_clip := Control.new()
-		name_clip.clip_contents = true
-		name_clip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		name_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		hbox.add_child(name_clip)
-
-		var name_label := Label.new()
-		name_label.text = track_name
-		name_label.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
-		name_label.anchor_top = 0.0
-		name_label.anchor_bottom = 1.0
-		name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		name_label.modulate = StylesUI.theme().c_text_hi if is_active else StylesUI.theme().c_text_dim
-		name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		name_clip.add_child(name_label)
-
-		# ── Duration ──────────────────────────────────────────────────
-		var dur_lbl := Label.new()
-		dur_lbl.text = _fmt_duration(dur)
-		dur_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
-		dur_lbl.modulate.a = StylesUI.theme().a_duration
-		dur_lbl.custom_minimum_size.x = 44
-		dur_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		dur_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		hbox.add_child(dur_lbl)
-
-		# ── Spacer ─────────────────────────────────────────────────────
-		var spacer := Control.new()
-		spacer.custom_minimum_size.x = 6
-		hbox.add_child(spacer)
-
-		# ── Remove button ─────────────────────────────────────────────
-		var remove_btn := Button.new()
-		var remove_tex := StylesUI.load_icon("close")
-		if remove_tex:
-			remove_btn.icon = remove_tex
-			remove_btn.expand_icon = true
-		remove_btn.custom_minimum_size = Vector2(20, 20)
-		remove_btn.focus_mode = Control.FOCUS_NONE
-		remove_btn.mouse_filter = Control.MOUSE_FILTER_STOP
-		remove_btn.modulate.a = StylesUI.theme().a_dim_icon
-		remove_btn.tooltip_text = "Remove from playlist"
-		var _rs := func(bg: Color) -> StyleBoxFlat:
-			var s := StylesUI.glass_box(bg, 5.0, false)
-			s.content_margin_left   = 4.0
-			s.content_margin_right  = 4.0
-			s.content_margin_top    = 3.0
-			s.content_margin_bottom = 3.0
-			return s
-		remove_btn.add_theme_stylebox_override("normal", _rs.call(StylesUI.theme().c_btn))
-		remove_btn.add_theme_stylebox_override("hover", _rs.call(StylesUI.theme().c_btn_h))
-		remove_btn.add_theme_stylebox_override("pressed", _rs.call(StylesUI.theme().c_btn_p))
-		remove_btn.pressed.connect(func() -> void:
-			_playlist.remove(idx)
-		)
-		hbox.add_child(remove_btn)
-
-		# Click handling
-		row.gui_input.connect(func(event: InputEvent) -> void:
-			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-				if on_track_selected.is_valid():
-					on_track_selected.call(idx)
-		)
-
-		# Hover effects
-		row.mouse_entered.connect(func() -> void:
-			if not _is_active_row(idx):
-				row.add_theme_stylebox_override("panel", _style_hover.duplicate())
-		)
-		row.mouse_exited.connect(func() -> void:
-			if not _is_active_row(idx):
-				row.add_theme_stylebox_override("panel", _style_normal.duplicate())
-		)
-
-		_track_container.add_child(row)
-		_track_rows.append({
-			"row": row,
-			"name_clip": name_clip,
-			"name_label": name_label,
-			"dur_label": dur_lbl,
-			"index": i,
-		})
+		var row_data := _create_row(i, current_idx)
+		_track_container.add_child(row_data["row"])
+		_track_rows.append(row_data)
 
 	_update_footer()
+	_last_track_list = _playlist.get_tracks().duplicate()
+	_last_current = current_idx
 	# Wait for layout then set up marquees
 	_setup_marquees.call_deferred()
+
+
+## Create a single track row Dictionary. Separated from _rebuild_list so
+## both the bulk rebuild and animated insert can use it.
+func _create_row(idx: int, force_active: int = -2) -> Dictionary:
+	var current_idx := force_active if force_active >= -1 else _playlist.get_current_index()
+	var is_active := (idx == current_idx)
+	var track_path: String = _playlist.get_track(idx)
+	var track_name := track_path.get_file().get_basename()
+	var dur: float = _duration_cache.get(track_path, 0.0)
+
+	var row := PanelContainer.new()
+	row.add_theme_stylebox_override("panel", _style_active.duplicate() if is_active else _style_normal.duplicate())
+	row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	StylesUI.apply_aero(row, true)
+
+	# Inner HBox for layout
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 2)
+	row.add_child(hbox)
+
+	# ── Number ────────────────────────────────────────────────────
+	var num_lbl := Label.new()
+	num_lbl.text = "%d." % [idx + 1]
+	num_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	num_lbl.modulate.a = StylesUI.theme().a_track_num
+	num_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	num_lbl.custom_minimum_size.x = 28
+	num_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(num_lbl)
+
+	# ── Name (clipped, with marquee if needed) ────────────────────
+	var name_clip := Control.new()
+	name_clip.clip_contents = true
+	name_clip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(name_clip)
+
+	var name_label := Label.new()
+	name_label.text = track_name
+	name_label.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	name_label.anchor_top = 0.0
+	name_label.anchor_bottom = 1.0
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	name_label.modulate = StylesUI.theme().c_text_hi if is_active else StylesUI.theme().c_text_dim
+	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name_clip.add_child(name_label)
+
+	# ── Duration ──────────────────────────────────────────────────
+	var dur_lbl := Label.new()
+	dur_lbl.text = _fmt_duration(dur)
+	dur_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	dur_lbl.modulate.a = StylesUI.theme().a_duration
+	dur_lbl.custom_minimum_size.x = 44
+	dur_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	dur_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_child(dur_lbl)
+
+	# ── Spacer ─────────────────────────────────────────────────────
+	var spacer := Control.new()
+	spacer.custom_minimum_size.x = 6
+	hbox.add_child(spacer)
+
+	# ── Remove button ─────────────────────────────────────────────
+	var remove_btn := Button.new()
+	var remove_tex := StylesUI.load_icon("close")
+	if remove_tex:
+		remove_btn.icon = remove_tex
+		remove_btn.expand_icon = true
+	remove_btn.custom_minimum_size = Vector2(20, 20)
+	remove_btn.focus_mode = Control.FOCUS_NONE
+	remove_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	remove_btn.modulate.a = StylesUI.theme().a_dim_icon
+	remove_btn.tooltip_text = "Remove from playlist"
+	var _rs := func(bg: Color) -> StyleBoxFlat:
+		var s := StylesUI.glass_box(bg, 5.0, false)
+		s.content_margin_left   = 4.0
+		s.content_margin_right  = 4.0
+		s.content_margin_top    = 3.0
+		s.content_margin_bottom = 3.0
+		return s
+	remove_btn.add_theme_stylebox_override("normal", _rs.call(StylesUI.theme().c_btn))
+	remove_btn.add_theme_stylebox_override("hover", _rs.call(StylesUI.theme().c_btn_h))
+	remove_btn.add_theme_stylebox_override("pressed", _rs.call(StylesUI.theme().c_btn_p))
+	remove_btn.pressed.connect(func() -> void:
+		var entry_idx: int = row.get_meta("list_index")
+		_playlist.remove(entry_idx)
+	)
+	hbox.add_child(remove_btn)
+
+	# Click handling
+	row.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			if on_track_selected.is_valid():
+				var entry_idx: int = row.get_meta("list_index")
+				on_track_selected.call(entry_idx)
+	)
+
+	# Hover effects
+	row.mouse_entered.connect(func() -> void:
+		var entry_idx: int = row.get_meta("list_index")
+		if not _is_active_row(entry_idx):
+			row.add_theme_stylebox_override("panel", _style_hover.duplicate())
+	)
+	row.mouse_exited.connect(func() -> void:
+		var entry_idx: int = row.get_meta("list_index")
+		if not _is_active_row(entry_idx):
+			row.add_theme_stylebox_override("panel", _style_normal.duplicate())
+	)
+
+	var result := {
+		"row": row,
+		"name_clip": name_clip,
+		"name_label": name_label,
+		"dur_label": dur_lbl,
+		"index": idx,
+	}
+	# Store index as metadata so closures can look it up dynamically
+	row.set_meta("list_index", idx)
+	row.set_meta("entry", result)
+	return result
+
+
+## Re-assign index numbers and update row_idx captures after insert/remove.
+func _reindex_rows() -> void:
+	for i in _track_rows.size():
+		var entry: Dictionary = _track_rows[i]
+		entry["index"] = i
+		var row: PanelContainer = entry["row"]
+		if row == null:
+			continue
+		# Update the metadata so closures resolve the correct index
+		row.set_meta("list_index", i)
+		# Update the num label text
+		var hbox: HBoxContainer = row.get_child(0) as HBoxContainer
+		if hbox and hbox.get_child_count() > 0:
+			var num_lbl: Label = hbox.get_child(0) as Label
+			if num_lbl:
+				num_lbl.text = "%d." % [i + 1]
 
 
 func _is_active_row(idx: int) -> bool:
