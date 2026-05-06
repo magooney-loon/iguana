@@ -17,7 +17,12 @@ var _shader_dropdown: OptionButton
 var _tab_idx:         int = 0
 var _last_shader_idx := -1
 
-# General tab
+# General tab — Appearance dropdowns
+var _skin_opt:   OptionButton
+var _theme_opt:  OptionButton
+var _style_opt:  OptionButton
+var _icons_opt:  OptionButton
+var _skins: Array[String] = []
 var _shuffle_check: CheckBox
 var _shuffle_spin:  SpinBox
 
@@ -301,6 +306,8 @@ func _build_general_tab() -> Control:
 	StylesUI.win_section(vbox, "APPEARANCE")
 
 	# ── Skin preset ─────────────────────────────────────────────────
+	_skins = StylesUI.discover_skins()
+
 	var skin_row := HBoxContainer.new()
 	skin_row.add_theme_constant_override("separation", 8)
 	var skin_pre := Label.new()
@@ -311,26 +318,16 @@ func _build_general_tab() -> Control:
 	)
 	skin_pre.custom_minimum_size.x = 48
 	skin_row.add_child(skin_pre)
-	var skin_opt := OptionButton.new()
-	skin_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	skin_opt.focus_mode = Control.FOCUS_NONE
-	var _skins := StylesUI.discover_skins()
-	var _is_custom := Config.skin_name == "custom" or not (Config.skin_name in _skins)
-	if _is_custom:
-		skin_opt.add_item("Custom")
-	for _sk in _skins:
-		skin_opt.add_item(_sk)
-	if _is_custom:
-		skin_opt.selected = 0
-	else:
-		var _ski := _skins.find(Config.skin_name)
-		if _ski >= 0:
-			skin_opt.selected = _ski + (1 if _is_custom else 0)
-	skin_opt.item_selected.connect(func(idx: int) -> void:
-		if _is_custom and idx == 0:
-			return  # "Custom" placeholder selected — do nothing
-		var actual_idx := idx - (1 if _is_custom else 0)
-		var chosen := _skins[actual_idx]
+	_skin_opt = OptionButton.new()
+	_skin_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_skin_opt.focus_mode = Control.FOCUS_NONE
+	_rebuild_skin_dropdown()
+	_skin_opt.item_selected.connect(func(idx: int) -> void:
+		# Index 0 is always "Custom" if present, skins start after
+		var offset := 1 if _skin_opt.get_item_text(0) == "Custom" else 0
+		if offset == 1 and idx == 0:
+			return  # "Custom" placeholder — do nothing
+		var chosen := _skins[idx - offset]
 		Config.skin_name      = chosen
 		Config.theme_name     = chosen
 		Config.style_name     = chosen
@@ -338,9 +335,10 @@ func _build_general_tab() -> Control:
 		Config.save()
 		StylesUI.load_skin(chosen)
 		StylesUI.reload_all()
+		_sync_sub_dropdowns()
 	)
-	StylesUI.apply_dropdown(skin_opt)
-	skin_row.add_child(skin_opt)
+	StylesUI.apply_dropdown(_skin_opt)
+	skin_row.add_child(_skin_opt)
 	vbox.add_child(skin_row)
 
 	# ── Individual overrides ────────────────────────────────────────
@@ -355,23 +353,23 @@ func _build_general_tab() -> Control:
 	)
 	theme_pre.custom_minimum_size.x = 48
 	theme_row.add_child(theme_pre)
-	var theme_opt := OptionButton.new()
-	theme_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	theme_opt.focus_mode = Control.FOCUS_NONE
+	_theme_opt = OptionButton.new()
+	_theme_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_theme_opt.focus_mode = Control.FOCUS_NONE
 	for _sk in _skins:
-		theme_opt.add_item(_sk)
+		_theme_opt.add_item(_sk)
 	var _ti := _skins.find(Config.theme_name)
 	if _ti >= 0:
-		theme_opt.selected = _ti
-	theme_opt.item_selected.connect(func(idx: int) -> void:
+		_theme_opt.selected = _ti
+	_theme_opt.item_selected.connect(func(idx: int) -> void:
 		Config.theme_name = _skins[idx]
 		_update_custom_state()
 		Config.save()
 		StylesUI.load_theme(Config.theme_name)
 		StylesUI.reload_all()
 	)
-	StylesUI.apply_dropdown(theme_opt)
-	theme_row.add_child(theme_opt)
+	StylesUI.apply_dropdown(_theme_opt)
+	theme_row.add_child(_theme_opt)
 	vbox.add_child(theme_row)
 
 	var style_row := HBoxContainer.new()
@@ -384,23 +382,23 @@ func _build_general_tab() -> Control:
 	)
 	style_pre.custom_minimum_size.x = 48
 	style_row.add_child(style_pre)
-	var style_opt := OptionButton.new()
-	style_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	style_opt.focus_mode = Control.FOCUS_NONE
+	_style_opt = OptionButton.new()
+	_style_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_opt.focus_mode = Control.FOCUS_NONE
 	for _sk in _skins:
-		style_opt.add_item(_sk)
+		_style_opt.add_item(_sk)
 	var _sti := _skins.find(Config.style_name)
 	if _sti >= 0:
-		style_opt.selected = _sti
-	style_opt.item_selected.connect(func(idx: int) -> void:
+		_style_opt.selected = _sti
+	_style_opt.item_selected.connect(func(idx: int) -> void:
 		Config.style_name = _skins[idx]
 		_update_custom_state()
 		Config.save()
 		StylesUI.load_style(Config.style_name)
 		StylesUI.reload_all()
 	)
-	StylesUI.apply_dropdown(style_opt)
-	style_row.add_child(style_opt)
+	StylesUI.apply_dropdown(_style_opt)
+	style_row.add_child(_style_opt)
 	vbox.add_child(style_row)
 
 	var icons_row := HBoxContainer.new()
@@ -413,23 +411,23 @@ func _build_general_tab() -> Control:
 	)
 	icons_pre.custom_minimum_size.x = 48
 	icons_row.add_child(icons_pre)
-	var icons_opt := OptionButton.new()
-	icons_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	icons_opt.focus_mode = Control.FOCUS_NONE
+	_icons_opt = OptionButton.new()
+	_icons_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_icons_opt.focus_mode = Control.FOCUS_NONE
 	for _sk in _skins:
-		icons_opt.add_item(_sk)
+		_icons_opt.add_item(_sk)
 	var _ipi := _skins.find(Config.icon_pack_name)
 	if _ipi >= 0:
-		icons_opt.selected = _ipi
-	icons_opt.item_selected.connect(func(idx: int) -> void:
+		_icons_opt.selected = _ipi
+	_icons_opt.item_selected.connect(func(idx: int) -> void:
 		Config.icon_pack_name = _skins[idx]
 		_update_custom_state()
 		Config.save()
 		StylesUI.load_icons(Config.icon_pack_name)
 		StylesUI.reload_all()
 	)
-	StylesUI.apply_dropdown(icons_opt)
-	icons_row.add_child(icons_opt)
+	StylesUI.apply_dropdown(_icons_opt)
+	icons_row.add_child(_icons_opt)
 	vbox.add_child(icons_row)
 
 	StylesUI.win_sep(vbox)
@@ -1181,9 +1179,45 @@ func _discover_dirs(dir_path: String) -> Array[String]:
 	return names
 
 
-## Check if individual settings differ from the skin preset and update skin_name.
+## Check if individual settings differ from the skin preset.
+## Updates Config.skin_name and rebuilds the skin dropdown to show Custom or the skin.
 func _update_custom_state() -> void:
 	if Config.theme_name == Config.style_name and Config.style_name == Config.icon_pack_name:
 		Config.skin_name = Config.theme_name
 	else:
 		Config.skin_name = "custom"
+	_rebuild_skin_dropdown()
+
+
+## Rebuild the skin dropdown to reflect the current Config.skin_name.
+func _rebuild_skin_dropdown() -> void:
+	if _skin_opt == null:
+		return
+	_skin_opt.clear()
+	var is_custom := Config.skin_name == "custom" or not (Config.skin_name in _skins)
+	if is_custom:
+		_skin_opt.add_item("Custom")
+	for sk in _skins:
+		_skin_opt.add_item(sk)
+	if is_custom:
+		_skin_opt.selected = 0
+	else:
+		var idx := _skins.find(Config.skin_name)
+		if idx >= 0:
+			_skin_opt.selected = idx + (1 if is_custom else 0)
+
+
+## Sync the individual theme/style/icons dropdowns to the current skin.
+func _sync_sub_dropdowns() -> void:
+	if _theme_opt != null:
+		var ti := _skins.find(Config.theme_name)
+		if ti >= 0:
+			_theme_opt.selected = ti
+	if _style_opt != null:
+		var si := _skins.find(Config.style_name)
+		if si >= 0:
+			_style_opt.selected = si
+	if _icons_opt != null:
+		var ii := _skins.find(Config.icon_pack_name)
+		if ii >= 0:
+			_icons_opt.selected = ii
