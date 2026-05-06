@@ -170,6 +170,22 @@ func _build() -> void:
 	StylesUI.apply_aero(_tabs, true)
 	content_margin.add_child(_tabs)
 
+	# Smooth eased fade on tab content switch
+	var _tab_idx := _tabs.current_tab
+	_tabs.tab_changed.connect(func(idx: int):
+		if idx == _tab_idx:
+			return
+		_tab_idx = idx
+		var content := _tabs.get_current_tab_control()
+		if not content:
+			return
+		content.modulate.a = 0.0
+		create_tween()\
+			.tween_property(content, "modulate:a", 1.0, 0.30)\
+			.set_ease(Tween.EASE_OUT)\
+			.set_trans(Tween.TRANS_QUINT)
+	)
+
 	_tabs.add_child(_build_general_tab())
 	_tabs.add_child(_build_shaders_tab())
 	_tabs.add_child(_build_keymap_tab())

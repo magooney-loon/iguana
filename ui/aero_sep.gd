@@ -115,29 +115,17 @@ func _draw_v() -> void:
 func _draw_cap(center: Vector2) -> void:
 	var r := _base_cap + _s_beat * 1.8
 
-	# Glow halo on beat — soft, transparent, larger
+	# Glow halo on beat — soft circle
 	if _s_beat > 0.05:
 		var glow_r := r * 2.2
 		var glow_col := Color(_base_color.r, _base_color.g, _base_color.b,
 			_s_beat * 0.35)
-		var glow_pts := PackedVector2Array([
-			center + Vector2(0.0, -glow_r),
-			center + Vector2(glow_r,  0.0),
-			center + Vector2(0.0,  glow_r),
-			center + Vector2(-glow_r, 0.0),
-		])
-		draw_colored_polygon(glow_pts, glow_col)
+		draw_circle(center, glow_r, glow_col)
 
-	# Solid diamond
+	# Solid circle cap
 	var cap_col := Color(_base_color.r, _base_color.g, _base_color.b,
 		_base_color.a + _s_beat * 0.4)
-	var pts := PackedVector2Array([
-		center + Vector2(0.0, -r),
-		center + Vector2(r,  0.0),
-		center + Vector2(0.0,  r),
-		center + Vector2(-r, 0.0),
-	])
-	draw_colored_polygon(pts, cap_col)
+	draw_circle(center, r, cap_col)
 
 
 func _fit() -> void:
