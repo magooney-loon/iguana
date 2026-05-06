@@ -1,4 +1,4 @@
-# Iguana — MilkDrop-Style Audio Visualizer
+# Iguana — Audio Visualizer/Player
 `It really licks the eyeball... yeah.`
 
 <img src="icon.webp" width="128" align="right" />
