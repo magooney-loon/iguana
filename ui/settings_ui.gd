@@ -156,9 +156,9 @@ func _build() -> void:
 
 	_tabs = TabContainer.new()
 	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_tabs.add_theme_stylebox_override("tab_fg", StylesUI.glass_box(StylesUI.C_BTN_H, 8.0, true))
-	_tabs.add_theme_stylebox_override("tab_bg", StylesUI.glass_box(StylesUI.C_BTN, 8.0, true))
-	_tabs.add_theme_stylebox_override("tab_hover", StylesUI.glass_box(StylesUI.C_ACCENT, 8.0, true))
+	_tabs.add_theme_stylebox_override("tab_fg", StylesUI.glass_box(StylesUI.theme().c_btn_h, 8.0, true))
+	_tabs.add_theme_stylebox_override("tab_bg", StylesUI.glass_box(StylesUI.theme().c_btn, 8.0, true))
+	_tabs.add_theme_stylebox_override("tab_hover", StylesUI.glass_box(StylesUI.theme().c_accent, 8.0, true))
 	_tabs.get_tab_bar().tab_alignment = TabBar.ALIGNMENT_CENTER
 	var tab_panel := StylesUI.glass_box(Color(0.04, 0.05, 0.09, 0.60), 10.0, false)
 	tab_panel.shadow_size = 0

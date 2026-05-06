@@ -42,6 +42,9 @@ var _shuffle_btn: Button
 func _ready() -> void:
 	_visualizer = get_tree().root.get_node("Main/VisualizerContainer/FeedbackViewport/Visualizer")
 
+	StylesUI.load_theme(Config.theme_name)
+	StylesUI.load_skin(Config.skin_name)
+
 	StylesUI.apply_bar_style(self)
 
 	# ── Sub-systems ────────────────────────────────────────────────────
@@ -215,9 +218,7 @@ func _setup_logo() -> void:
 
 	# Glassy pill panel — no shadow since it sits flush on the player bar
 	var panel := PanelContainer.new()
-	var style := StylesUI.glass_box(Color(0.06, 0.07, 0.12, 0.88), 18.0, true)
-	style.corner_radius_top_left     = 18
-	style.corner_radius_top_right    = 18
+	var style := StylesUI.glass_box(StylesUI.theme().c_logo, StylesUI.skin().logo_radius, true)
 	style.corner_radius_bottom_left  = 0
 	style.corner_radius_bottom_right = 0
 	style.set_border_width_all(1)

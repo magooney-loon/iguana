@@ -25,6 +25,8 @@ var crossfade_duration  := 2.0  # seconds
 var auto_hide_player   := false
 var vsync_enabled      := true
 var max_fps            := 60
+var theme_name         := "aero_blue"
+var skin_name          := "aero"
 
 # Per-shader post-processing: Dictionary keyed by filename stem
 # e.g. { "solstice": { "exposure": 1.4, ... }, "mars": { ... } }
@@ -63,6 +65,8 @@ func save() -> void:
 	cfg.set_value("general", "auto_hide_player",  auto_hide_player)
 	cfg.set_value("general", "vsync_enabled", vsync_enabled)
 	cfg.set_value("general", "max_fps", max_fps)
+	cfg.set_value("general", "theme_name", theme_name)
+	cfg.set_value("general", "skin_name", skin_name)
 
 	# Per-shader PP configs — keyed by filename stem
 	for key in shader_pp_configs:
@@ -113,6 +117,10 @@ func load_settings() -> void:
 		vsync_enabled = cfg.get_value("general", "vsync_enabled")
 	if cfg.has_section_key("general", "max_fps"):
 		max_fps = cfg.get_value("general", "max_fps")
+	if cfg.has_section_key("general", "theme_name"):
+		theme_name = cfg.get_value("general", "theme_name")
+	if cfg.has_section_key("general", "skin_name"):
+		skin_name = cfg.get_value("general", "skin_name")
 
 	# Resolve shader_name → shader_index
 	shader_index = 0  # default

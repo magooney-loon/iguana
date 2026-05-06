@@ -79,13 +79,13 @@ func is_visible() -> bool:
 # ── Styles ────────────────────────────────────────────────────────────────────
 
 func _init_styles() -> void:
-	_style_normal = StylesUI.glass_box(StylesUI.C_BTN, 6.0, true)
+	_style_normal = StylesUI.glass_box(StylesUI.theme().c_btn, 6.0, true)
 	_style_normal.content_margin_left   = 10.0
 	_style_normal.content_margin_right  = 10.0
 	_style_normal.content_margin_top    = 5.0
 	_style_normal.content_margin_bottom = 5.0
 
-	_style_hover = StylesUI.glass_box(StylesUI.C_BTN_H, 6.0, true)
+	_style_hover = StylesUI.glass_box(StylesUI.theme().c_btn_h, 6.0, true)
 	_style_hover.content_margin_left   = 10.0
 	_style_hover.content_margin_right  = 10.0
 	_style_hover.content_margin_top    = 5.0
@@ -318,9 +318,9 @@ func _rebuild_list() -> void:
 			s.content_margin_top = 3.0
 			s.content_margin_bottom = 3.0
 			return s
-		remove_btn.add_theme_stylebox_override("normal", _rs.call(StylesUI.C_BTN))
-		remove_btn.add_theme_stylebox_override("hover", _rs.call(StylesUI.C_BTN_H))
-		remove_btn.add_theme_stylebox_override("pressed", _rs.call(StylesUI.C_BTN_P))
+		remove_btn.add_theme_stylebox_override("normal", _rs.call(StylesUI.theme().c_btn))
+		remove_btn.add_theme_stylebox_override("hover", _rs.call(StylesUI.theme().c_btn_h))
+		remove_btn.add_theme_stylebox_override("pressed", _rs.call(StylesUI.theme().c_btn_p))
 		remove_btn.pressed.connect(func() -> void:
 			_playlist.remove(idx)
 		)

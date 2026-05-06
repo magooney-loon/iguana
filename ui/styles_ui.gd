@@ -1,188 +1,187 @@
 class_name StylesUI
 
-## ── Shared noise shader ──────────────────────────────────────────────────────
-## Loaded once and reused for every panel that requests a material overlay.
+# ── Active theme / skin ───────────────────────────────────────────────────────
+static var active_theme: UITheme
+static var active_skin: UISkin
+
+# ── Shared noise shader ───────────────────────────────────────────────────────
 static var _noise_shader: Shader
-## Panels with aero material that need per-frame audio updates.
 static var _aero_panels: Array[WeakRef] = []
 static var _aero_seps: Array[WeakRef] = []
 static var _aero_sep_script: GDScript
 
 
+static func theme() -> UITheme:
+	if active_theme == null:
+		active_theme = UITheme.new()
+	return active_theme
+
+
+static func skin() -> UISkin:
+	if active_skin == null:
+		active_skin = UISkin.new()
+	return active_skin
+
+
+## Load a named theme from ui/themes/<name>.tres.
+## Falls back to UITheme defaults if the file is missing or invalid.
+static func load_theme(name: String) -> void:
+	var path := "res://ui/themes/%s.tres" % name
+	if ResourceLoader.exists(path):
+		var t := ResourceLoader.load(path) as UITheme
+		if t != null:
+			active_theme = t
+			return
+	active_theme = UITheme.new()
+
+
+## Load a named skin from ui/skins/<name>.tres.
+## Falls back to UISkin defaults if the file is missing or invalid.
+## Invalidates the cached noise shader so the new shader_path is picked up.
+static func load_skin(name: String) -> void:
+	var path := "res://ui/skins/%s.tres" % name
+	if ResourceLoader.exists(path):
+		var s := ResourceLoader.load(path) as UISkin
+		if s != null:
+			active_skin = s
+			_noise_shader = null
+			return
+	active_skin = UISkin.new()
+	_noise_shader = null
+
+
 static func _get_noise_shader() -> Shader:
 	if _noise_shader == null:
-		_noise_shader = load("res://shaders/utils/ui_noise.gdshader") as Shader
+		var shader_path := skin().shader_path
+		_noise_shader = load(shader_path) as Shader
 		if _noise_shader == null:
-			push_warning("StylesUI: failed to load ui_noise.gdshader")
+			push_warning("StylesUI: failed to load shader: %s" % shader_path)
 	return _noise_shader
 
 
 ## Apply a grain + vignette material directly to a panel Control.
-## The canvas_item shader modifies the panel's rendered StyleBox output
-## in-place — no extra children needed.
 static func apply_noise(panel: Control, subtle := true) -> void:
 	var shader := _get_noise_shader()
 	if shader == null:
 		return
-
+	var s := skin()
 	var mat := ShaderMaterial.new()
 	mat.shader = shader
 	if subtle:
-		# Grain
-		mat.set_shader_parameter("grain_strength", 0.025)
-		mat.set_shader_parameter("grain_speed", 0.8)
-		# Vignette
-		mat.set_shader_parameter("vignette_strength", 0.05)
-		mat.set_shader_parameter("vignette_pulse", 0.012)
-		mat.set_shader_parameter("vignette_pulse_spd", 0.35)
+		mat.set_shader_parameter("grain_strength",      s.subtle_grain_strength)
+		mat.set_shader_parameter("grain_speed",         s.subtle_grain_speed)
+		mat.set_shader_parameter("vignette_strength",   s.subtle_vignette_strength)
+		mat.set_shader_parameter("vignette_pulse",      s.subtle_vignette_pulse)
+		mat.set_shader_parameter("vignette_pulse_spd",  s.subtle_vignette_pulse_spd)
 	else:
-		# Grain
-		mat.set_shader_parameter("grain_strength", 0.04)
-		mat.set_shader_parameter("grain_speed", 1.2)
-		# Vignette
-		mat.set_shader_parameter("vignette_strength", 0.09)
-		mat.set_shader_parameter("vignette_pulse", 0.02)
-		mat.set_shader_parameter("vignette_pulse_spd", 0.5)
+		mat.set_shader_parameter("grain_strength",      s.normal_grain_strength)
+		mat.set_shader_parameter("grain_speed",         s.normal_grain_speed)
+		mat.set_shader_parameter("vignette_strength",   s.normal_vignette_strength)
+		mat.set_shader_parameter("vignette_pulse",      s.normal_vignette_pulse)
+		mat.set_shader_parameter("vignette_pulse_spd",  s.normal_vignette_pulse_spd)
 	panel.material = mat
 
 
-
-## Apply Frutiger Aero gloss + bevel on top of the industrial noise.
-## Enables specular band, lighting gradient, fresnel edge bloom,
-## directional bevel, and micro-texture — all driven through the
-## existing ui_noise shader's Aero uniform group.
+## Apply Frutiger Aero gloss + bevel on top of the noise.
 static func apply_aero(panel: Control, subtle := true) -> void:
 	apply_noise(panel, subtle)
 	var mat := panel.material as ShaderMaterial
 	if mat == null:
 		return
+	var s := skin()
 	if subtle:
-		# Specular highlight band
-		mat.set_shader_parameter("specular_strength", 0.15)
-		mat.set_shader_parameter("specular_y_pos", 0.02)
-		mat.set_shader_parameter("specular_height", 0.18)
-		mat.set_shader_parameter("corner_radius", 0.04)
-		mat.set_shader_parameter("wave_seed", randf() * 100.0)
-		# Lighting gradient
-		mat.set_shader_parameter("gradient_strength", 0.05)
-		# Fresnel edge bloom
-		mat.set_shader_parameter("fresnel_strength", 0.06)
-		mat.set_shader_parameter("fresnel_width", 0.05)
-		# Directional bevel
-		mat.set_shader_parameter("bevel_strength", 0.10)
-		mat.set_shader_parameter("bevel_width", 0.025)
-		# Micro-texture
-		mat.set_shader_parameter("gloss_texture_str", 0.012)
-		mat.set_shader_parameter("caustic_scale", 8.0)
-		mat.set_shader_parameter("iridescence", 0.5)
+		mat.set_shader_parameter("specular_strength",   s.subtle_specular_strength)
+		mat.set_shader_parameter("specular_y_pos",      s.subtle_specular_y_pos)
+		mat.set_shader_parameter("specular_height",     s.subtle_specular_height)
+		mat.set_shader_parameter("corner_radius",       s.subtle_corner_radius)
+		mat.set_shader_parameter("wave_seed",           randf() * 100.0)
+		mat.set_shader_parameter("gradient_strength",   s.subtle_gradient_strength)
+		mat.set_shader_parameter("fresnel_strength",    s.subtle_fresnel_strength)
+		mat.set_shader_parameter("fresnel_width",       s.subtle_fresnel_width)
+		mat.set_shader_parameter("bevel_strength",      s.subtle_bevel_strength)
+		mat.set_shader_parameter("bevel_width",         s.subtle_bevel_width)
+		mat.set_shader_parameter("gloss_texture_str",   s.subtle_gloss_texture_str)
+		mat.set_shader_parameter("caustic_scale",       s.subtle_caustic_scale)
+		mat.set_shader_parameter("iridescence",         s.subtle_iridescence)
 	else:
-		# Specular highlight band — more pronounced
-		mat.set_shader_parameter("specular_strength", 0.25)
-		mat.set_shader_parameter("specular_y_pos", 0.01)
-		mat.set_shader_parameter("specular_height", 0.22)
-		mat.set_shader_parameter("corner_radius", 0.035)
-		mat.set_shader_parameter("wave_seed", randf() * 100.0)
-		# Lighting gradient
-		mat.set_shader_parameter("gradient_strength", 0.10)
-		# Fresnel edge bloom
-		mat.set_shader_parameter("fresnel_strength", 0.12)
-		mat.set_shader_parameter("fresnel_width", 0.06)
-		# Directional bevel
-		mat.set_shader_parameter("bevel_strength", 0.18)
-		mat.set_shader_parameter("bevel_width", 0.03)
-		# Micro-texture
-		mat.set_shader_parameter("gloss_texture_str", 0.02)
-		mat.set_shader_parameter("caustic_scale", 10.0)
-		mat.set_shader_parameter("iridescence", 0.65)
-	# Track for per-frame audio updates
+		mat.set_shader_parameter("specular_strength",   s.normal_specular_strength)
+		mat.set_shader_parameter("specular_y_pos",      s.normal_specular_y_pos)
+		mat.set_shader_parameter("specular_height",     s.normal_specular_height)
+		mat.set_shader_parameter("corner_radius",       s.normal_corner_radius)
+		mat.set_shader_parameter("wave_seed",           randf() * 100.0)
+		mat.set_shader_parameter("gradient_strength",   s.normal_gradient_strength)
+		mat.set_shader_parameter("fresnel_strength",    s.normal_fresnel_strength)
+		mat.set_shader_parameter("fresnel_width",       s.normal_fresnel_width)
+		mat.set_shader_parameter("bevel_strength",      s.normal_bevel_strength)
+		mat.set_shader_parameter("bevel_width",         s.normal_bevel_width)
+		mat.set_shader_parameter("gloss_texture_str",   s.normal_gloss_texture_str)
+		mat.set_shader_parameter("caustic_scale",       s.normal_caustic_scale)
+		mat.set_shader_parameter("iridescence",         s.normal_iridescence)
 	_aero_panels.append(WeakRef.new())
 	_aero_panels[-1] = weakref(panel)
 
 
-## Push audio data to all active aero panels.  Call every frame from
-## the visualizer's _process — keeps the glass gloss in sync with the
-## music without each panel needing its own script.
+## Push audio data to all active aero panels and separators every frame.
 static func update_audio(beat_val: float, energy_val: float, bass_val: float) -> void:
-	# Panels — shader uniforms
 	var alive: Array[WeakRef] = []
 	for ref in _aero_panels:
 		var panel := ref.get_ref() as Control
 		if panel == null:
-			continue  # panel was freed — drop it
+			continue
 		var mat := panel.material as ShaderMaterial
 		if mat == null:
 			continue
-		mat.set_shader_parameter("beat", beat_val)
+		mat.set_shader_parameter("beat",   beat_val)
 		mat.set_shader_parameter("energy", energy_val)
-		mat.set_shader_parameter("bass", bass_val)
+		mat.set_shader_parameter("bass",   bass_val)
 		alive.append(ref)
 	_aero_panels = alive
 
-	# Separators — script variables
 	var live: Array[WeakRef] = []
 	for ref in _aero_seps:
 		var sep := ref.get_ref() as Control
 		if sep == null:
 			continue
-		sep.set("beat", beat_val)
+		sep.set("beat",   beat_val)
 		sep.set("energy", energy_val)
-		sep.set("bass", bass_val)
+		sep.set("bass",   bass_val)
 		live.append(ref)
 	_aero_seps = live
 
 
-## ── Aero Glass Theme ──────────────────────────────────────────────────────────
-## Colour palette
-const C_GLASS     := Color(0.08, 0.09, 0.16, 0.68)
-const C_GLASS_LT := Color(0.14, 0.16, 0.26, 0.55)
-const C_BORDER   := Color(0.55, 0.65, 0.85, 0.18)
-const C_HILITE   := Color(0.70, 0.80, 1.00, 0.22)
-const C_SHADOW   := Color(0.0, 0.0, 0.02, 0.45)
-const C_BTN      := Color(0.16, 0.18, 0.28, 0.35)
-const C_BTN_H    := Color(0.30, 0.38, 0.55, 0.45)
-const C_BTN_P    := Color(0.08, 0.09, 0.14, 0.50)
-const C_ACCENT   := Color(0.40, 0.58, 0.92, 0.35)
-const C_SLIDER_BG   := Color(0.06, 0.07, 0.12, 0.55)
-const C_SLIDER_FILL := Color(0.30, 0.48, 0.80, 0.55)
-const C_GRABBER     := Color(0.55, 0.72, 1.00, 0.85)
-const C_GRABBER_H   := Color(0.70, 0.85, 1.00, 0.95)
-const C_SEP         := Color(0.45, 0.55, 0.75, 0.15)
-
-
 static func glass_box(bg: Color, radius: float = 10.0, highlight: bool = true) -> StyleBoxFlat:
+	var t := theme()
 	var s := StyleBoxFlat.new()
 	s.bg_color           = bg
-	s.border_color       = C_BORDER
+	s.border_color       = t.c_hilite if highlight else t.c_border
 	s.set_border_width_all(1)
 	s.corner_radius_top_left     = int(radius)
 	s.corner_radius_top_right    = int(radius)
 	s.corner_radius_bottom_right = int(radius)
 	s.corner_radius_bottom_left  = int(radius)
-	s.shadow_color       = C_SHADOW
+	s.shadow_color       = t.c_shadow
 	s.shadow_size        = maxi(int(radius * 0.9), 4)
 	s.shadow_offset      = Vector2(0, maxf(radius * 0.3, 1.5))
-	s.anti_aliasing_size  = 2.0
-	if highlight:
-		s.border_color = C_HILITE
+	s.anti_aliasing_size = 2.0
 	return s
 
 
 static func apply_glass_btn(btn: Button) -> void:
-	# Normal — raised, soft shadow
-	var n := glass_box(C_BTN, 7.0, true)
+	var t  := theme()
+	var sk := skin()
+	var r  := sk.btn_radius
+	var n := glass_box(t.c_btn, r, true)
 	n.content_margin_left   = 10.0
 	n.content_margin_right  = 10.0
 	n.content_margin_top    = 4.0
 	n.content_margin_bottom = 4.0
-	# Hover — brighter, deeper shadow for "lifted" feel
-	var h := glass_box(C_BTN_H, 7.0, true)
+	var h := glass_box(t.c_btn_h, r, true)
 	h.content_margin_left   = 10.0
 	h.content_margin_right  = 10.0
 	h.content_margin_top    = 4.0
 	h.content_margin_bottom = 4.0
 	h.shadow_size = 14
-	# Pressed — sunken: content shifts down 1px, shadow shrinks
-	var p := glass_box(C_BTN_P, 7.0, true)
+	var p := glass_box(t.c_btn_p, r, true)
 	p.content_margin_left   = 10.0
 	p.content_margin_right  = 10.0
 	p.content_margin_top    = 5.0
@@ -194,89 +193,85 @@ static func apply_glass_btn(btn: Button) -> void:
 	btn.add_theme_stylebox_override("pressed", p)
 
 
-## Apply Aero glass styling to an HSlider (seek bar, volume, etc.).
-## • Track: dark translucent glass with soft border
-## • Fill: blue-tinted glass showing progress
-## • Grabber: bright glass circle that lights up on hover
 static func apply_glass_slider(slider: HSlider, compact := false) -> void:
-	var track_h := 4.0 if compact else 6.0
-	var grab_size := 12.0 if compact else 14.0
-	var radius := 4.0 if compact else 5.0
+	var t  := theme()
+	var sk := skin()
+	var track_h  := sk.slider_track_compact if compact else sk.slider_track_normal
+	var grab_size := sk.slider_grab_compact  if compact else sk.slider_grab_normal
+	var radius   := 4.0 if compact else 5.0
 
-	# Track (background)
 	var bg := StyleBoxFlat.new()
-	bg.bg_color = C_SLIDER_BG
-	bg.border_color = Color(0.4, 0.5, 0.7, 0.12)
+	bg.bg_color     = t.c_slider_bg
+	bg.border_color = Color(t.c_border.r, t.c_border.g, t.c_border.b, 0.12)
 	bg.set_border_width_all(1)
-	bg.corner_radius_top_left = int(radius)
-	bg.corner_radius_top_right = int(radius)
+	bg.corner_radius_top_left     = int(radius)
+	bg.corner_radius_top_right    = int(radius)
 	bg.corner_radius_bottom_right = int(radius)
-	bg.corner_radius_bottom_left = int(radius)
-	bg.content_margin_top = track_h
+	bg.corner_radius_bottom_left  = int(radius)
+	bg.content_margin_top    = track_h
 	bg.content_margin_bottom = track_h
 	slider.add_theme_stylebox_override("slider", bg)
 
-	# Fill (progress)
 	var fill := StyleBoxFlat.new()
-	fill.bg_color = C_SLIDER_FILL
-	fill.border_color = Color(0.5, 0.65, 0.9, 0.2)
+	fill.bg_color     = t.c_slider_fill
+	fill.border_color = Color(t.c_border.r, t.c_border.g, t.c_border.b, 0.20)
 	fill.set_border_width_all(1)
-	fill.corner_radius_top_left = int(radius)
-	fill.corner_radius_top_right = int(radius)
+	fill.corner_radius_top_left     = int(radius)
+	fill.corner_radius_top_right    = int(radius)
 	fill.corner_radius_bottom_right = int(radius)
-	fill.corner_radius_bottom_left = int(radius)
-	fill.content_margin_top = track_h
+	fill.corner_radius_bottom_left  = int(radius)
+	fill.content_margin_top    = track_h
 	fill.content_margin_bottom = track_h
 	slider.add_theme_stylebox_override("fill", fill)
 
-	# Grabber — raised glass bead
 	var grab := StyleBoxFlat.new()
-	grab.bg_color = C_GRABBER
-	grab.border_color = C_HILITE
+	grab.bg_color     = t.c_grabber
+	grab.border_color = t.c_hilite
 	grab.set_border_width_all(1)
-	grab.corner_radius_top_left = int(grab_size / 2.0)
-	grab.corner_radius_top_right = int(grab_size / 2.0)
+	grab.corner_radius_top_left     = int(grab_size / 2.0)
+	grab.corner_radius_top_right    = int(grab_size / 2.0)
 	grab.corner_radius_bottom_right = int(grab_size / 2.0)
-	grab.corner_radius_bottom_left = int(grab_size / 2.0)
-	grab.shadow_color = C_SHADOW
-	grab.shadow_size = 4
+	grab.corner_radius_bottom_left  = int(grab_size / 2.0)
+	grab.shadow_color  = t.c_shadow
+	grab.shadow_size   = 4
 	grab.shadow_offset = Vector2(0, 2)
-	grab.anti_aliasing_size = 2.0
-	grab.content_margin_left = grab_size
+	grab.anti_aliasing_size   = 2.0
+	grab.content_margin_left  = grab_size
 	grab.content_margin_right = grab_size
-	grab.content_margin_top = grab_size
+	grab.content_margin_top   = grab_size
 	grab.content_margin_bottom = grab_size
 	slider.add_theme_stylebox_override("grabber_area", grab)
 
-	# Grabber hover — brighter, lifted
 	var grab_h := StyleBoxFlat.new()
-	grab_h.bg_color = C_GRABBER_H
-	grab_h.border_color = Color(0.85, 0.92, 1.0, 0.4)
+	grab_h.bg_color     = t.c_grabber_h
+	grab_h.border_color = Color(t.c_grabber_h.r + 0.15, t.c_grabber_h.g + 0.07, t.c_grabber_h.b, 0.4)
 	grab_h.set_border_width_all(1)
-	grab_h.corner_radius_top_left = int(grab_size / 2.0)
-	grab_h.corner_radius_top_right = int(grab_size / 2.0)
+	grab_h.corner_radius_top_left     = int(grab_size / 2.0)
+	grab_h.corner_radius_top_right    = int(grab_size / 2.0)
 	grab_h.corner_radius_bottom_right = int(grab_size / 2.0)
-	grab_h.corner_radius_bottom_left = int(grab_size / 2.0)
-	grab_h.shadow_color = C_SHADOW
-	grab_h.shadow_size = 6
+	grab_h.corner_radius_bottom_left  = int(grab_size / 2.0)
+	grab_h.shadow_color  = t.c_shadow
+	grab_h.shadow_size   = 6
 	grab_h.shadow_offset = Vector2(0, 3)
-	grab_h.anti_aliasing_size = 2.0
-	grab_h.content_margin_left = grab_size + 1.0
-	grab_h.content_margin_right = grab_size + 1.0
-	grab_h.content_margin_top = grab_size + 1.0
+	grab_h.anti_aliasing_size    = 2.0
+	grab_h.content_margin_left   = grab_size + 1.0
+	grab_h.content_margin_right  = grab_size + 1.0
+	grab_h.content_margin_top    = grab_size + 1.0
 	grab_h.content_margin_bottom = grab_size + 1.0
 	slider.add_theme_stylebox_override("grabber_area_highlight", grab_h)
 
 
 static func apply_bar_style(panel: PanelContainer) -> void:
-	var style := glass_box(Color(0.06, 0.07, 0.12, 0.72), 12.0, true)
+	var t  := theme()
+	var sk := skin()
+	var style := glass_box(t.c_glass_dark, sk.bar_radius, true)
 	style.corner_radius_bottom_left  = 0
 	style.corner_radius_bottom_right = 0
-	style.content_margin_left   = 14.0
-	style.content_margin_right  = 14.0
-	style.content_margin_top    = 8.0
-	style.content_margin_bottom = 8.0
-	style.shadow_size = 16
+	style.content_margin_left   = sk.bar_padding_h
+	style.content_margin_right  = sk.bar_padding_h
+	style.content_margin_top    = sk.bar_padding_v
+	style.content_margin_bottom = sk.bar_padding_v
+	style.shadow_size = sk.bar_shadow_size
 	panel.add_theme_stylebox_override("panel", style)
 
 
@@ -285,12 +280,14 @@ static func make_vsep() -> Control:
 		_aero_sep_script = load("res://ui/aero_sep.gd")
 	var sep := Control.new()
 	sep.set_script(_aero_sep_script)
-	sep.set("is_vertical", true)
+	sep.set("is_vertical",  true)
+	sep.set("_base_color",  theme().c_sep_draw)
+	sep.set("_base_wave",   skin().sep_base_wave)
+	sep.set("_base_cap",    skin().sep_base_cap)
 	_aero_seps.append(weakref(sep))
 	return sep
 
 
-## Load an SVG icon from ui/icons/<name>.svg and return a Texture2D.
 static func load_icon(name: String) -> Texture2D:
 	var path := "res://ui/icons/%s.svg" % name
 	var tex := load(path) as Texture2D
@@ -299,8 +296,6 @@ static func load_icon(name: String) -> Texture2D:
 	return tex
 
 
-## Create a Button with only an icon (no text) and a tooltip.
-## Connects `callback` to `pressed` if it's valid.
 static func icon_btn(icon_name: String, tooltip: String = "",
 		min_size := Vector2(32, 28), callback: Callable = Callable()) -> Button:
 	var btn := Button.new()
@@ -318,7 +313,6 @@ static func icon_btn(icon_name: String, tooltip: String = "",
 	return btn
 
 
-## Update the icon on an existing button (for play/pause, loop modes, etc.).
 static func set_icon(btn: Button, icon_name: String) -> void:
 	var tex := load_icon(icon_name)
 	if tex:
@@ -326,13 +320,11 @@ static func set_icon(btn: Button, icon_name: String) -> void:
 	btn.text = ""
 
 
-## Create a Label that acts as a clickable link.
-## Stores `url` in metadata and opens it in the system browser on click.
 static func make_link_label(text: String, url: String, font_size: int = 12) -> Label:
 	var lbl := Label.new()
 	lbl.text = text
 	lbl.add_theme_font_size_override("font_size", font_size)
-	lbl.modulate = Color(0.55, 0.75, 1.0)
+	lbl.modulate = theme().c_link
 	lbl.mouse_filter = Control.MOUSE_FILTER_STOP
 	lbl.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	lbl.set_meta("link_url", url)
@@ -341,12 +333,12 @@ static func make_link_label(text: String, url: String, font_size: int = 12) -> L
 			OS.shell_open(url)
 	)
 	lbl.mouse_entered.connect(func() -> void:
-		lbl.modulate = Color(0.70, 0.88, 1.0)
-		lbl.add_theme_color_override("font_color", Color(0.70, 0.88, 1.0))
+		lbl.modulate = theme().c_link_h
+		lbl.add_theme_color_override("font_color", theme().c_link_h)
 	)
 	lbl.mouse_exited.connect(func() -> void:
-		lbl.modulate = Color(0.55, 0.75, 1.0)
-		lbl.add_theme_color_override("font_color", Color(0.55, 0.75, 1.0))
+		lbl.modulate = theme().c_link
+		lbl.add_theme_color_override("font_color", theme().c_link)
 	)
 	return lbl
 
@@ -355,7 +347,7 @@ static func win_section(parent: Control, title: String) -> void:
 	var lbl := Label.new()
 	lbl.text = title
 	lbl.add_theme_font_size_override("font_size", 10)
-	lbl.modulate = Color(0.55, 0.8, 1.0, 0.75)
+	lbl.modulate = theme().c_section
 	parent.add_child(lbl)
 
 
@@ -365,5 +357,8 @@ static func win_sep(parent: Control) -> void:
 	var sep := Control.new()
 	sep.set_script(_aero_sep_script)
 	sep.set("is_vertical", false)
+	sep.set("_base_color",  theme().c_sep_draw)
+	sep.set("_base_wave",   skin().sep_base_wave)
+	sep.set("_base_cap",    skin().sep_base_cap)
 	_aero_seps.append(weakref(sep))
 	parent.add_child(sep)
