@@ -63,6 +63,7 @@ PostProcessDisplay (ColorRect)   — tonemap / gamma / vignette / grain on top
 │       │   ├── theme.tres     # Color scheme
 │       │   ├── style.tres     # Glass shader params + animation
 │       │   ├── style.gdshader # UI overlay shader
+│       │   ├── Geist.ttf      # Optional custom font (.ttf / .otf)
 │       │   └── icons/         # SVG icon set
 │       ├── iguana/            # Iguana Green skin
 │       └── kitty/            # Kitty skin

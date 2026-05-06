@@ -8,6 +8,7 @@ ui/appearance/
 │   ├── theme.tres     ← color palette (UITheme)
 │   ├── style.tres     ← shader params + animation (UIStyle)
 │   ├── style.gdshader ← optional custom UI overlay shader
+│   ├── Geist.ttf      ← optional custom font (first .ttf/.otf found)
 │   └── icons/         ← SVG icon set
 ├── iguana/
 └── kitty/
@@ -21,8 +22,9 @@ ui/appearance/
 2. Edit `theme.tres` colors in the Godot Inspector.
 3. Optionally edit `style.tres` shader parameters and animation timing.
 4. Optionally add a custom `style.gdshader` and update `shader_path` in `style.tres`.
-5. Replace the SVGs in `icons/` with your own designs.
-6. It appears in Settings → Appearance → Skin automatically.
+5. Optionally drop a `.ttf` or `.otf` font file into the folder for a custom typeface.
+6. Replace the SVGs in `icons/` with your own designs.
+7. It appears in Settings → Appearance → Skin automatically.
 
 If you only want to change colors, you only need to edit `theme.tres`.
 
@@ -146,6 +148,37 @@ A theme is a `UITheme` resource. It controls every color used to build UI panels
 |---|---|
 | `c_dbg_bg` | Debug bar background |
 | `c_dbg_fill` | Debug bar fill |
+
+---
+
+## Fonts
+
+Each skin can optionally include a custom typeface. Drop a single `.ttf` or `.otf` file into the skin folder alongside `theme.tres`. The first font file found is loaded and applied to all UI labels, buttons, tabs, and built-in controls.
+
+**If no font file is present**, the engine default (Inter) is used — no configuration needed.
+
+```
+ui/appearance/aero/
+├── theme.tres
+├── style.tres
+├── Geist.ttf          ← optional: any .ttf or .otf
+└── icons/
+```
+
+**Guidelines for skin fonts:**
+
+- Use a single weight (Regular 400 works best at the default font sizes).
+- Prefer fonts with good legibility at 10–14px — the UI is compact.
+- Any SIL Open Font License or public domain font can be bundled.
+- Only the first `.ttf` / `.otf` file alphabetically is loaded; extras are ignored.
+
+**How it works internally:**
+
+| Method | What it covers |
+|---|---|
+| `StylesUI.apply_font(lbl)` | Apply font to a single label (used for dynamically created playlist rows) |
+| `StylesUI.track_label()` | Tracks a label and applies font + re-applies on skin switch |
+| `Theme.default_font` | Set on the settings window `Theme` — covers CheckBox, OptionButton, TabBar, etc. |
 
 ---
 
@@ -286,6 +319,7 @@ The reload system works by tracking every styled control in weak-reference array
 | `make_vsep()` / `win_sep()` | All separators |
 | `icon_btn()` | All icon buttons |
 | `track_glass_panel()` | Window chrome (title bars, content panels, footers, logo, tabs) |
-| `track_label()` | Labels with theme-driven font size / color |
+| `track_label()` | Labels with theme-driven font size / color / font |
+| `apply_font()` | Apply the active skin font to any label (used for dynamic labels like playlist rows) |
 
 **Manual reload:** Components can register callbacks with `StylesUI.on_reload(callable)` for parts that cannot be automatically tracked (e.g. playlist row regeneration).
