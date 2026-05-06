@@ -25,9 +25,9 @@ var crossfade_duration  := 2.0  # seconds
 var auto_hide_player   := false
 var vsync_enabled      := true
 var max_fps            := 60
-var theme_name         := "aero_blue"
-var skin_name          := "aero"
-var style_name         := "aero_glass"
+var theme_name         := "iguana_green"
+var skin_name          := "iguana"
+var style_name         := "iguana_glass"
 var icon_pack_name     := "aero"
 
 # Per-shader post-processing: Dictionary keyed by filename stem

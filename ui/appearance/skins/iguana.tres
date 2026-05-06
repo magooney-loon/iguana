@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="UISkin" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/main/ui_skin.gd" id="1_skin"]
+
+[resource]
+script = ExtResource("1_skin")
+btn_radius = 8.0
+panel_radius = 12.0
+bar_radius = 14.0
+logo_radius = 20.0
+bar_shadow_size = 18
+bar_padding_h = 16.0
+bar_padding_v = 9.0
+slider_track_compact = 4.0
+slider_track_normal = 6.0
+slider_grab_compact = 12.0
+slider_grab_normal = 14.0
+sep_base_wave = 0.6
+sep_base_cap = 2.0

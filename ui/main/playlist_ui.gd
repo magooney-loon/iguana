@@ -97,7 +97,7 @@ func _init_styles() -> void:
 	_style_hover.content_margin_top    = 5.0
 	_style_hover.content_margin_bottom = 5.0
 
-	_style_active = StylesUI.glass_box(Color(0.22, 0.34, 0.56, 0.50), 6.0, true)
+	_style_active = StylesUI.glass_box(StylesUI.theme().c_active_row, 6.0, true)
 	_style_active.content_margin_left   = 10.0
 	_style_active.content_margin_right  = 10.0
 	_style_active.content_margin_top    = 5.0
@@ -133,7 +133,7 @@ func _build() -> void:
 
 	# ── Title bar ─────────────────────────────────────────────────────
 	var title_bar := PanelContainer.new()
-	title_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(Color(0.10, 0.11, 0.18, 0.60), 14.0, true))
+	title_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_title_bar, 14.0, true))
 	StylesUI.apply_aero(title_bar, true)
 	col.add_child(title_bar)
 
@@ -154,7 +154,7 @@ func _build() -> void:
 	var title_lbl := Label.new()
 	title_lbl.text = "Playlist"
 	title_lbl.add_theme_font_size_override("font_size", 14)
-	title_lbl.modulate = Color(0.7, 0.82, 1.0)
+	title_lbl.modulate = StylesUI.theme().c_text_hi
 	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	title_row.add_child(title_lbl)
@@ -170,7 +170,7 @@ func _build() -> void:
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.add_theme_stylebox_override("panel", StylesUI.glass_box(Color(0.04, 0.05, 0.09, 0.60), 10.0, false))
+	_scroll.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_panel_bg, 10.0, false))
 	var scroll_panel := _scroll.get_theme_stylebox("panel") as StyleBoxFlat
 	if scroll_panel:
 		scroll_panel.shadow_size = 0
@@ -184,7 +184,7 @@ func _build() -> void:
 
 	# ── Footer bar ────────────────────────────────────────────────────
 	var footer_bar := PanelContainer.new()
-	footer_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(Color(0.08, 0.09, 0.15, 0.55), 8.0, true))
+	footer_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_footer_bar, 8.0, true))
 	StylesUI.apply_aero(footer_bar, true)
 	col.add_child(footer_bar)
 
@@ -287,7 +287,7 @@ func _rebuild_list() -> void:
 		name_label.anchor_bottom = 1.0
 		name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		if is_active:
-			name_label.modulate = Color(0.75, 0.88, 1.0)
+			name_label.modulate = StylesUI.theme().c_text_hi
 		name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		name_clip.add_child(name_label)
 
@@ -405,7 +405,7 @@ func _highlight_current() -> void:
 		var name_label: Label = entry["name_label"]
 		if i == idx:
 			row.add_theme_stylebox_override("panel", _style_active.duplicate())
-			name_label.modulate = Color(0.75, 0.88, 1.0)
+			name_label.modulate = StylesUI.theme().c_text_hi
 		else:
 			row.add_theme_stylebox_override("panel", _style_normal.duplicate())
 			name_label.modulate = Color.WHITE
