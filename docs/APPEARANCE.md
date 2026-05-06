@@ -46,6 +46,47 @@ A theme is a `UITheme` resource. It controls every color used to build UI panels
 | `c_link` | Hyperlink label normal |
 | `c_link_h` | Hyperlink label hovered |
 | `c_section` | Section header label |
+| `c_title_bar` | Window title bar background |
+| `c_panel_bg` | Content panel background |
+| `c_footer_bar` | Footer bar background |
+| `c_active_row` | Active / selected playlist row |
+| `c_text_hi` | Highlighted text color |
+| `c_text_dim` | Dimmed / secondary text color |
+| `c_notify_shadow` | Notification overlay shadow color |
+| `c_dbg_bg` | Debug bar background |
+| `c_dbg_fill` | Debug bar fill |
+
+**Notification properties:**
+
+| Property | Default | Purpose |
+|---|---|---|
+| `c_notify_shadow` | Color(0,0,0,0.6) | Notification text shadow color |
+| `notify_offset` | Vector2(16, 14) | Notification position on screen |
+
+**Font size properties:**
+
+| Property | Default | Purpose |
+|---|---|---|
+| `font_notification` | 22 | Notification overlay label |
+| `font_title` | 14 | Window title bars, about name |
+| `font_body` | 12 | Body text, labels, playlist rows |
+| `font_section` | 10 | Section header labels |
+| `font_version` | 11 | Version stamp in About tab |
+
+**Text opacity properties:**
+
+| Property | Default | Purpose |
+|---|---|---|
+| `a_time_label` | 0.70 | Time display in player bar |
+| `a_footer_stats` | 0.60 | Playlist footer track count |
+| `a_info_text` | 0.75 | Info / description text |
+| `a_label_text` | 0.55 | Row labels in About / Keymap tabs |
+| `a_tagline` | 0.65 | Tagline text |
+| `a_version` | 0.35 | Version stamp |
+| `a_empty_msg` | 0.45 | Empty state messages |
+| `a_track_num` | 0.40 | Track number labels |
+| `a_duration` | 0.50 | Track duration labels |
+| `a_dim_icon` | 0.50 | Dimmed icons (shuffle inactive, remove btn) |
 
 ---
 
@@ -70,12 +111,70 @@ A skin is a `UISkin` resource. It controls corner radii, padding, and the animat
 | `bar_shadow_size` | 16 | Player bar drop shadow size (px) |
 | `bar_padding_h` | 14.0 | Player bar horizontal inner padding |
 | `bar_padding_v` | 8.0 | Player bar vertical inner padding |
+
+**Button properties:**
+
+| Property | Default | Purpose |
+|---|---|---|
+| `btn_margin_h` | 10.0 | Button horizontal content margin |
+| `btn_margin_top` | 4.0 | Button top content margin (normal / hover) |
+| `btn_margin_bottom` | 4.0 | Button bottom content margin (normal / hover) |
+| `btn_hover_shadow` | 14 | Button hover shadow size |
+| `btn_pressed_margin_top` | 5.0 | Button pressed top content margin |
+| `btn_pressed_margin_bottom` | 3.0 | Button pressed bottom content margin |
+| `btn_pressed_shadow` | 4 | Button pressed shadow size |
+
+**Slider properties:**
+
+| Property | Default | Purpose |
+|---|---|---|
 | `slider_track_compact` | 4.0 | Slider track height in compact mode |
 | `slider_track_normal` | 6.0 | Slider track height in normal mode |
 | `slider_grab_compact` | 12.0 | Slider thumb margin in compact mode |
 | `slider_grab_normal` | 14.0 | Slider thumb margin in normal mode |
+| `slider_radius_compact` | 4.0 | Slider track corner radius (compact) |
+| `slider_radius_normal` | 5.0 | Slider track corner radius (normal) |
+| `slider_grabber_shadow` | 4 | Grabber shadow size |
+| `slider_grabber_h_shadow` | 6 | Grabber highlight shadow size |
+
+**Window properties:**
+
+| Property | Default | Purpose |
+|---|---|---|
+| `win_title_radius` | 14.0 | Window title bar corner radius |
+| `win_tab_radius` | 8.0 | Tab corner radius |
+| `win_tab_panel_radius` | 10.0 | Tab content panel corner radius |
+| `win_tab_margin` | 10.0 | Tab content panel padding |
+| `win_footer_radius` | 8.0 | Footer bar corner radius |
+
+**Playlist row properties:**
+
+| Property | Default | Purpose |
+|---|---|---|
+| `row_radius` | 6.0 | Playlist row corner radius |
+| `row_margin_h` | 10.0 | Playlist row horizontal content padding |
+| `row_margin_v` | 5.0 | Playlist row vertical content padding |
+| `row_btn_radius` | 5.0 | Inline row button corner radius (remove btn) |
+| `row_btn_margin_h` | 4.0 | Inline row button horizontal margin |
+| `row_btn_margin_v` | 3.0 | Inline row button vertical margin |
+
+**Logo properties:**
+
+| Property | Default | Purpose |
+|---|---|---|
+| `logo_margin_h` | 8.0 | Logo pill horizontal padding |
+| `logo_margin_top` | 5.0 | Logo pill top padding |
+| `logo_margin_bottom` | 2.0 | Logo pill bottom padding |
+| `logo_icon_size` | 40.0 | Logo icon dimensions (px) |
+
+**Separator properties:**
+
+| Property | Default | Purpose |
+|---|---|---|
 | `sep_base_wave` | 0.5 | Separator idle wave amplitude |
 | `sep_base_cap` | 1.8 | Separator endpoint cap radius |
+| `sep_h_margin` | 10.0 | Horizontal separator side margin |
+| `sep_v_margin` | 5.0 | Vertical separator top/bottom margin |
 
 ---
 

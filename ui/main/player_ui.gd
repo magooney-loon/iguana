@@ -153,7 +153,7 @@ func _build_bar() -> void:
 
 	_time_label = Label.new()
 	_time_label.text = "0:00 / 0:00"
-	_time_label.modulate.a = 0.7
+	_time_label.modulate.a = StylesUI.theme().a_time_label
 	_time_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	top.add_child(_time_label)
@@ -226,10 +226,10 @@ func _setup_logo() -> void:
 	style.set_border_width_all(1)
 	style.border_width_bottom   = 0
 	style.shadow_size           = 0
-	style.content_margin_left   = 8.0
-	style.content_margin_right  = 8.0
-	style.content_margin_top    = 5.0
-	style.content_margin_bottom = 2.0
+	style.content_margin_left   = StylesUI.skin().logo_margin_h
+	style.content_margin_right  = StylesUI.skin().logo_margin_h
+	style.content_margin_top    = StylesUI.skin().logo_margin_top
+	style.content_margin_bottom = StylesUI.skin().logo_margin_bottom
 	panel.add_theme_stylebox_override("panel", style)
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.z_index = 99
@@ -238,8 +238,9 @@ func _setup_logo() -> void:
 	img.texture      = tex
 	img.expand_mode  = TextureRect.EXPAND_IGNORE_SIZE
 	img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	img.custom_minimum_size = Vector2(40, 40)
-	img.size         = Vector2(40, 40)
+	var _icon_size := StylesUI.skin().logo_icon_size
+	img.custom_minimum_size = Vector2(_icon_size, _icon_size)
+	img.size         = Vector2(_icon_size, _icon_size)
 	img.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(img)
 
@@ -444,15 +445,15 @@ func _refresh_mode_buttons() -> void:
 		Playlist.PlayMode.SEQUENTIAL:
 			StylesUI.set_icon(_loop_btn, "loop_none")
 			_loop_btn.tooltip_text = "Sequential (click to loop all)"
-			_shuffle_btn.modulate.a = 0.5
+			_shuffle_btn.modulate.a = StylesUI.theme().a_dim_icon
 		Playlist.PlayMode.LOOP_ALL:
 			StylesUI.set_icon(_loop_btn, "loop_all")
 			_loop_btn.tooltip_text = "Loop All (click to loop one)"
-			_shuffle_btn.modulate.a = 0.5
+			_shuffle_btn.modulate.a = StylesUI.theme().a_dim_icon
 		Playlist.PlayMode.LOOP_ONE:
 			StylesUI.set_icon(_loop_btn, "loop_one")
 			_loop_btn.tooltip_text = "Loop One (click to shuffle)"
-			_shuffle_btn.modulate.a = 0.5
+			_shuffle_btn.modulate.a = StylesUI.theme().a_dim_icon
 		Playlist.PlayMode.SHUFFLE:
 			StylesUI.set_icon(_loop_btn, "loop_all")
 			_loop_btn.tooltip_text = "Shuffle active (click for sequential)"

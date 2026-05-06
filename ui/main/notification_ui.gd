@@ -16,9 +16,9 @@ func _ready() -> void:
 	set_anchors_preset(PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label = Label.new()
-	_label.add_theme_font_size_override("font_size", 22)
-	_label.position = Vector2(16, 14)
-	_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.6))
+	_label.add_theme_font_size_override("font_size", StylesUI.theme().font_notification)
+	_label.position = StylesUI.theme().notify_offset
+	_label.add_theme_color_override("font_shadow_color", StylesUI.theme().c_notify_shadow)
 	_label.add_theme_constant_override("shadow_offset_x", 1)
 	_label.add_theme_constant_override("shadow_offset_y", 1)
 	_label.hide()
@@ -42,4 +42,3 @@ func process_ui(delta: float) -> void:
 		_label.modulate.a = clampf(_label_timer, 0.0, 1.0)
 		if _label_timer <= 0.0:
 			_label.hide()
-

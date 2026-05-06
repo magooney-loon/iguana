@@ -85,23 +85,26 @@ func is_visible() -> bool:
 # ── Styles ────────────────────────────────────────────────────────────────────
 
 func _init_styles() -> void:
-	_style_normal = StylesUI.glass_box(StylesUI.theme().c_btn, 6.0, true)
-	_style_normal.content_margin_left   = 10.0
-	_style_normal.content_margin_right  = 10.0
-	_style_normal.content_margin_top    = 5.0
-	_style_normal.content_margin_bottom = 5.0
+	var sk := StylesUI.skin()
+	var t  := StylesUI.theme()
 
-	_style_hover = StylesUI.glass_box(StylesUI.theme().c_btn_h, 6.0, true)
-	_style_hover.content_margin_left   = 10.0
-	_style_hover.content_margin_right  = 10.0
-	_style_hover.content_margin_top    = 5.0
-	_style_hover.content_margin_bottom = 5.0
+	_style_normal = StylesUI.glass_box(t.c_btn, sk.row_radius, true)
+	_style_normal.content_margin_left   = sk.row_margin_h
+	_style_normal.content_margin_right  = sk.row_margin_h
+	_style_normal.content_margin_top    = sk.row_margin_v
+	_style_normal.content_margin_bottom = sk.row_margin_v
 
-	_style_active = StylesUI.glass_box(StylesUI.theme().c_active_row, 6.0, true)
-	_style_active.content_margin_left   = 10.0
-	_style_active.content_margin_right  = 10.0
-	_style_active.content_margin_top    = 5.0
-	_style_active.content_margin_bottom = 5.0
+	_style_hover = StylesUI.glass_box(t.c_btn_h, sk.row_radius, true)
+	_style_hover.content_margin_left   = sk.row_margin_h
+	_style_hover.content_margin_right  = sk.row_margin_h
+	_style_hover.content_margin_top    = sk.row_margin_v
+	_style_hover.content_margin_bottom = sk.row_margin_v
+
+	_style_active = StylesUI.glass_box(t.c_active_row, sk.row_radius, true)
+	_style_active.content_margin_left   = sk.row_margin_h
+	_style_active.content_margin_right  = sk.row_margin_h
+	_style_active.content_margin_top    = sk.row_margin_v
+	_style_active.content_margin_bottom = sk.row_margin_v
 
 
 # ── Build ─────────────────────────────────────────────────────────────────────
@@ -133,7 +136,7 @@ func _build() -> void:
 
 	# ── Title bar ─────────────────────────────────────────────────────
 	var title_bar := PanelContainer.new()
-	title_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_title_bar, 14.0, true))
+	title_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_title_bar, StylesUI.skin().win_title_radius, true))
 	StylesUI.apply_aero(title_bar, true)
 	col.add_child(title_bar)
 
@@ -153,7 +156,7 @@ func _build() -> void:
 
 	var title_lbl := Label.new()
 	title_lbl.text = "Playlist"
-	title_lbl.add_theme_font_size_override("font_size", 14)
+	title_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_title)
 	title_lbl.modulate = StylesUI.theme().c_text_hi
 	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -170,7 +173,7 @@ func _build() -> void:
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_panel_bg, 10.0, false))
+	_scroll.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_panel_bg, StylesUI.skin().win_tab_panel_radius, false))
 	var scroll_panel := _scroll.get_theme_stylebox("panel") as StyleBoxFlat
 	if scroll_panel:
 		scroll_panel.shadow_size = 0
@@ -184,7 +187,7 @@ func _build() -> void:
 
 	# ── Footer bar ────────────────────────────────────────────────────
 	var footer_bar := PanelContainer.new()
-	footer_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_footer_bar, 8.0, true))
+	footer_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_footer_bar, StylesUI.skin().win_footer_radius, true))
 	StylesUI.apply_aero(footer_bar, true)
 	col.add_child(footer_bar)
 
@@ -200,8 +203,8 @@ func _build() -> void:
 	footer_margin.add_child(footer_row)
 
 	_footer_stats = Label.new()
-	_footer_stats.add_theme_font_size_override("font_size", 12)
-	_footer_stats.modulate.a = 0.6
+	_footer_stats.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	_footer_stats.modulate.a = StylesUI.theme().a_footer_stats
 	_footer_stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer_row.add_child(_footer_stats)
 
@@ -234,8 +237,8 @@ func _rebuild_list() -> void:
 	if _playlist.is_empty():
 		var empty_lbl := Label.new()
 		empty_lbl.text = "No tracks loaded"
-		empty_lbl.add_theme_font_size_override("font_size", 12)
-		empty_lbl.modulate.a = 0.45
+		empty_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+		empty_lbl.modulate.a = StylesUI.theme().a_empty_msg
 		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_track_container.add_child(empty_lbl)
 		_update_footer()
@@ -266,8 +269,8 @@ func _rebuild_list() -> void:
 		# ── Number ────────────────────────────────────────────────────
 		var num_lbl := Label.new()
 		num_lbl.text = "%d." % [i + 1]
-		num_lbl.add_theme_font_size_override("font_size", 12)
-		num_lbl.modulate.a = 0.40
+		num_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+		num_lbl.modulate.a = StylesUI.theme().a_track_num
 		num_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		num_lbl.custom_minimum_size.x = 28
 		num_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -282,7 +285,7 @@ func _rebuild_list() -> void:
 
 		var name_label := Label.new()
 		name_label.text = track_name
-		name_label.add_theme_font_size_override("font_size", 12)
+		name_label.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
 		name_label.anchor_top = 0.0
 		name_label.anchor_bottom = 1.0
 		name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -294,8 +297,8 @@ func _rebuild_list() -> void:
 		# ── Duration ──────────────────────────────────────────────────
 		var dur_lbl := Label.new()
 		dur_lbl.text = _fmt_duration(dur)
-		dur_lbl.add_theme_font_size_override("font_size", 12)
-		dur_lbl.modulate.a = 0.50
+		dur_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+		dur_lbl.modulate.a = StylesUI.theme().a_duration
 		dur_lbl.custom_minimum_size.x = 44
 		dur_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		dur_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -315,14 +318,15 @@ func _rebuild_list() -> void:
 		remove_btn.custom_minimum_size = Vector2(20, 20)
 		remove_btn.focus_mode = Control.FOCUS_NONE
 		remove_btn.mouse_filter = Control.MOUSE_FILTER_STOP
-		remove_btn.modulate.a = 0.5
+		remove_btn.modulate.a = StylesUI.theme().a_dim_icon
 		remove_btn.tooltip_text = "Remove from playlist"
+		var _sk := StylesUI.skin()
 		var _rs := func(bg: Color) -> StyleBoxFlat:
-			var s := StylesUI.glass_box(bg, 5.0, false)
-			s.content_margin_left = 4.0
-			s.content_margin_right = 4.0
-			s.content_margin_top = 3.0
-			s.content_margin_bottom = 3.0
+			var s := StylesUI.glass_box(bg, _sk.row_btn_radius, false)
+			s.content_margin_left = _sk.row_btn_margin_h
+			s.content_margin_right = _sk.row_btn_margin_h
+			s.content_margin_top = _sk.row_btn_margin_v
+			s.content_margin_bottom = _sk.row_btn_margin_v
 			return s
 		remove_btn.add_theme_stylebox_override("normal", _rs.call(StylesUI.theme().c_btn))
 		remove_btn.add_theme_stylebox_override("hover", _rs.call(StylesUI.theme().c_btn_h))
@@ -408,7 +412,7 @@ func _highlight_current() -> void:
 			name_label.modulate = StylesUI.theme().c_text_hi
 		else:
 			row.add_theme_stylebox_override("panel", _style_normal.duplicate())
-			name_label.modulate = Color.WHITE
+			name_label.modulate = StylesUI.theme().c_text_dim
 	_setup_marquees.call_deferred()
 
 

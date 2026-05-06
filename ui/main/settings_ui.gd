@@ -120,7 +120,7 @@ func _build() -> void:
 
 	# ── Custom title bar ──────────────────────────────────────────────
 	var title_bar := PanelContainer.new()
-	title_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_title_bar, 14.0, true))
+	title_bar.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_title_bar, StylesUI.skin().win_title_radius, true))
 	StylesUI.apply_aero(title_bar, true)
 	col.add_child(title_bar)
 
@@ -137,7 +137,7 @@ func _build() -> void:
 
 	var title_lbl := Label.new()
 	title_lbl.text = "Settings"
-	title_lbl.add_theme_font_size_override("font_size", 14)
+	title_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_title)
 	title_lbl.modulate = StylesUI.theme().c_text_hi
 	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(title_lbl)
@@ -156,16 +156,17 @@ func _build() -> void:
 
 	_tabs = TabContainer.new()
 	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_tabs.add_theme_stylebox_override("tab_fg", StylesUI.glass_box(StylesUI.theme().c_btn_h, 8.0, true))
-	_tabs.add_theme_stylebox_override("tab_bg", StylesUI.glass_box(StylesUI.theme().c_btn, 8.0, true))
-	_tabs.add_theme_stylebox_override("tab_hover", StylesUI.glass_box(StylesUI.theme().c_accent, 8.0, true))
+	_tabs.add_theme_stylebox_override("tab_fg", StylesUI.glass_box(StylesUI.theme().c_btn_h, StylesUI.skin().win_tab_radius, true))
+	_tabs.add_theme_stylebox_override("tab_bg", StylesUI.glass_box(StylesUI.theme().c_btn, StylesUI.skin().win_tab_radius, true))
+	_tabs.add_theme_stylebox_override("tab_hover", StylesUI.glass_box(StylesUI.theme().c_accent, StylesUI.skin().win_tab_radius, true))
 	_tabs.get_tab_bar().tab_alignment = TabBar.ALIGNMENT_CENTER
-	var tab_panel := StylesUI.glass_box(StylesUI.theme().c_panel_bg, 10.0, false)
+	var _sk := StylesUI.skin()
+	var tab_panel := StylesUI.glass_box(StylesUI.theme().c_panel_bg, _sk.win_tab_panel_radius, false)
 	tab_panel.shadow_size = 0
-	tab_panel.content_margin_left   = 10.0
-	tab_panel.content_margin_right  = 10.0
-	tab_panel.content_margin_top    = 10.0
-	tab_panel.content_margin_bottom = 10.0
+	tab_panel.content_margin_left   = _sk.win_tab_margin
+	tab_panel.content_margin_right  = _sk.win_tab_margin
+	tab_panel.content_margin_top    = _sk.win_tab_margin
+	tab_panel.content_margin_bottom = _sk.win_tab_margin
 	_tabs.add_theme_stylebox_override("panel", tab_panel)
 	StylesUI.apply_aero(_tabs, true)
 	content_margin.add_child(_tabs)
@@ -195,9 +196,9 @@ func _build() -> void:
 	StylesUI.on_reload(func() -> void:
 		if not is_instance_valid(_tabs):
 			return
-		_tabs.add_theme_stylebox_override("tab_fg",    StylesUI.glass_box(StylesUI.theme().c_btn_h,  8.0, true))
-		_tabs.add_theme_stylebox_override("tab_bg",    StylesUI.glass_box(StylesUI.theme().c_btn,    8.0, true))
-		_tabs.add_theme_stylebox_override("tab_hover", StylesUI.glass_box(StylesUI.theme().c_accent, 8.0, true))
+		_tabs.add_theme_stylebox_override("tab_fg",    StylesUI.glass_box(StylesUI.theme().c_btn_h,  StylesUI.skin().win_tab_radius, true))
+		_tabs.add_theme_stylebox_override("tab_bg",    StylesUI.glass_box(StylesUI.theme().c_btn,    StylesUI.skin().win_tab_radius, true))
+		_tabs.add_theme_stylebox_override("tab_hover", StylesUI.glass_box(StylesUI.theme().c_accent, StylesUI.skin().win_tab_radius, true))
 	)
 
 
@@ -268,7 +269,7 @@ func _build_general_tab() -> Control:
 	theme_row.add_theme_constant_override("separation", 8)
 	var theme_pre := Label.new()
 	theme_pre.text = "Theme"
-	theme_pre.add_theme_font_size_override("font_size", 12)
+	theme_pre.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
 	theme_pre.custom_minimum_size.x = 48
 	theme_row.add_child(theme_pre)
 	var theme_opt := OptionButton.new()
@@ -293,7 +294,7 @@ func _build_general_tab() -> Control:
 	skin_row.add_theme_constant_override("separation", 8)
 	var skin_pre := Label.new()
 	skin_pre.text = "Skin"
-	skin_pre.add_theme_font_size_override("font_size", 12)
+	skin_pre.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
 	skin_pre.custom_minimum_size.x = 48
 	skin_row.add_child(skin_pre)
 	var skin_opt := OptionButton.new()
@@ -318,7 +319,7 @@ func _build_general_tab() -> Control:
 	style_row.add_theme_constant_override("separation", 8)
 	var style_pre := Label.new()
 	style_pre.text = "Style"
-	style_pre.add_theme_font_size_override("font_size", 12)
+	style_pre.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
 	style_pre.custom_minimum_size.x = 48
 	style_row.add_child(style_pre)
 	var style_opt := OptionButton.new()
@@ -343,7 +344,7 @@ func _build_general_tab() -> Control:
 	icons_row.add_theme_constant_override("separation", 8)
 	var icons_pre := Label.new()
 	icons_pre.text = "Icons"
-	icons_pre.add_theme_font_size_override("font_size", 12)
+	icons_pre.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
 	icons_pre.custom_minimum_size.x = 48
 	icons_row.add_child(icons_pre)
 	var icons_opt := OptionButton.new()
@@ -475,12 +476,12 @@ func _build_shaders_tab() -> Control:
 	StylesUI.win_section(vbox, "SHADER INFO")
 
 	_shader_author_label = Label.new()
-	_shader_author_label.add_theme_font_size_override("font_size", 12)
-	_shader_author_label.modulate.a = 0.75
+	_shader_author_label.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	_shader_author_label.modulate.a = StylesUI.theme().a_info_text
 	vbox.add_child(_shader_author_label)
 
 	_shader_website_label = Label.new()
-	_shader_website_label.add_theme_font_size_override("font_size", 12)
+	_shader_website_label.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
 	_shader_website_label.modulate = StylesUI.theme().c_link
 	_shader_website_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	_shader_website_label.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -506,8 +507,8 @@ func _build_shaders_tab() -> Control:
 	vbox.add_child(_shader_desc_clip)
 
 	_shader_desc_label = Label.new()
-	_shader_desc_label.add_theme_font_size_override("font_size", 12)
-	_shader_desc_label.modulate.a = 0.75
+	_shader_desc_label.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	_shader_desc_label.modulate.a = StylesUI.theme().a_info_text
 	_shader_desc_clip.add_child(_shader_desc_label)
 
 	_update_shader_info()
@@ -564,7 +565,7 @@ func _pp_slider(parent: VBoxContainer, label: String, param: String,
 
 	var lbl := Label.new()
 	lbl.text = label
-	lbl.add_theme_font_size_override("font_size", 12)
+	lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
 	lbl.custom_minimum_size.x = 145
 	row.add_child(lbl)
 
@@ -577,7 +578,7 @@ func _pp_slider(parent: VBoxContainer, label: String, param: String,
 	StylesUI.apply_glass_slider(slider, true)
 
 	var val_lbl := Label.new()
-	val_lbl.add_theme_font_size_override("font_size", 12)
+	val_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
 	val_lbl.custom_minimum_size.x = 40
 	val_lbl.horizontal_alignment  = HORIZONTAL_ALIGNMENT_RIGHT
 
@@ -716,14 +717,14 @@ func _build_keymap_tab() -> Control:
 
 		var label := Label.new()
 		label.text = Keymap.get_action_name(action_id)
-		label.add_theme_font_size_override("font_size", 12)
+		label.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
 		label.custom_minimum_size.x = 185
 		label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(label)
 
 		var key_label := Label.new()
 		key_label.text = Keymap.key_to_label(Keymap.get_key(action_id))
-		key_label.add_theme_font_size_override("font_size", 12)
+		key_label.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
 		key_label.custom_minimum_size.x = 80
 		key_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		key_label.modulate = StylesUI.theme().c_text_hi
@@ -813,7 +814,7 @@ func _dbg_row(parent: VBoxContainer, display: String, key: String, max_val: floa
 
 	var lbl := Label.new()
 	lbl.text = display
-	lbl.add_theme_font_size_override("font_size", 12)
+	lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
 	lbl.custom_minimum_size.x = 170
 	row.add_child(lbl)
 
@@ -828,7 +829,7 @@ func _dbg_row(parent: VBoxContainer, display: String, key: String, max_val: floa
 	row.add_child(bar)
 
 	var val_lbl := Label.new()
-	val_lbl.add_theme_font_size_override("font_size", 12)
+	val_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
 	val_lbl.custom_minimum_size.x     = 46
 	val_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	row.add_child(val_lbl)
@@ -904,7 +905,7 @@ func _build_about_tab() -> Control:
 	# Name
 	var name_lbl := Label.new()
 	name_lbl.text = "Iguana"
-	name_lbl.add_theme_font_size_override("font_size", 22)
+	name_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_notification)
 	name_lbl.modulate = StylesUI.theme().c_text_hi
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -913,8 +914,8 @@ func _build_about_tab() -> Control:
 	# Tagline
 	var tag_lbl := Label.new()
 	tag_lbl.text = "It really licks the eyeball, yeah..."
-	tag_lbl.add_theme_font_size_override("font_size", 12)
-	tag_lbl.modulate.a = 0.65
+	tag_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	tag_lbl.modulate.a = StylesUI.theme().a_tagline
 	tag_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tag_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_child(tag_lbl)
@@ -934,8 +935,8 @@ func _build_about_tab() -> Control:
 	gh_row.add_theme_constant_override("separation", 8)
 	var gh_lbl := Label.new()
 	gh_lbl.text = "GitHub"
-	gh_lbl.add_theme_font_size_override("font_size", 12)
-	gh_lbl.modulate.a = 0.55
+	gh_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	gh_lbl.modulate.a = StylesUI.theme().a_label_text
 	gh_lbl.custom_minimum_size.x = 80
 	gh_row.add_child(gh_lbl)
 	gh_row.add_child(StylesUI.make_link_label("magooney-loon/iguana", "https://github.com/magooney-loon/iguana"))
@@ -945,8 +946,8 @@ func _build_about_tab() -> Control:
 	x_row.add_theme_constant_override("separation", 8)
 	var x_lbl := Label.new()
 	x_lbl.text = "X / Twitter"
-	x_lbl.add_theme_font_size_override("font_size", 12)
-	x_lbl.modulate.a = 0.55
+	x_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	x_lbl.modulate.a = StylesUI.theme().a_label_text
 	x_lbl.custom_minimum_size.x = 80
 	x_row.add_child(x_lbl)
 	x_row.add_child(StylesUI.make_link_label("@MyMoonEnt", "https://x.com/MyMoonEnt"))
@@ -956,8 +957,8 @@ func _build_about_tab() -> Control:
 	rd_row.add_theme_constant_override("separation", 8)
 	var rd_lbl := Label.new()
 	rd_lbl.text = "Reddit"
-	rd_lbl.add_theme_font_size_override("font_size", 12)
-	rd_lbl.modulate.a = 0.55
+	rd_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	rd_lbl.modulate.a = StylesUI.theme().a_label_text
 	rd_lbl.custom_minimum_size.x = 80
 	rd_row.add_child(rd_lbl)
 	rd_row.add_child(StylesUI.make_link_label("u/SubjectHealthy2409", "https://www.reddit.com/user/SubjectHealthy2409/"))
@@ -967,8 +968,8 @@ func _build_about_tab() -> Control:
 	em_row.add_theme_constant_override("separation", 8)
 	var em_lbl := Label.new()
 	em_lbl.text = "Contact"
-	em_lbl.add_theme_font_size_override("font_size", 12)
-	em_lbl.modulate.a = 0.55
+	em_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	em_lbl.modulate.a = StylesUI.theme().a_label_text
 	em_lbl.custom_minimum_size.x = 80
 	em_row.add_child(em_lbl)
 	em_row.add_child(StylesUI.make_link_label("contact@magooney.org", "mailto:contact@magooney.org"))
@@ -981,8 +982,8 @@ func _build_about_tab() -> Control:
 	# Version stamp
 	var ver_lbl := Label.new()
 	ver_lbl.text = "v0.1.0"
-	ver_lbl.add_theme_font_size_override("font_size", 11)
-	ver_lbl.modulate.a = 0.35
+	ver_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_version)
+	ver_lbl.modulate.a = StylesUI.theme().a_version
 	ver_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ver_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_child(ver_lbl)
@@ -996,14 +997,14 @@ func _about_row(parent: VBoxContainer, label: String, value: String) -> void:
 
 	var lbl := Label.new()
 	lbl.text = label
-	lbl.add_theme_font_size_override("font_size", 12)
-	lbl.modulate.a = 0.55
+	lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	lbl.modulate.a = StylesUI.theme().a_label_text
 	lbl.custom_minimum_size.x = 80
 	row.add_child(lbl)
 
 	var val := Label.new()
 	val.text = value
-	val.add_theme_font_size_override("font_size", 12)
+	val.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
 	val.modulate = StylesUI.theme().c_text_hi
 	row.add_child(val)
 

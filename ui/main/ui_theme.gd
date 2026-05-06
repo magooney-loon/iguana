@@ -43,6 +43,29 @@ extends Resource
 @export var c_text_hi     := Color(0.70, 0.82, 1.00, 1.00)
 @export var c_text_dim    := Color(0.55, 0.65, 0.85, 0.55)
 
+@export_group("Notification")
+@export var c_notify_shadow := Color(0.0, 0.0, 0.0, 0.6)
+@export var notify_offset   := Vector2(16, 14)
+
+@export_group("Font Sizes")
+@export var font_notification := 22
+@export var font_title        := 14
+@export var font_body         := 12
+@export var font_section      := 10
+@export var font_version      := 11
+
+@export_group("Text Opacity")
+@export var a_time_label   := 0.70
+@export var a_footer_stats := 0.60
+@export var a_info_text    := 0.75
+@export var a_label_text   := 0.55
+@export var a_tagline      := 0.65
+@export var a_version      := 0.35
+@export var a_empty_msg    := 0.45
+@export var a_track_num    := 0.40
+@export var a_duration     := 0.50
+@export var a_dim_icon     := 0.50
+
 @export_group("Debug")
 @export var c_dbg_bg      := Color(0.03, 0.04, 0.08, 0.50)
 @export var c_dbg_fill    := Color(0.35, 0.52, 0.85, 0.55)

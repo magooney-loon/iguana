@@ -286,22 +286,22 @@ static func _apply_glass_btn_to(btn: Button) -> void:
 	var sk := skin()
 	var r  := sk.btn_radius
 	var n := glass_box(t.c_btn, r, true)
-	n.content_margin_left   = 10.0
-	n.content_margin_right  = 10.0
-	n.content_margin_top    = 4.0
-	n.content_margin_bottom = 4.0
+	n.content_margin_left   = sk.btn_margin_h
+	n.content_margin_right  = sk.btn_margin_h
+	n.content_margin_top    = sk.btn_margin_top
+	n.content_margin_bottom = sk.btn_margin_bottom
 	var h := glass_box(t.c_btn_h, r, true)
-	h.content_margin_left   = 10.0
-	h.content_margin_right  = 10.0
-	h.content_margin_top    = 4.0
-	h.content_margin_bottom = 4.0
-	h.shadow_size = 14
+	h.content_margin_left   = sk.btn_margin_h
+	h.content_margin_right  = sk.btn_margin_h
+	h.content_margin_top    = sk.btn_margin_top
+	h.content_margin_bottom = sk.btn_margin_bottom
+	h.shadow_size = sk.btn_hover_shadow
 	var p := glass_box(t.c_btn_p, r, true)
-	p.content_margin_left   = 10.0
-	p.content_margin_right  = 10.0
-	p.content_margin_top    = 5.0
-	p.content_margin_bottom = 3.0
-	p.shadow_size   = 4
+	p.content_margin_left   = sk.btn_margin_h
+	p.content_margin_right  = sk.btn_margin_h
+	p.content_margin_top    = sk.btn_pressed_margin_top
+	p.content_margin_bottom = sk.btn_pressed_margin_bottom
+	p.shadow_size   = sk.btn_pressed_shadow
 	p.shadow_offset = Vector2(0, 1)
 	btn.add_theme_stylebox_override("normal",  n)
 	btn.add_theme_stylebox_override("hover",   h)
@@ -318,7 +318,7 @@ static func _apply_glass_slider_to(slider: HSlider, compact: bool) -> void:
 	var sk := skin()
 	var track_h   := sk.slider_track_compact if compact else sk.slider_track_normal
 	var grab_size := sk.slider_grab_compact  if compact else sk.slider_grab_normal
-	var radius    := 4.0 if compact else 5.0
+	var radius    := sk.slider_radius_compact if compact else sk.slider_radius_normal
 
 	var bg := StyleBoxFlat.new()
 	bg.bg_color     = t.c_slider_bg
@@ -353,7 +353,7 @@ static func _apply_glass_slider_to(slider: HSlider, compact: bool) -> void:
 	grab.corner_radius_bottom_right = int(grab_size / 2.0)
 	grab.corner_radius_bottom_left  = int(grab_size / 2.0)
 	grab.shadow_color   = t.c_shadow
-	grab.shadow_size    = 4
+	grab.shadow_size    = sk.slider_grabber_shadow
 	grab.shadow_offset  = Vector2(0, 2)
 	grab.anti_aliasing_size   = 2.0
 	grab.content_margin_left  = grab_size
@@ -371,7 +371,7 @@ static func _apply_glass_slider_to(slider: HSlider, compact: bool) -> void:
 	grab_h.corner_radius_bottom_right = int(grab_size / 2.0)
 	grab_h.corner_radius_bottom_left  = int(grab_size / 2.0)
 	grab_h.shadow_color   = t.c_shadow
-	grab_h.shadow_size    = 6
+	grab_h.shadow_size    = sk.slider_grabber_h_shadow
 	grab_h.shadow_offset  = Vector2(0, 3)
 	grab_h.anti_aliasing_size    = 2.0
 	grab_h.content_margin_left   = grab_size + 1.0
@@ -473,7 +473,7 @@ static func make_link_label(text: String, url: String, font_size: int = 12) -> L
 static func win_section(parent: Control, title: String) -> void:
 	var lbl := Label.new()
 	lbl.text = title
-	lbl.add_theme_font_size_override("font_size", 10)
+	lbl.add_theme_font_size_override("font_size", theme().font_section)
 	lbl.modulate = theme().c_section
 	parent.add_child(lbl)
 
@@ -531,7 +531,7 @@ class _Sep extends Control:
 
 	func _draw_h() -> void:
 		var mid_y  := size.y * 0.5
-		var margin := 10.0
+		var margin := StylesUI.skin().sep_h_margin
 		var left   := margin
 		var right  := maxf(size.x - margin, left + 6.0)
 		var w      := right - left
@@ -559,7 +559,7 @@ class _Sep extends Control:
 
 	func _draw_v() -> void:
 		var mid_x  := size.x * 0.5
-		var margin := 5.0
+		var margin := StylesUI.skin().sep_v_margin
 		var top    := margin
 		var bot    := maxf(size.y - margin, top + 6.0)
 		var h      := bot - top
