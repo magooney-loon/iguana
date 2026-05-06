@@ -9,7 +9,7 @@ shader_path = "res://ui/appearance/styles/aero_glass.gdshader"
 
 # ── Logo ──
 logo_visible = true
-logo_anchor = 0
+logo_anchor = 2
 
 # ── Animation ──
 anim_autohide_duration = 0.45

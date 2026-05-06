@@ -7,6 +7,7 @@ var _analyzer:   AudioAnalyzer
 
 # Window
 var _win:          Window
+var _engine_theme: Theme
 var _content:      Control
 var _tween:        Tween
 
@@ -104,6 +105,10 @@ func _build() -> void:
 	_win.hide()
 	add_child(_win)
 
+	_engine_theme = Theme.new()
+	_win.theme = _engine_theme
+	_apply_engine_theme()
+
 	# Margin so shadows don't clip against the window edges
 	var shadow_pad := MarginContainer.new()
 	shadow_pad.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -200,6 +205,18 @@ func _build() -> void:
 	_tabs.add_child(_build_debug_tab())
 	_tabs.add_child(_build_about_tab())
 
+	StylesUI.on_reload(func() -> void:
+		if is_instance_valid(_win):
+			_apply_engine_theme()
+	)
+
+
+func _apply_engine_theme() -> void:
+	if _engine_theme == null:
+		return
+	var t := StylesUI.theme()
+	_engine_theme.set_color("font_color", "CheckBox", t.c_text_hi)
+	_engine_theme.set_color("font_color", "OptionButton", t.c_text_hi)
 
 
 # ── General tab ──────────────────────────────────────────────────────────────
@@ -232,6 +249,9 @@ func _build_general_tab() -> Control:
 	xf_row.add_theme_constant_override("separation", 4)
 	var xf_pre := Label.new()
 	xf_pre.text = "Crossfade"
+	StylesUI.track_label(xf_pre, func(l: Label) -> void:
+		l.add_theme_color_override("font_color", StylesUI.theme().c_text_hi)
+	)
 	xf_row.add_child(xf_pre)
 	var xf_spin := SpinBox.new()
 	xf_spin.min_value = 0.5
@@ -271,6 +291,7 @@ func _build_general_tab() -> Control:
 	theme_pre.text = "Theme"
 	StylesUI.track_label(theme_pre, func(l: Label) -> void:
 		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+		l.add_theme_color_override("font_color", StylesUI.theme().c_text_hi)
 	)
 	theme_pre.custom_minimum_size.x = 48
 	theme_row.add_child(theme_pre)
@@ -298,6 +319,7 @@ func _build_general_tab() -> Control:
 	style_pre.text = "Style"
 	StylesUI.track_label(style_pre, func(l: Label) -> void:
 		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+		l.add_theme_color_override("font_color", StylesUI.theme().c_text_hi)
 	)
 	style_pre.custom_minimum_size.x = 48
 	style_row.add_child(style_pre)
@@ -325,6 +347,7 @@ func _build_general_tab() -> Control:
 	icons_pre.text = "Icons"
 	StylesUI.track_label(icons_pre, func(l: Label) -> void:
 		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+		l.add_theme_color_override("font_color", StylesUI.theme().c_text_hi)
 	)
 	icons_pre.custom_minimum_size.x = 48
 	icons_row.add_child(icons_pre)
@@ -361,6 +384,9 @@ func _build_general_tab() -> Control:
 	fps_cap_row.add_theme_constant_override("separation", 4)
 	var fps_cap_pre := Label.new()
 	fps_cap_pre.text = "Max FPS"
+	StylesUI.track_label(fps_cap_pre, func(l: Label) -> void:
+		l.add_theme_color_override("font_color", StylesUI.theme().c_text_hi)
+	)
 	fps_cap_row.add_child(fps_cap_pre)
 	var fps_cap_spin := SpinBox.new()
 	fps_cap_spin.min_value = 15.0
@@ -554,6 +580,7 @@ func _pp_slider(parent: VBoxContainer, label: String, param: String,
 	lbl.text = label
 	StylesUI.track_label(lbl, func(l: Label) -> void:
 		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+		l.add_theme_color_override("font_color", StylesUI.theme().c_text_hi)
 	)
 	lbl.custom_minimum_size.x = 145
 	row.add_child(lbl)
@@ -710,6 +737,7 @@ func _build_keymap_tab() -> Control:
 		label.text = Keymap.get_action_name(action_id)
 		StylesUI.track_label(label, func(l: Label) -> void:
 			l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+			l.add_theme_color_override("font_color", StylesUI.theme().c_text_hi)
 		)
 		label.custom_minimum_size.x = 185
 		label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -811,6 +839,7 @@ func _dbg_row(parent: VBoxContainer, display: String, key: String, max_val: floa
 	lbl.text = display
 	StylesUI.track_label(lbl, func(l: Label) -> void:
 		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+		l.add_theme_color_override("font_color", StylesUI.theme().c_text_hi)
 	)
 	lbl.custom_minimum_size.x = 170
 	row.add_child(lbl)

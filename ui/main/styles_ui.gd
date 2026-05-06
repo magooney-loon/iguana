@@ -494,7 +494,7 @@ static func win_section(parent: Control, title: String) -> void:
 	lbl.text = title
 	track_label(lbl, func(l: Label) -> void:
 		l.add_theme_font_size_override("font_size", theme().font_section)
-		l.modulate = theme().c_section
+		l.add_theme_color_override("font_color", theme().c_section)
 	)
 	parent.add_child(lbl)
 
