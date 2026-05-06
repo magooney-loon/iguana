@@ -25,6 +25,7 @@ uniform float corner_radius   : hint_range(0.0, 0.15, 0.005) = 0.04;
 uniform float beat            : hint_range(0.0, 1.0)          = 0.0;
 uniform float energy          : hint_range(0.0, 1.0)          = 0.0;
 uniform float bass            : hint_range(0.0, 1.0)          = 0.0;
+uniform float wave_seed       : hint_range(0.0, 100.0, 0.1)   = 0.0;
 uniform float gradient_strength : hint_range(0.0, 0.3, 0.01)  = 0.0;
 uniform float fresnel_strength  : hint_range(0.0, 0.5, 0.01)  = 0.0;
 uniform float fresnel_width     : hint_range(0.01, 0.2, 0.01) = 0.05;
@@ -106,10 +107,11 @@ void fragment() {
 	float dir_bias = 1.0 + (0.5 - uv.y) * 0.6;
 	edge_glow *= dir_bias;
 
-	// Flowing wave animation — organic, audio-reactive
+	// Flowing wave animation — organic, audio-reactive, per-panel unique
 	float wave_amp = 0.06 + beat * 0.15 + energy * 0.05;
-	float wave  = sin(uv.x * 25.0 + t * 1.8 + sin(uv.y * 10.0 + t * 0.7) * 2.0) * wave_amp;
-	wave += sin(uv.y * 18.0 - t * 1.2 + cos(uv.x * 8.0 + t * 0.5) * 1.5) * wave_amp * 0.7;
+	float ws = wave_seed;
+	float wave  = sin(uv.x * 25.0 + t * 1.8 + ws * 6.28 + sin(uv.y * 10.0 + t * 0.7 + ws) * 2.0) * wave_amp;
+	wave += sin(uv.y * 18.0 - t * 1.2 + ws * 4.17 + cos(uv.x * 8.0 + t * 0.5 + ws * 0.7) * 1.5) * wave_amp * 0.7;
 	edge_glow *= (1.0 + wave);
 
 	// Caustic ripples — light concentrating through curved glass surface

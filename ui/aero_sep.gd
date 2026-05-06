@@ -19,10 +19,12 @@ var _s_energy := 0.0
 var _base_color := Color(0.45, 0.55, 0.75, 0.22)
 var _base_wave  := 0.5
 var _base_cap   := 1.8
+var _seed       := 0.0
 
 
 func _ready() -> void:
 	_fit()
+	_seed = randf() * 100.0
 
 
 func _process(_delta: float) -> void:
@@ -55,12 +57,17 @@ func _draw_h() -> void:
 	live_color.a = _base_color.a + _s_energy * 0.15
 	var line_w := 1.0 + _s_beat * 0.8
 
-	# Wavy line — amplitude surges with beat
+	# Per-instance wave shape — frequency, phase, secondary wave all unique
+	var freq := 2.5 + sin(_seed) * 1.5
+	var phase := _seed * 3.7
+	var freq2 := 1.8 + cos(_seed * 0.7) * 0.8
+
 	var pts := PackedVector2Array()
 	for i in range(steps + 1):
 		var t := float(i) / float(steps)
 		var x := left + t * w
-		var y := mid_y + sin(t * PI * 3.0) * live_wave
+		var y := mid_y + sin(t * PI * freq + phase) * live_wave
+		y += sin(t * PI * freq2 + _seed * 2.1) * live_wave * 0.3
 		pts.append(Vector2(x, y))
 	draw_polyline(pts, live_color, line_w, true)
 
@@ -84,12 +91,17 @@ func _draw_v() -> void:
 	live_color.a = _base_color.a + _s_energy * 0.15
 	var line_w := 1.0 + _s_beat * 0.6
 
-	# Wavy line — amplitude surges with beat
+	# Per-instance wave shape
+	var freq := 2.5 + sin(_seed * 1.3) * 1.5
+	var phase := _seed * 2.9
+	var freq2 := 1.5 + cos(_seed * 0.5) * 0.7
+
 	var pts := PackedVector2Array()
 	for i in range(steps + 1):
 		var t := float(i) / float(steps)
 		var y := top + t * h
-		var x := mid_x + sin(t * PI * 3.0) * live_wave
+		var x := mid_x + sin(t * PI * freq + phase) * live_wave
+		x += sin(t * PI * freq2 + _seed * 1.7) * live_wave * 0.3
 		pts.append(Vector2(x, y))
 	draw_polyline(pts, live_color, line_w, true)
 

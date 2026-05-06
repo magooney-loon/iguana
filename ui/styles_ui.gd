@@ -62,6 +62,7 @@ static func apply_aero(panel: Control, subtle := true) -> void:
 		mat.set_shader_parameter("specular_y_pos", 0.02)
 		mat.set_shader_parameter("specular_height", 0.18)
 		mat.set_shader_parameter("corner_radius", 0.04)
+		mat.set_shader_parameter("wave_seed", randf() * 100.0)
 		# Lighting gradient
 		mat.set_shader_parameter("gradient_strength", 0.05)
 		# Fresnel edge bloom
@@ -80,6 +81,7 @@ static func apply_aero(panel: Control, subtle := true) -> void:
 		mat.set_shader_parameter("specular_y_pos", 0.01)
 		mat.set_shader_parameter("specular_height", 0.22)
 		mat.set_shader_parameter("corner_radius", 0.035)
+		mat.set_shader_parameter("wave_seed", randf() * 100.0)
 		# Lighting gradient
 		mat.set_shader_parameter("gradient_strength", 0.10)
 		# Fresnel edge bloom
