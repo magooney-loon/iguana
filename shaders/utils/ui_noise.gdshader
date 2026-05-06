@@ -28,6 +28,8 @@ uniform float fresnel_width     : hint_range(0.01, 0.2, 0.01) = 0.05;
 uniform float bevel_strength    : hint_range(0.0, 0.3, 0.01)  = 0.0;
 uniform float bevel_width       : hint_range(0.005, 0.1, 0.005) = 0.025;
 uniform float gloss_texture_str : hint_range(0.0, 0.1, 0.005) = 0.0;
+uniform float caustic_scale    : hint_range(1.0, 20.0, 0.5)  = 8.0;
+uniform float iridescence      : hint_range(0.0, 1.0, 0.05)  = 0.5;
 
 
 // ── Hash / noise helpers ─────────────────────────────────────────────────────
@@ -71,11 +73,6 @@ void fragment() {
 	//      bevel, and micro-texture.
 	// ══════════════════════════════════════════════════════════════════════
 
-	// Specular highlight — curved elliptical gloss band (upper portion)
-	float spec_y = (uv.y - specular_y_pos) / max(specular_height, 0.001);
-	float spec_x = 1.0 - pow(abs(uv.x - 0.5) * 2.0, specular_curve);
-	float specular = exp(-spec_y * spec_y * 4.0) * max(spec_x, 0.0);
-
 	// Top-to-bottom lighting gradient (1 at top, 0 at bottom)
 	float lighting_grad = 1.0 - uv.y;
 
@@ -91,6 +88,40 @@ void fragment() {
 	float bevel_hi  = bv_top * 0.6 + bv_left * 0.4;
 	float bevel_sh  = bv_bottom * 0.4 + bv_right * 0.6;
 
+	// Liquid glass specular — starts at top edge, fades down
+	// specular_y_pos offsets the highlight from the very top (near 0)
+	float hl_dist = max(uv.y - specular_y_pos, 0.0);
+	float hl_zone = exp(-hl_dist / max(specular_height, 0.001) * 3.5);
+
+	// Horizontal falloff — center bright, edges dim
+	float hl_x = 1.0 - pow(abs(uv.x - 0.5) * 2.0, specular_curve);
+
+	// Caustic ripples — light concentrating through curved glass surface
+	float c_t = t * 0.12;
+	float c1 = sin(uv.x * caustic_scale + sin(uv.y * caustic_scale * 1.3 + c_t) * 2.0);
+	float c2 = cos(uv.y * caustic_scale * 0.9 + cos(uv.x * caustic_scale * 0.7 - c_t * 0.7) * 1.8);
+	float caustic = abs(c1 + c2) * 0.25 + 0.5;
+
+	// Subtle bright edge right at the top — light catching the glass curve
+	float top_glow = exp(-hl_dist * hl_dist * 600.0);
+
+	// Main specular: smooth exponential fade with caustic variation + top edge glow
+	float specular = hl_zone * hl_x * mix(1.0, caustic, 0.4) + top_glow * hl_x;
+
+	// Secondary inner reflection — fainter echo below the main highlight
+	float sec_y = specular_y_pos + specular_height * 3.5;
+	float sec_d = (uv.y - sec_y) / max(specular_height * 1.2, 0.001);
+	float secondary = exp(-sec_d * sec_d * 2.0) * hl_x * step(0.0, uv.y - sec_y);
+
+	// Iridescent color — warm white center, cool blue at edges
+	float edge_f = abs(uv.x - 0.5) * 2.0;
+	vec3 spec_color = mix(vec3(1.0, 0.97, 0.94), vec3(0.65, 0.82, 1.0), edge_f * iridescence);
+	vec3 sec_color = vec3(0.75, 0.88, 1.0);
+
+	// Pack for combine
+	vec3 aero_spec = specular * spec_color;
+	vec3 aero_secondary = secondary * sec_color * 0.12;
+
 	// Micro-texture for material grain
 	float gloss_tex = hash12(uv * 512.0 + 7.3) - 0.5;
 
@@ -105,8 +136,9 @@ void fragment() {
 	// Vignette darkens edges
 	result -= vig_amt;
 
-	// Aero gloss — specular highlight band
-	result += specular * specular_strength;
+	// Aero gloss — liquid glass specular + caustics + secondary reflection
+	result += aero_spec * specular_strength;
+	result += aero_secondary * specular_strength;
 	// Aero gloss — top-bright / bottom-dark gradient
 	result += (lighting_grad - 0.4) * gradient_strength;
 	// Aero gloss — fresnel edge bloom

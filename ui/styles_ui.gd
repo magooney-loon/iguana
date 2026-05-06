@@ -55,8 +55,8 @@ static func apply_aero(panel: Control, subtle := true) -> void:
 	if subtle:
 		# Specular highlight band
 		mat.set_shader_parameter("specular_strength", 0.15)
-		mat.set_shader_parameter("specular_y_pos", 0.28)
-		mat.set_shader_parameter("specular_height", 0.12)
+		mat.set_shader_parameter("specular_y_pos", 0.02)
+		mat.set_shader_parameter("specular_height", 0.18)
 		mat.set_shader_parameter("specular_curve", 1.8)
 		# Lighting gradient
 		mat.set_shader_parameter("gradient_strength", 0.05)
@@ -68,11 +68,13 @@ static func apply_aero(panel: Control, subtle := true) -> void:
 		mat.set_shader_parameter("bevel_width", 0.025)
 		# Micro-texture
 		mat.set_shader_parameter("gloss_texture_str", 0.012)
+		mat.set_shader_parameter("caustic_scale", 8.0)
+		mat.set_shader_parameter("iridescence", 0.5)
 	else:
 		# Specular highlight band — more pronounced
 		mat.set_shader_parameter("specular_strength", 0.25)
-		mat.set_shader_parameter("specular_y_pos", 0.25)
-		mat.set_shader_parameter("specular_height", 0.15)
+		mat.set_shader_parameter("specular_y_pos", 0.01)
+		mat.set_shader_parameter("specular_height", 0.22)
 		mat.set_shader_parameter("specular_curve", 1.5)
 		# Lighting gradient
 		mat.set_shader_parameter("gradient_strength", 0.10)
@@ -84,6 +86,8 @@ static func apply_aero(panel: Control, subtle := true) -> void:
 		mat.set_shader_parameter("bevel_width", 0.03)
 		# Micro-texture
 		mat.set_shader_parameter("gloss_texture_str", 0.02)
+		mat.set_shader_parameter("caustic_scale", 10.0)
+		mat.set_shader_parameter("iridescence", 0.65)
 
 
 ## ── Aero Glass Theme ──────────────────────────────────────────────────────────
