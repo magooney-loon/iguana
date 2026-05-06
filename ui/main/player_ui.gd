@@ -153,7 +153,9 @@ func _build_bar() -> void:
 
 	_time_label = Label.new()
 	_time_label.text = "0:00 / 0:00"
-	_time_label.modulate.a = StylesUI.theme().a_time_label
+	StylesUI.track_label(_time_label, func(l: Label) -> void:
+		l.modulate.a = StylesUI.theme().a_time_label
+	)
 	_time_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	top.add_child(_time_label)

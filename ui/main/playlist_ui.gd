@@ -158,8 +158,10 @@ func _build() -> void:
 
 	var title_lbl := Label.new()
 	title_lbl.text = "Playlist"
-	title_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_title)
-	title_lbl.modulate = StylesUI.theme().c_text_hi
+	StylesUI.track_label(title_lbl, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", StylesUI.theme().font_title)
+		l.modulate = StylesUI.theme().c_text_hi
+	)
 	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	title_row.add_child(title_lbl)
@@ -208,8 +210,10 @@ func _build() -> void:
 	footer_margin.add_child(footer_row)
 
 	_footer_stats = Label.new()
-	_footer_stats.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
-	_footer_stats.modulate.a = StylesUI.theme().a_footer_stats
+	StylesUI.track_label(_footer_stats, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+		l.modulate.a = StylesUI.theme().a_footer_stats
+	)
 	_footer_stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer_row.add_child(_footer_stats)
 

@@ -16,9 +16,11 @@ func _ready() -> void:
 	set_anchors_preset(PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label = Label.new()
-	_label.add_theme_font_size_override("font_size", StylesUI.theme().font_notification)
-	_label.position = StylesUI.theme().notify_offset
-	_label.add_theme_color_override("font_shadow_color", StylesUI.theme().c_notify_shadow)
+	StylesUI.track_label(_label, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", StylesUI.theme().font_notification)
+		l.position = StylesUI.theme().notify_offset
+		l.add_theme_color_override("font_shadow_color", StylesUI.theme().c_notify_shadow)
+	)
 	_label.add_theme_constant_override("shadow_offset_x", 1)
 	_label.add_theme_constant_override("shadow_offset_y", 1)
 	_label.hide()

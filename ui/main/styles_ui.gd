@@ -24,6 +24,8 @@ static var _bar_panels: Array[WeakRef] = []
 static var _aero_seps: Array[WeakRef] = []
 # {ref: WeakRef, rebuild: Callable}
 static var _glass_panels: Array[Dictionary] = []
+# {ref: WeakRef, refresh: Callable}
+static var _tracked_labels: Array[Dictionary] = []
 # Extra per-component refresh hooks
 static var _reload_cbs: Array[Callable] = []
 
@@ -124,14 +126,16 @@ static func reload_all() -> void:
 		live_sliders.append(entry)
 	_sliders = live_sliders
 
-	# Aero shader panels — re-apply material params
+	# Aero shader panels — swap shader AND re-apply material params
 	var live_aero: Array[Dictionary] = []
+	var new_shader := _get_noise_shader()
 	for entry in _aero_panels:
 		var panel := entry.ref.get_ref() as Control
 		if panel == null:
 			continue
 		var mat := panel.material as ShaderMaterial
-		if mat:
+		if mat and new_shader:
+			mat.shader = new_shader
 			_apply_aero_params(mat, entry.subtle)
 		live_aero.append(entry)
 	_aero_panels = live_aero
@@ -170,6 +174,16 @@ static func reload_all() -> void:
 		entry.rebuild.call(panel)
 		live_gp.append(entry)
 	_glass_panels = live_gp
+
+	# Tracked labels — re-apply colors and font sizes
+	var live_lbl: Array[Dictionary] = []
+	for entry in _tracked_labels:
+		var lbl := entry.ref.get_ref() as Label
+		if lbl == null:
+			continue
+		entry.refresh.call(lbl)
+		live_lbl.append(entry)
+	_tracked_labels = live_lbl
 
 	# Component callbacks (tabs, playlist rows, etc.)
 	for cb in _reload_cbs:
@@ -403,6 +417,13 @@ static func apply_glass_slider(slider: HSlider, compact := false) -> void:
 static func track_glass_panel(panel: Control, rebuild: Callable) -> void:
 	rebuild.call(panel)
 	_glass_panels.append({"ref": weakref(panel), "rebuild": rebuild})
+
+
+## Register a Label for live reload. `refresh` receives the label and
+## should re-apply modulate, font_size, etc from the current theme.
+static func track_label(lbl: Label, refresh: Callable) -> void:
+	refresh.call(lbl)
+	_tracked_labels.append({"ref": weakref(lbl), "refresh": refresh})
 
 
 static func _apply_bar_style_to(panel: PanelContainer) -> void:
