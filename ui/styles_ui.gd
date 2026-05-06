@@ -9,7 +9,6 @@ static var active_style: UIStyle
 static var _noise_shader: Shader
 static var _aero_panels: Array[WeakRef] = []
 static var _aero_seps: Array[WeakRef] = []
-static var _aero_sep_script: GDScript
 
 
 static func theme() -> UITheme:
@@ -155,12 +154,12 @@ static func update_audio(beat_val: float, energy_val: float, bass_val: float) ->
 
 	var live: Array[WeakRef] = []
 	for ref in _aero_seps:
-		var sep := ref.get_ref() as Control
+		var sep := ref.get_ref() as _Sep
 		if sep == null:
 			continue
-		sep.set("beat",   beat_val)
-		sep.set("energy", energy_val)
-		sep.set("bass",   bass_val)
+		sep.beat   = beat_val
+		sep.energy = energy_val
+		sep.bass   = bass_val
 		live.append(ref)
 	_aero_seps = live
 
@@ -212,9 +211,9 @@ static func apply_glass_btn(btn: Button) -> void:
 static func apply_glass_slider(slider: HSlider, compact := false) -> void:
 	var t  := theme()
 	var sk := skin()
-	var track_h  := sk.slider_track_compact if compact else sk.slider_track_normal
+	var track_h   := sk.slider_track_compact if compact else sk.slider_track_normal
 	var grab_size := sk.slider_grab_compact  if compact else sk.slider_grab_normal
-	var radius   := 4.0 if compact else 5.0
+	var radius    := 4.0 if compact else 5.0
 
 	var bg := StyleBoxFlat.new()
 	bg.bg_color     = t.c_slider_bg
@@ -248,9 +247,9 @@ static func apply_glass_slider(slider: HSlider, compact := false) -> void:
 	grab.corner_radius_top_right    = int(grab_size / 2.0)
 	grab.corner_radius_bottom_right = int(grab_size / 2.0)
 	grab.corner_radius_bottom_left  = int(grab_size / 2.0)
-	grab.shadow_color  = t.c_shadow
-	grab.shadow_size   = 4
-	grab.shadow_offset = Vector2(0, 2)
+	grab.shadow_color   = t.c_shadow
+	grab.shadow_size    = 4
+	grab.shadow_offset  = Vector2(0, 2)
 	grab.anti_aliasing_size   = 2.0
 	grab.content_margin_left  = grab_size
 	grab.content_margin_right = grab_size
@@ -266,9 +265,9 @@ static func apply_glass_slider(slider: HSlider, compact := false) -> void:
 	grab_h.corner_radius_top_right    = int(grab_size / 2.0)
 	grab_h.corner_radius_bottom_right = int(grab_size / 2.0)
 	grab_h.corner_radius_bottom_left  = int(grab_size / 2.0)
-	grab_h.shadow_color  = t.c_shadow
-	grab_h.shadow_size   = 6
-	grab_h.shadow_offset = Vector2(0, 3)
+	grab_h.shadow_color   = t.c_shadow
+	grab_h.shadow_size    = 6
+	grab_h.shadow_offset  = Vector2(0, 3)
 	grab_h.anti_aliasing_size    = 2.0
 	grab_h.content_margin_left   = grab_size + 1.0
 	grab_h.content_margin_right  = grab_size + 1.0
@@ -292,14 +291,8 @@ static func apply_bar_style(panel: PanelContainer) -> void:
 
 
 static func make_vsep() -> Control:
-	if _aero_sep_script == null:
-		_aero_sep_script = load("res://ui/aero_sep.gd")
-	var sep := Control.new()
-	sep.set_script(_aero_sep_script)
-	sep.set("is_vertical",  true)
-	sep.set("_base_color",  theme().c_sep_draw)
-	sep.set("_base_wave",   skin().sep_base_wave)
-	sep.set("_base_cap",    skin().sep_base_cap)
+	var sep := _Sep.new()
+	sep.is_vertical = true
 	_aero_seps.append(weakref(sep))
 	return sep
 
@@ -368,13 +361,139 @@ static func win_section(parent: Control, title: String) -> void:
 
 
 static func win_sep(parent: Control) -> void:
-	if _aero_sep_script == null:
-		_aero_sep_script = load("res://ui/aero_sep.gd")
-	var sep := Control.new()
-	sep.set_script(_aero_sep_script)
-	sep.set("is_vertical", false)
-	sep.set("_base_color",  theme().c_sep_draw)
-	sep.set("_base_wave",   skin().sep_base_wave)
-	sep.set("_base_cap",    skin().sep_base_cap)
+	var sep := _Sep.new()
 	_aero_seps.append(weakref(sep))
 	parent.add_child(sep)
+
+
+# ── Separator — inner class ───────────────────────────────────────────────────
+## Wavy audio-reactive separator drawn entirely in code.
+## Reads color from UITheme.c_sep_draw and wave/cap from UISkin on _ready.
+class _Sep extends Control:
+	const _TAU := 6.28318530718
+
+	var is_vertical := false
+
+	var beat   := 0.0
+	var energy := 0.0
+	var bass   := 0.0
+
+	var _s_beat   := 0.0
+	var _s_energy := 0.0
+
+	var _base_color: Color
+	var _base_wave:  float
+	var _base_cap:   float
+	var _seed := 0.0
+
+	func _ready() -> void:
+		_base_color = StylesUI.theme().c_sep_draw
+		_base_wave  = StylesUI.skin().sep_base_wave
+		_base_cap   = StylesUI.skin().sep_base_cap
+		if is_vertical:
+			custom_minimum_size    = Vector2(10.0, 0.0)
+			size_flags_vertical    = Control.SIZE_EXPAND_FILL
+			size_flags_horizontal  = Control.SIZE_SHRINK_CENTER
+		else:
+			custom_minimum_size   = Vector2(0.0, 8.0)
+			size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_seed = randf() * 100.0
+
+	func _process(_delta: float) -> void:
+		_s_beat   = lerpf(_s_beat,   beat,   0.18)
+		_s_energy = lerpf(_s_energy, energy, 0.12)
+		queue_redraw()
+
+	func _draw() -> void:
+		if size.x < 2.0 or size.y < 2.0:
+			return
+		if is_vertical:
+			_draw_v()
+		else:
+			_draw_h()
+
+	func _draw_h() -> void:
+		var mid_y  := size.y * 0.5
+		var margin := 10.0
+		var left   := margin
+		var right  := maxf(size.x - margin, left + 6.0)
+		var w      := right - left
+
+		var live_wave  := _base_wave + _s_beat * 2.5 + _s_energy * 0.6
+		var live_color := _base_color
+		live_color.a   = _base_color.a + _s_energy * 0.15
+		var line_w     := 1.0 + _s_beat * 0.8
+
+		var freq  := 2.5 + sin(_seed) * 1.5
+		var phase := _seed * 3.7
+		var freq2 := 1.8 + cos(_seed * 0.7) * 0.8
+
+		var pts := PackedVector2Array()
+		for i in range(29):
+			var t := float(i) / 28.0
+			var x := left + t * w
+			var y := mid_y + sin(t * PI * freq + phase) * live_wave
+			y += sin(t * PI * freq2 + _seed * 2.1) * live_wave * 0.3
+			pts.append(Vector2(x, y))
+		draw_polyline(pts, live_color, line_w, true)
+
+		_draw_cap(Vector2(left - 1.0, mid_y))
+		_draw_cap(Vector2(right + 1.0, mid_y))
+
+	func _draw_v() -> void:
+		var mid_x  := size.x * 0.5
+		var margin := 5.0
+		var top    := margin
+		var bot    := maxf(size.y - margin, top + 6.0)
+		var h      := bot - top
+
+		var live_wave  := _base_wave + _s_beat * 2.0 + _s_energy * 0.4
+		var live_color := _base_color
+		live_color.a   = _base_color.a + _s_energy * 0.15
+		var line_w     := 1.0 + _s_beat * 0.6
+
+		var freq  := 2.5 + sin(_seed * 1.3) * 1.5
+		var phase := _seed * 2.9
+		var freq2 := 1.5 + cos(_seed * 0.5) * 0.7
+
+		var pts := PackedVector2Array()
+		for i in range(15):
+			var t := float(i) / 14.0
+			var y := top + t * h
+			var x := mid_x + sin(t * PI * freq + phase) * live_wave
+			x += sin(t * PI * freq2 + _seed * 1.7) * live_wave * 0.3
+			pts.append(Vector2(x, y))
+		draw_polyline(pts, live_color, line_w, true)
+
+		_draw_cap(Vector2(mid_x, top - 1.0))
+		_draw_cap(Vector2(mid_x, bot + 1.0))
+
+	func _draw_cap(center: Vector2) -> void:
+		var r     := _base_cap * 0.8 + _s_beat * 1.2
+		var steps := 16
+
+		var wobble := func(a: float) -> float:
+			var w := 1.0
+			w += sin(a * 3.0 + _seed * 0.7) * 0.18
+			w += cos(a * 5.0 + _seed * 1.3) * 0.10
+			return w
+
+		for layer in range(4, 0, -1):
+			var frac    := float(layer) / 4.0
+			var layer_r := r * frac * 1.3
+			var alpha   := _base_color.a * frac * frac * 0.6
+			if layer <= 2 and _s_beat > 0.05:
+				alpha += _s_beat * 0.15 * frac
+			var pts := PackedVector2Array()
+			for i in range(steps):
+				var a := _TAU * float(i) / float(steps)
+				pts.append(center + Vector2(cos(a), sin(a)) * layer_r * wobble.call(a))
+			draw_colored_polygon(pts, Color(_base_color.r, _base_color.g, _base_color.b, alpha))
+
+		if _s_beat > 0.05:
+			var glow_pts := PackedVector2Array()
+			for i in range(steps):
+				var a := _TAU * float(i) / float(steps)
+				glow_pts.append(center + Vector2(cos(a), sin(a)) * r * 2.0 * wobble.call(a))
+			draw_colored_polygon(glow_pts,
+				Color(_base_color.r, _base_color.g, _base_color.b, _s_beat * 0.2))
