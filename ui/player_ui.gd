@@ -101,7 +101,7 @@ func _ready() -> void:
 	mouse_exited.connect(_on_player_mouse_exited)
 
 	# Apply industrial noise texture to the player bar
-	StylesUI.apply_noise(self, false)
+	StylesUI.apply_aero(self, false)
 
 	_setup_logo.call_deferred()
 
@@ -272,7 +272,7 @@ func _setup_logo() -> void:
 	panel.add_child(img)
 
 	_logo_panel = panel
-	StylesUI.apply_noise(panel, true)
+	StylesUI.apply_aero(panel, true)
 	get_parent().add_child(_logo_panel)
 
 	await get_tree().process_frame

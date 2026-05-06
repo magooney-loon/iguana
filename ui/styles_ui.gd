@@ -1,7 +1,7 @@
 class_name StylesUI
 
 ## ── Shared noise shader ──────────────────────────────────────────────────────
-## Loaded once and reused for every panel that requests an industrial overlay.
+## Loaded once and reused for every panel that requests a material overlay.
 static var _noise_shader: Shader
 
 
@@ -13,7 +13,7 @@ static func _get_noise_shader() -> Shader:
 	return _noise_shader
 
 
-## Apply an industrial noise material directly to a panel Control.
+## Apply a grain + vignette material directly to a panel Control.
 ## The canvas_item shader modifies the panel's rendered StyleBox output
 ## in-place — no extra children needed.
 static func apply_noise(panel: Control, subtle := true) -> void:
@@ -25,49 +25,65 @@ static func apply_noise(panel: Control, subtle := true) -> void:
 	mat.shader = shader
 	if subtle:
 		# Grain
-		mat.set_shader_parameter("grain_strength", 0.03)
-		mat.set_shader_parameter("grain_speed", 1.0)
-		# Scanlines
-		mat.set_shader_parameter("scanline_strength", 0.025)
-		mat.set_shader_parameter("scanline_scroll_spd", 0.2)
-		# Scratches
-		mat.set_shader_parameter("scratch_strength", 0.015)
-		mat.set_shader_parameter("scratch_drift", 0.1)
-		# CRT effects
-		mat.set_shader_parameter("flicker_strength", 0.01)
-		mat.set_shader_parameter("roll_speed", 0.035)
-		mat.set_shader_parameter("roll_strength", 0.02)
-		mat.set_shader_parameter("interference_str", 0.01)
+		mat.set_shader_parameter("grain_strength", 0.025)
+		mat.set_shader_parameter("grain_speed", 0.8)
 		# Vignette
-		mat.set_shader_parameter("vignette_strength", 0.06)
-		mat.set_shader_parameter("vignette_pulse", 0.015)
-		mat.set_shader_parameter("vignette_pulse_spd", 0.4)
-		# Chromatic aberration
-		mat.set_shader_parameter("chromatic_str", 0.0006)
-		mat.set_shader_parameter("chromatic_flicker", 0.3)
+		mat.set_shader_parameter("vignette_strength", 0.05)
+		mat.set_shader_parameter("vignette_pulse", 0.012)
+		mat.set_shader_parameter("vignette_pulse_spd", 0.35)
 	else:
 		# Grain
-		mat.set_shader_parameter("grain_strength", 0.05)
-		mat.set_shader_parameter("grain_speed", 1.5)
-		# Scanlines
-		mat.set_shader_parameter("scanline_strength", 0.05)
-		mat.set_shader_parameter("scanline_scroll_spd", 0.4)
-		# Scratches
-		mat.set_shader_parameter("scratch_strength", 0.03)
-		mat.set_shader_parameter("scratch_drift", 0.25)
-		# CRT effects
-		mat.set_shader_parameter("flicker_strength", 0.025)
-		mat.set_shader_parameter("roll_speed", 0.06)
-		mat.set_shader_parameter("roll_strength", 0.04)
-		mat.set_shader_parameter("interference_str", 0.025)
+		mat.set_shader_parameter("grain_strength", 0.04)
+		mat.set_shader_parameter("grain_speed", 1.2)
 		# Vignette
-		mat.set_shader_parameter("vignette_strength", 0.12)
-		mat.set_shader_parameter("vignette_pulse", 0.03)
-		mat.set_shader_parameter("vignette_pulse_spd", 0.7)
-		# Chromatic aberration
-		mat.set_shader_parameter("chromatic_str", 0.0012)
-		mat.set_shader_parameter("chromatic_flicker", 0.5)
+		mat.set_shader_parameter("vignette_strength", 0.09)
+		mat.set_shader_parameter("vignette_pulse", 0.02)
+		mat.set_shader_parameter("vignette_pulse_spd", 0.5)
 	panel.material = mat
+
+
+
+## Apply Frutiger Aero gloss + bevel on top of the industrial noise.
+## Enables specular band, lighting gradient, fresnel edge bloom,
+## directional bevel, and micro-texture — all driven through the
+## existing ui_noise shader's Aero uniform group.
+static func apply_aero(panel: Control, subtle := true) -> void:
+	apply_noise(panel, subtle)
+	var mat := panel.material as ShaderMaterial
+	if mat == null:
+		return
+	if subtle:
+		# Specular highlight band
+		mat.set_shader_parameter("specular_strength", 0.15)
+		mat.set_shader_parameter("specular_y_pos", 0.28)
+		mat.set_shader_parameter("specular_height", 0.12)
+		mat.set_shader_parameter("specular_curve", 1.8)
+		# Lighting gradient
+		mat.set_shader_parameter("gradient_strength", 0.05)
+		# Fresnel edge bloom
+		mat.set_shader_parameter("fresnel_strength", 0.06)
+		mat.set_shader_parameter("fresnel_width", 0.05)
+		# Directional bevel
+		mat.set_shader_parameter("bevel_strength", 0.10)
+		mat.set_shader_parameter("bevel_width", 0.025)
+		# Micro-texture
+		mat.set_shader_parameter("gloss_texture_str", 0.012)
+	else:
+		# Specular highlight band — more pronounced
+		mat.set_shader_parameter("specular_strength", 0.25)
+		mat.set_shader_parameter("specular_y_pos", 0.25)
+		mat.set_shader_parameter("specular_height", 0.15)
+		mat.set_shader_parameter("specular_curve", 1.5)
+		# Lighting gradient
+		mat.set_shader_parameter("gradient_strength", 0.10)
+		# Fresnel edge bloom
+		mat.set_shader_parameter("fresnel_strength", 0.12)
+		mat.set_shader_parameter("fresnel_width", 0.06)
+		# Directional bevel
+		mat.set_shader_parameter("bevel_strength", 0.18)
+		mat.set_shader_parameter("bevel_width", 0.03)
+		# Micro-texture
+		mat.set_shader_parameter("gloss_texture_str", 0.02)
 
 
 ## ── Aero Glass Theme ──────────────────────────────────────────────────────────
@@ -93,29 +109,35 @@ static func glass_box(bg: Color, radius: float = 10.0, highlight: bool = true) -
 	s.corner_radius_bottom_right = int(radius)
 	s.corner_radius_bottom_left  = int(radius)
 	s.shadow_color       = C_SHADOW
-	s.shadow_size        = 8
-	s.shadow_offset      = Vector2(0, 3)
+	s.shadow_size        = 12
+	s.shadow_offset      = Vector2(0, 4)
 	if highlight:
 		s.border_color = C_HILITE
 	return s
 
 
 static func apply_glass_btn(btn: Button) -> void:
+	# Normal — raised, soft shadow
 	var n := glass_box(C_BTN, 7.0, true)
 	n.content_margin_left   = 10.0
 	n.content_margin_right  = 10.0
 	n.content_margin_top    = 4.0
 	n.content_margin_bottom = 4.0
+	# Hover — brighter, deeper shadow for "lifted" feel
 	var h := glass_box(C_BTN_H, 7.0, true)
 	h.content_margin_left   = 10.0
 	h.content_margin_right  = 10.0
 	h.content_margin_top    = 4.0
 	h.content_margin_bottom = 4.0
+	h.shadow_size = 14
+	# Pressed — sunken: content shifts down 1px, shadow shrinks
 	var p := glass_box(C_BTN_P, 7.0, true)
 	p.content_margin_left   = 10.0
 	p.content_margin_right  = 10.0
-	p.content_margin_top    = 4.0
-	p.content_margin_bottom = 4.0
+	p.content_margin_top    = 5.0
+	p.content_margin_bottom = 3.0
+	p.shadow_size   = 4
+	p.shadow_offset = Vector2(0, 1)
 	btn.add_theme_stylebox_override("normal",  n)
 	btn.add_theme_stylebox_override("hover",   h)
 	btn.add_theme_stylebox_override("pressed", p)
@@ -129,7 +151,7 @@ static func apply_bar_style(panel: PanelContainer) -> void:
 	style.content_margin_right  = 14.0
 	style.content_margin_top    = 8.0
 	style.content_margin_bottom = 8.0
-	style.shadow_size = 14
+	style.shadow_size = 16
 	panel.add_theme_stylebox_override("panel", style)
 
 
