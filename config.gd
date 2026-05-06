@@ -28,6 +28,7 @@ var max_fps            := 60
 var theme_name         := "aero_blue"
 var skin_name          := "aero"
 var style_name         := "aero_glass"
+var icon_pack_name     := "aero"
 
 # Per-shader post-processing: Dictionary keyed by filename stem
 # e.g. { "solstice": { "exposure": 1.4, ... }, "mars": { ... } }
@@ -69,6 +70,7 @@ func save() -> void:
 	cfg.set_value("general", "theme_name", theme_name)
 	cfg.set_value("general", "skin_name", skin_name)
 	cfg.set_value("general", "style_name", style_name)
+	cfg.set_value("general", "icon_pack_name", icon_pack_name)
 
 	# Per-shader PP configs — keyed by filename stem
 	for key in shader_pp_configs:
@@ -125,6 +127,8 @@ func load_settings() -> void:
 		skin_name = cfg.get_value("general", "skin_name")
 	if cfg.has_section_key("general", "style_name"):
 		style_name = cfg.get_value("general", "style_name")
+	if cfg.has_section_key("general", "icon_pack_name"):
+		icon_pack_name = cfg.get_value("general", "icon_pack_name")
 
 	# Resolve shader_name → shader_index
 	shader_index = 0  # default

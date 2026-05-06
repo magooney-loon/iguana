@@ -1,9 +1,10 @@
 class_name StylesUI
 
-# ── Active theme / skin / style ───────────────────────────────────────────────
+# ── Active theme / skin / style / icon pack ──────────────────────────────────
 static var active_theme: UITheme
 static var active_skin: UISkin
 static var active_style: UIStyle
+static var _icon_pack: String = "aero"
 
 # ── Shared noise shader ───────────────────────────────────────────────────────
 static var _noise_shader: Shader
@@ -49,6 +50,11 @@ static func load_skin(name: String) -> void:
 			active_skin = s
 			return
 	active_skin = UISkin.new()
+
+
+## Set the active icon pack — folder name under ui/icons/.
+static func load_icons(pack: String) -> void:
+	_icon_pack = pack
 
 
 ## Load a named style from ui/styles/<name>.tres.
@@ -298,7 +304,7 @@ static func make_vsep() -> Control:
 
 
 static func load_icon(name: String) -> Texture2D:
-	var path := "res://ui/icons/%s.svg" % name
+	var path := "res://ui/icons/%s/%s.svg" % [_icon_pack, name]
 	var tex := load(path) as Texture2D
 	if tex == null:
 		push_warning("StylesUI: icon not found: %s" % path)

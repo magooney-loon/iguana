@@ -325,6 +325,29 @@ func _build_general_tab() -> Control:
 	style_row.add_child(style_opt)
 	vbox.add_child(style_row)
 
+	var icons_row := HBoxContainer.new()
+	icons_row.add_theme_constant_override("separation", 8)
+	var icons_pre := Label.new()
+	icons_pre.text = "Icons"
+	icons_pre.add_theme_font_size_override("font_size", 12)
+	icons_pre.custom_minimum_size.x = 48
+	icons_row.add_child(icons_pre)
+	var icons_opt := OptionButton.new()
+	icons_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	icons_opt.focus_mode = Control.FOCUS_NONE
+	var _icon_packs := _discover_dirs("res://ui/icons/")
+	for _ip in _icon_packs:
+		icons_opt.add_item(_ip)
+	var _ipi := _icon_packs.find(Config.icon_pack_name)
+	if _ipi >= 0:
+		icons_opt.selected = _ipi
+	icons_opt.item_selected.connect(func(idx: int) -> void:
+		Config.icon_pack_name = _icon_packs[idx]
+		Config.save()
+	)
+	icons_row.add_child(icons_opt)
+	vbox.add_child(icons_row)
+
 	var restart_note := Label.new()
 	restart_note.text = "Changes take effect on restart"
 	restart_note.add_theme_font_size_override("font_size", 10)
@@ -985,6 +1008,22 @@ func _discover_tres(dir_path: String) -> Array[String]:
 	while f != "":
 		if not dir.current_is_dir() and f.ends_with(".tres"):
 			names.append(f.get_basename())
+		f = dir.get_next()
+	dir.list_dir_end()
+	names.sort()
+	return names
+
+
+func _discover_dirs(dir_path: String) -> Array[String]:
+	var names: Array[String] = []
+	var dir := DirAccess.open(dir_path)
+	if dir == null:
+		return names
+	dir.list_dir_begin()
+	var f := dir.get_next()
+	while f != "":
+		if dir.current_is_dir() and not f.begins_with("."):
+			names.append(f)
 		f = dir.get_next()
 	dir.list_dir_end()
 	names.sort()

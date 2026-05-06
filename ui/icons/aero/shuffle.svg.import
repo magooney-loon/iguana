@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d2uhg8gcdqnyt"
-path="res://.godot/imported/loop_none.svg-6a41b2af9b0810a5e4dad8b3374b7963.ctex"
+uid="uid://cwpg4xpkr1pj8"
+path="res://.godot/imported/shuffle.svg-829539058067a2b458b6cd38abbea5f8.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://ui/icons/loop_none.svg"
-dest_files=["res://.godot/imported/loop_none.svg-6a41b2af9b0810a5e4dad8b3374b7963.ctex"]
+source_file="res://ui/icons/aero/shuffle.svg"
+dest_files=["res://.godot/imported/shuffle.svg-829539058067a2b458b6cd38abbea5f8.ctex"]
 
 [params]
 
