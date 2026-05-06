@@ -442,6 +442,7 @@ func _pp_slider(parent: VBoxContainer, label: String, param: String,
 	slider.step      = step
 	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	slider.focus_mode = Control.FOCUS_NONE
+	StylesUI.apply_glass_slider(slider, true)
 
 	var val_lbl := Label.new()
 	val_lbl.add_theme_font_size_override("font_size", 12)

@@ -169,23 +169,7 @@ func _build_bar() -> void:
 	_vol_slider.focus_mode = Control.FOCUS_NONE
 	_vol_slider.value_changed.connect(_on_vol_changed)
 
-	var vs_bg := StylesUI.glass_box(Color(0.04, 0.05, 0.10, 0.50), 5.0, false)
-	vs_bg.content_margin_top = 6.0
-	vs_bg.content_margin_bottom = 6.0
-	_vol_slider.add_theme_stylebox_override("slider", vs_bg)
-
-	var vs_fill := StylesUI.glass_box(Color(0.30, 0.45, 0.75, 0.50), 5.0, false)
-	vs_fill.content_margin_top = 6.0
-	vs_fill.content_margin_bottom = 6.0
-	_vol_slider.add_theme_stylebox_override("fill", vs_fill)
-
-	var vs_grab := StylesUI.glass_box(Color(0.55, 0.70, 1.0, 0.80), 8.0, true)
-	vs_grab.content_margin_left = 4.0
-	vs_grab.content_margin_right = 4.0
-	vs_grab.content_margin_top = 4.0
-	vs_grab.content_margin_bottom = 4.0
-	_vol_slider.add_theme_stylebox_override("grabber_area", vs_grab)
-	_vol_slider.add_theme_stylebox_override("grabber_area_highlight", vs_grab)
+	StylesUI.apply_glass_slider(_vol_slider, true)
 
 	top.add_child(_vol_slider)
 
@@ -213,23 +197,7 @@ func _build_bar() -> void:
 	_seek_bar.focus_mode = Control.FOCUS_NONE
 	_seek_bar.value_changed.connect(_on_seek_changed)
 
-	var sb_bg := StylesUI.glass_box(Color(0.04, 0.05, 0.10, 0.50), 5.0, false)
-	sb_bg.content_margin_top = 6.0
-	sb_bg.content_margin_bottom = 6.0
-	_seek_bar.add_theme_stylebox_override("slider", sb_bg)
-
-	var sb_fill := StylesUI.glass_box(Color(0.30, 0.45, 0.75, 0.50), 5.0, false)
-	sb_fill.content_margin_top = 6.0
-	sb_fill.content_margin_bottom = 6.0
-	_seek_bar.add_theme_stylebox_override("fill", sb_fill)
-
-	var sb_grab := StylesUI.glass_box(Color(0.55, 0.70, 1.0, 0.80), 8.0, true)
-	sb_grab.content_margin_left = 4.0
-	sb_grab.content_margin_right = 4.0
-	sb_grab.content_margin_top = 4.0
-	sb_grab.content_margin_bottom = 4.0
-	_seek_bar.add_theme_stylebox_override("grabber_area", sb_grab)
-	_seek_bar.add_theme_stylebox_override("grabber_area_highlight", sb_grab)
+	StylesUI.apply_glass_slider(_seek_bar)
 
 	vbox.add_child(_seek_bar)
 

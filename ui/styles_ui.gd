@@ -5,6 +5,7 @@ class_name StylesUI
 static var _noise_shader: Shader
 ## Panels with aero material that need per-frame audio updates.
 static var _aero_panels: Array[WeakRef] = []
+static var _aero_sep_script: GDScript
 
 
 static func _get_noise_shader() -> Shader:
@@ -125,6 +126,11 @@ const C_BTN      := Color(0.16, 0.18, 0.28, 0.35)
 const C_BTN_H    := Color(0.30, 0.38, 0.55, 0.45)
 const C_BTN_P    := Color(0.08, 0.09, 0.14, 0.50)
 const C_ACCENT   := Color(0.40, 0.58, 0.92, 0.35)
+const C_SLIDER_BG   := Color(0.06, 0.07, 0.12, 0.55)
+const C_SLIDER_FILL := Color(0.30, 0.48, 0.80, 0.55)
+const C_GRABBER     := Color(0.55, 0.72, 1.00, 0.85)
+const C_GRABBER_H   := Color(0.70, 0.85, 1.00, 0.95)
+const C_SEP         := Color(0.45, 0.55, 0.75, 0.15)
 
 
 static func glass_box(bg: Color, radius: float = 10.0, highlight: bool = true) -> StyleBoxFlat:
@@ -171,6 +177,78 @@ static func apply_glass_btn(btn: Button) -> void:
 	btn.add_theme_stylebox_override("pressed", p)
 
 
+## Apply Aero glass styling to an HSlider (seek bar, volume, etc.).
+## • Track: dark translucent glass with soft border
+## • Fill: blue-tinted glass showing progress
+## • Grabber: bright glass circle that lights up on hover
+static func apply_glass_slider(slider: HSlider, compact := false) -> void:
+	var track_h := 4.0 if compact else 6.0
+	var grab_size := 12.0 if compact else 14.0
+	var radius := 4.0 if compact else 5.0
+
+	# Track (background)
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = C_SLIDER_BG
+	bg.border_color = Color(0.4, 0.5, 0.7, 0.12)
+	bg.set_border_width_all(1)
+	bg.corner_radius_top_left = int(radius)
+	bg.corner_radius_top_right = int(radius)
+	bg.corner_radius_bottom_right = int(radius)
+	bg.corner_radius_bottom_left = int(radius)
+	bg.content_margin_top = track_h
+	bg.content_margin_bottom = track_h
+	slider.add_theme_stylebox_override("slider", bg)
+
+	# Fill (progress)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = C_SLIDER_FILL
+	fill.border_color = Color(0.5, 0.65, 0.9, 0.2)
+	fill.set_border_width_all(1)
+	fill.corner_radius_top_left = int(radius)
+	fill.corner_radius_top_right = int(radius)
+	fill.corner_radius_bottom_right = int(radius)
+	fill.corner_radius_bottom_left = int(radius)
+	fill.content_margin_top = track_h
+	fill.content_margin_bottom = track_h
+	slider.add_theme_stylebox_override("fill", fill)
+
+	# Grabber — raised glass bead
+	var grab := StyleBoxFlat.new()
+	grab.bg_color = C_GRABBER
+	grab.border_color = C_HILITE
+	grab.set_border_width_all(1)
+	grab.corner_radius_top_left = int(grab_size / 2.0)
+	grab.corner_radius_top_right = int(grab_size / 2.0)
+	grab.corner_radius_bottom_right = int(grab_size / 2.0)
+	grab.corner_radius_bottom_left = int(grab_size / 2.0)
+	grab.shadow_color = C_SHADOW
+	grab.shadow_size = 4
+	grab.shadow_offset = Vector2(0, 2)
+	grab.content_margin_left = grab_size
+	grab.content_margin_right = grab_size
+	grab.content_margin_top = grab_size
+	grab.content_margin_bottom = grab_size
+	slider.add_theme_stylebox_override("grabber_area", grab)
+
+	# Grabber hover — brighter, lifted
+	var grab_h := StyleBoxFlat.new()
+	grab_h.bg_color = C_GRABBER_H
+	grab_h.border_color = Color(0.85, 0.92, 1.0, 0.4)
+	grab_h.set_border_width_all(1)
+	grab_h.corner_radius_top_left = int(grab_size / 2.0)
+	grab_h.corner_radius_top_right = int(grab_size / 2.0)
+	grab_h.corner_radius_bottom_right = int(grab_size / 2.0)
+	grab_h.corner_radius_bottom_left = int(grab_size / 2.0)
+	grab_h.shadow_color = C_SHADOW
+	grab_h.shadow_size = 6
+	grab_h.shadow_offset = Vector2(0, 3)
+	grab_h.content_margin_left = grab_size + 1.0
+	grab_h.content_margin_right = grab_size + 1.0
+	grab_h.content_margin_top = grab_size + 1.0
+	grab_h.content_margin_bottom = grab_size + 1.0
+	slider.add_theme_stylebox_override("grabber_area_highlight", grab_h)
+
+
 static func apply_bar_style(panel: PanelContainer) -> void:
 	var style := glass_box(Color(0.06, 0.07, 0.12, 0.72), 12.0, true)
 	style.corner_radius_bottom_left  = 0
@@ -183,8 +261,13 @@ static func apply_bar_style(panel: PanelContainer) -> void:
 	panel.add_theme_stylebox_override("panel", style)
 
 
-static func make_vsep() -> VSeparator:
-	return VSeparator.new()
+static func make_vsep() -> Control:
+	if _aero_sep_script == null:
+		_aero_sep_script = load("res://ui/aero_sep.gd")
+	var sep := Control.new()
+	sep.set_script(_aero_sep_script)
+	sep.set("is_vertical", true)
+	return sep
 
 
 ## Load an SVG icon from ui/icons/<name>.svg and return a Texture2D.
@@ -257,4 +340,9 @@ static func win_section(parent: Control, title: String) -> void:
 
 
 static func win_sep(parent: Control) -> void:
-	parent.add_child(HSeparator.new())
+	if _aero_sep_script == null:
+		_aero_sep_script = load("res://ui/aero_sep.gd")
+	var sep := Control.new()
+	sep.set_script(_aero_sep_script)
+	sep.set("is_vertical", false)
+	parent.add_child(sep)
