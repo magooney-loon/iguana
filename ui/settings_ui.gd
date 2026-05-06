@@ -161,7 +161,7 @@ func _build() -> void:
 	_tabs.add_theme_stylebox_override("tab_hover", StylesUI.glass_box(StylesUI.C_ACCENT, 8.0, true))
 	_tabs.get_tab_bar().tab_alignment = TabBar.ALIGNMENT_CENTER
 	var tab_panel := StylesUI.glass_box(Color(0.04, 0.05, 0.09, 0.60), 10.0, false)
-	tab_panel.shadow_size = 0  # No shadow — inset inside settings window
+	tab_panel.shadow_size = 0
 	tab_panel.content_margin_left   = 10.0
 	tab_panel.content_margin_right  = 10.0
 	tab_panel.content_margin_top    = 10.0
@@ -388,12 +388,6 @@ func _build_shaders_tab() -> Control:
 	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "POST-PROCESSING")
 
-	_pp_shader_label = Label.new()
-	_pp_shader_label.text = "Editing: %s" % _visualizer.SHADERS[_visualizer._shader_index].name
-	_pp_shader_label.add_theme_font_size_override("font_size", 13)
-	_pp_shader_label.modulate.a = 0.80
-	vbox.add_child(_pp_shader_label)
-
 	var pp_toggle := CheckBox.new()
 	pp_toggle.text = "Post-process enabled"
 	pp_toggle.button_pressed = _visualizer._post_display.visible
@@ -419,6 +413,10 @@ func _build_shaders_tab() -> Control:
 
 	var reset_btn := StylesUI.icon_btn("reset", "Reset to defaults", Vector2(32, 28), _reset_post_defaults)
 	btn_row.add_child(reset_btn)
+
+	var btn_spacer := Control.new()
+	btn_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_row.add_child(btn_spacer)
 
 	var save_btn := StylesUI.icon_btn("save", "Save settings", Vector2(32, 28), func(): _visualizer.save_settings())
 	btn_row.add_child(save_btn)
@@ -541,8 +539,6 @@ func _setup_desc_marquee() -> void:
 
 
 func _update_pp_sliders() -> void:
-	if _pp_shader_label:
-		_pp_shader_label.text = "Editing: %s" % _visualizer.SHADERS[_visualizer._shader_index].name
 	_update_shader_info()
 	for param in _pp_sliders:
 		var entry: Dictionary = _pp_sliders[param]
