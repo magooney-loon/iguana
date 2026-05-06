@@ -487,11 +487,14 @@ static func set_icon(btn: Button, icon_name: String) -> void:
 	btn.text = ""
 
 
-static func make_link_label(text: String, url: String, font_size: int = 12) -> Label:
+static func make_link_label(text: String, url: String, font_size: int = -1) -> Label:
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", font_size)
-	lbl.modulate = theme().c_link
+	var fs := font_size if font_size > 0 else theme().font_body
+	track_label(lbl, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", fs)
+		l.modulate = theme().c_link
+	)
 	lbl.mouse_filter = Control.MOUSE_FILTER_STOP
 	lbl.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	lbl.set_meta("link_url", url)
@@ -513,8 +516,10 @@ static func make_link_label(text: String, url: String, font_size: int = 12) -> L
 static func win_section(parent: Control, title: String) -> void:
 	var lbl := Label.new()
 	lbl.text = title
-	lbl.add_theme_font_size_override("font_size", theme().font_section)
-	lbl.modulate = theme().c_section
+	track_label(lbl, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", theme().font_section)
+		l.modulate = theme().c_section
+	)
 	parent.add_child(lbl)
 
 

@@ -111,6 +111,12 @@ func _ready() -> void:
 
 	_setup_logo.call_deferred()
 
+	StylesUI.on_reload(func() -> void:
+		if not is_instance_valid(_shuffle_btn):
+			return
+		_shuffle_btn.modulate.a = 1.0 if _playlist.get_play_mode() == Playlist.PlayMode.SHUFFLE else StylesUI.theme().a_dim_icon
+	)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Player bar
@@ -374,7 +380,7 @@ func _refresh_song_label(crossfade: bool = false) -> void:
 	if not crossfade or _song_label.text == track_name:
 		_song_label.text = track_name
 		_song_label.modulate.a = 1.0
-		_time_label.modulate.a = 1.0
+		_time_label.modulate.a = StylesUI.theme().a_time_label
 		return
 
 	if _song_tween and _song_tween.is_valid():
@@ -388,7 +394,7 @@ func _refresh_song_label(crossfade: bool = false) -> void:
 	_time_tween = create_tween()
 	_time_tween.tween_property(_time_label, "modulate:a", 0.0, 0.2)
 	_time_tween.tween_callback(func(): _time_label.text = "0:00 / 0:00")
-	_time_tween.tween_property(_time_label, "modulate:a", 1.0, 0.3)
+	_time_tween.tween_property(_time_label, "modulate:a", StylesUI.theme().a_time_label, 0.3)
 
 
 func _on_playlist_track_changed(index: int) -> void:

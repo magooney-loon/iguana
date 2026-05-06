@@ -578,7 +578,9 @@ func _pp_slider(parent: VBoxContainer, label: String, param: String,
 
 	var lbl := Label.new()
 	lbl.text = label
-	lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	StylesUI.track_label(lbl, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	)
 	lbl.custom_minimum_size.x = 145
 	row.add_child(lbl)
 
@@ -591,7 +593,9 @@ func _pp_slider(parent: VBoxContainer, label: String, param: String,
 	StylesUI.apply_glass_slider(slider, true)
 
 	var val_lbl := Label.new()
-	val_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	StylesUI.track_label(val_lbl, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	)
 	val_lbl.custom_minimum_size.x = 40
 	val_lbl.horizontal_alignment  = HORIZONTAL_ALIGNMENT_RIGHT
 
@@ -831,7 +835,9 @@ func _dbg_row(parent: VBoxContainer, display: String, key: String, max_val: floa
 
 	var lbl := Label.new()
 	lbl.text = display
-	lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	StylesUI.track_label(lbl, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	)
 	lbl.custom_minimum_size.x = 170
 	row.add_child(lbl)
 
@@ -841,12 +847,16 @@ func _dbg_row(parent: VBoxContainer, display: String, key: String, max_val: floa
 	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.custom_minimum_size   = Vector2(80, 14)
 	bar.show_percentage = false
-	bar.add_theme_stylebox_override("background", StylesUI.glass_box(StylesUI.theme().c_dbg_bg, 4.0, false))
-	bar.add_theme_stylebox_override("fill", StylesUI.glass_box(StylesUI.theme().c_dbg_fill, 4.0, false))
+	StylesUI.track_glass_panel(bar, func(p: Control) -> void:
+		p.add_theme_stylebox_override("background", StylesUI.glass_box(StylesUI.theme().c_dbg_bg, 4.0, false))
+		p.add_theme_stylebox_override("fill", StylesUI.glass_box(StylesUI.theme().c_dbg_fill, 4.0, false))
+	)
 	row.add_child(bar)
 
 	var val_lbl := Label.new()
-	val_lbl.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	StylesUI.track_label(val_lbl, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	)
 	val_lbl.custom_minimum_size.x     = 46
 	val_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	row.add_child(val_lbl)
