@@ -165,6 +165,9 @@ func _build() -> void:
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.add_theme_stylebox_override("panel", StylesUI.glass_box(Color(0.04, 0.05, 0.09, 0.60), 10.0, false))
+	var scroll_panel := _scroll.get_theme_stylebox("panel") as StyleBoxFlat
+	if scroll_panel:
+		scroll_panel.shadow_size = 0
 	StylesUI.apply_aero(_scroll, true)
 	list_margin.add_child(_scroll)
 

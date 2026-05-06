@@ -161,6 +161,7 @@ func _build() -> void:
 	_tabs.add_theme_stylebox_override("tab_hover", StylesUI.glass_box(StylesUI.C_ACCENT, 8.0, true))
 	_tabs.get_tab_bar().tab_alignment = TabBar.ALIGNMENT_CENTER
 	var tab_panel := StylesUI.glass_box(Color(0.04, 0.05, 0.09, 0.60), 10.0, false)
+	tab_panel.shadow_size = 0  # No shadow — inset inside settings window
 	tab_panel.content_margin_left   = 10.0
 	tab_panel.content_margin_right  = 10.0
 	tab_panel.content_margin_top    = 10.0

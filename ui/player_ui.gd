@@ -213,7 +213,7 @@ func _setup_logo() -> void:
 	if tex == null:
 		return
 
-	# Glassy pill panel
+	# Glassy pill panel — no shadow since it sits flush on the player bar
 	var panel := PanelContainer.new()
 	var style := StylesUI.glass_box(Color(0.06, 0.07, 0.12, 0.88), 18.0, true)
 	style.corner_radius_top_left     = 18
@@ -222,6 +222,7 @@ func _setup_logo() -> void:
 	style.corner_radius_bottom_right = 0
 	style.set_border_width_all(1)
 	style.border_width_bottom   = 0
+	style.shadow_size           = 0
 	style.content_margin_left   = 8.0
 	style.content_margin_right  = 8.0
 	style.content_margin_top    = 5.0
