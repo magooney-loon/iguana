@@ -15,17 +15,17 @@ Godot 4 audio-reactive shader visualizer with a feedback rendering pipeline. Ana
 
 ```
 AudioEffectSpectrumAnalyzer
-        ↓
+		↓
 AudioAnalyzer.process()          — runs every frame via AudioSource
-        ↓
+		↓
 _push_uniforms()                 — 30+ values pushed to the active ShaderMaterial
-        ↓
+		↓
 FeedbackViewport (SubViewport)   — shader renders here (ColorRect + ShaderMaterial)
-        ↓
+		↓
 BackbufferViewport (SubViewport) — copies FeedbackViewport output each frame
-        ↓
+		↓
 prev_frame uniform               — shader reads last frame from BackbufferViewport
-        ↓
+		↓
 PostProcessDisplay (ColorRect)   — tonemap / gamma / vignette / grain on top
 ```
 
