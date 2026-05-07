@@ -37,6 +37,12 @@ var icon_pack_name     := "iguana"
 # Populated externally by visualizer.gd (it owns the shader configs).
 var shader_pp_configs: Dictionary = {}
 
+# Native per-shader defaults (from shader file headers), set by visualizer.gd
+# before load_settings() runs. Used by save() to avoid persisting values that
+# haven't been customized, so shader authors can update defaults without users
+# needing to hit "Reset to defaults".
+var shader_pp_defaults: Dictionary = {}
+
 # Ordered list of shader keys (filename stems), set by visualizer.gd at startup.
 # Needed so we can write configs in order and resolve names to indices.
 var shader_keys: Array[String] = []
@@ -75,11 +81,17 @@ func save() -> void:
 	cfg.set_value("general", "style_name", style_name)
 	cfg.set_value("general", "icon_pack_name", icon_pack_name)
 
-	# Per-shader PP configs — keyed by filename stem
+	# Per-shader PP configs — only persist values the user actually changed.
+	# Comparing against the native defaults from shader headers means author
+	# updates to @exposure etc. won't be masked by stale saved values.
 	for key in shader_pp_configs:
-		var section := "shader_%s" % key
+		var section   := "shader_%s" % key
+		var defaults  := shader_pp_defaults.get(key, PP_DEFAULTS) as Dictionary
 		for pp_key in shader_pp_configs[key]:
-			cfg.set_value(section, pp_key, shader_pp_configs[key][pp_key])
+			var value         = shader_pp_configs[key][pp_key]
+			var default_value = defaults.get(pp_key, PP_DEFAULTS.get(pp_key, null))
+			if value != default_value:
+				cfg.set_value(section, pp_key, value)
 
 	# Favorites
 	cfg.set_value("general", "favorite_shaders", favorite_shaders)
@@ -112,10 +124,11 @@ func factory_reset() -> void:
 	style_name        = "iguana"
 	icon_pack_name    = "iguana"
 
-	# Reset per-shader PP configs to defaults
+	# Reset per-shader PP configs to their native defaults (from shader headers)
 	for key in shader_pp_configs:
+		var defaults := shader_pp_defaults.get(key, PP_DEFAULTS) as Dictionary
 		for pp_key in PP_DEFAULTS:
-			shader_pp_configs[key][pp_key] = PP_DEFAULTS[pp_key]
+			shader_pp_configs[key][pp_key] = defaults.get(pp_key, PP_DEFAULTS[pp_key])
 
 	save()
 

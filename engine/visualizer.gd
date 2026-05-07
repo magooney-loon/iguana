@@ -222,6 +222,9 @@ func _ready() -> void:
 
 	# Sync per-shader PP defaults to Config (centralized store)
 	Config.shader_pp_configs = _shader_pp_configs
+	# Snapshot the native defaults (from shader headers) before load_settings()
+	# merges saved values on top — needed by save() to skip unmodified values.
+	Config.shader_pp_defaults = _shader_pp_configs.duplicate(true)
 	Config.load_settings()
 	# Apply loaded general settings
 	shuffle_interval = Config.shuffle_interval
