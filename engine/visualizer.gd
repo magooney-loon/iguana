@@ -20,6 +20,7 @@ var _backbuffer_vp: SubViewport
 var shuffle_interval := 45.0   # var so the settings window can change it
 var _shuffle_timer   := 0.0
 var _shuffle_on      := false
+var _shuffle_favs    := false
 
 # Beat-triggered switching cooldown (prevents rapid-fire switches)
 const SWITCH_COOLDOWN_MIN := 4.0
@@ -227,6 +228,7 @@ func _ready() -> void:
 	# Apply loaded general settings
 	shuffle_interval = Config.shuffle_interval
 	_shuffle_on = Config.shuffle_on
+	_shuffle_favs = Config.shuffle_favorites
 	_post_display.visible = Config.post_enabled
 	# Apply loaded shader index (resolved by Config from shader_name)
 	_shader_index = Config.shader_index
@@ -290,10 +292,24 @@ func _toggle_post_process() -> void:
 
 
 func _shuffle() -> void:
-	var next := _shader_index
-	while next == _shader_index:
-		next = randi() % _loaded_shaders.size()
-	_switch(next)
+	if _shuffle_favs and Config.favorite_shaders.size() > 0:
+		# Only pick from favorited shaders
+		var fav_indices: Array[int] = []
+		for fi in SHADERS.size():
+			var fstem: String = SHADERS[fi].path.get_file().get_basename()
+			if fstem in Config.favorite_shaders:
+				fav_indices.append(fi)
+		if fav_indices.size() <= 1:
+			return
+		var next := _shader_index
+		while next == _shader_index:
+			next = fav_indices[randi() % fav_indices.size()]
+		_switch(next)
+	else:
+		var next := _shader_index
+		while next == _shader_index:
+			next = randi() % _loaded_shaders.size()
+		_switch(next)
 
 
 # ── Frame loop ─────────────────────────────────────────────────────

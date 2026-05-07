@@ -36,6 +36,7 @@ var _icons_opt:  OptionButton
 var _skins: Array[String] = []
 var _shuffle_check: CheckBox
 var _shuffle_spin:  SpinBox
+var _shuffle_fav_check: CheckBox
 
 # Post-process tab
 var _pp_sliders:            Dictionary = {}
@@ -520,6 +521,20 @@ func _build_general_tab() -> Control:
 	shuffle_row.add_child(_shuffle_spin)
 
 	vbox.add_child(shuffle_row)
+
+	_shuffle_fav_check = CheckBox.new()
+	_shuffle_fav_check.text = "Favorites only"
+	_shuffle_fav_check.button_pressed = _visualizer._shuffle_favs
+	var has_favs: bool = Config.favorite_shaders.size() > 0
+	_shuffle_fav_check.disabled = not has_favs
+	if not has_favs:
+		_shuffle_fav_check.tooltip_text = "Star some shaders in the Shaders tab first"
+	_shuffle_fav_check.toggled.connect(func(on: bool):
+		_visualizer._shuffle_favs = on
+		Config.shuffle_favorites = on
+		Config.save()
+	)
+	vbox.add_child(_shuffle_fav_check)
 
 	_shuffle_check.toggled.connect(func(on: bool):
 		_visualizer._shuffle_on    = on
@@ -1077,6 +1092,7 @@ func _toggle_favorite(stem: String) -> void:
 	_refresh_picker_star_states()
 	if _picker_fav_only:
 		_refresh_picker_list()
+	_refresh_shuffle_fav_state()
 
 
 func _refresh_picker_star_states() -> void:
@@ -1092,6 +1108,21 @@ func _on_picker_search(_text: String) -> void:
 func _on_picker_fav_toggle(on: bool) -> void:
 	_picker_fav_only = on
 	_refresh_picker_list()
+
+
+func _refresh_shuffle_fav_state() -> void:
+	if not _shuffle_fav_check:
+		return
+	var has_favs: bool = Config.favorite_shaders.size() > 0
+	_shuffle_fav_check.disabled = not has_favs
+	if has_favs:
+		_shuffle_fav_check.tooltip_text = ""
+	else:
+		_shuffle_fav_check.tooltip_text = "Star some shaders in the Shaders tab first"
+		_shuffle_fav_check.button_pressed = false
+		_visualizer._shuffle_favs = false
+		Config.shuffle_favorites = false
+		Config.save()
 
 
 func _refresh_picker_list() -> void:

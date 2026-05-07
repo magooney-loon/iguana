@@ -25,6 +25,7 @@ var crossfade_duration  := 2.0  # seconds
 var auto_hide_player   := false
 var vsync_enabled      := true
 var max_fps            := 60
+var shuffle_favorites  := false
 var favorite_shaders   : Array[String] = []
 var skin_name          := "iguana"
 var theme_name         := "iguana"
@@ -68,6 +69,7 @@ func save() -> void:
 	cfg.set_value("general", "auto_hide_player",  auto_hide_player)
 	cfg.set_value("general", "vsync_enabled", vsync_enabled)
 	cfg.set_value("general", "max_fps", max_fps)
+	cfg.set_value("general", "shuffle_favorites", shuffle_favorites)
 	cfg.set_value("general", "skin_name", skin_name)
 	cfg.set_value("general", "theme_name", theme_name)
 	cfg.set_value("general", "style_name", style_name)
@@ -125,6 +127,8 @@ func load_settings() -> void:
 		vsync_enabled = cfg.get_value("general", "vsync_enabled")
 	if cfg.has_section_key("general", "max_fps"):
 		max_fps = cfg.get_value("general", "max_fps")
+	if cfg.has_section_key("general", "shuffle_favorites"):
+		shuffle_favorites = cfg.get_value("general", "shuffle_favorites")
 
 	# Skin loading with migration from old naming
 	if cfg.has_section_key("general", "skin_name"):
