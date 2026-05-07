@@ -1004,6 +1004,11 @@ func _build_shader_picker() -> void:
 		)
 		info_col.add_child(author_lbl)
 
+		# Description tooltip
+		var desc: String = meta.get("description", "")
+		if desc != "":
+			row.tooltip_text = desc
+
 		var entry := {
 			"row":        row,
 			"star_btn":   star_btn,
@@ -1022,6 +1027,10 @@ func _build_shader_picker() -> void:
 
 
 func _open_shader_picker() -> void:
+	if _picker_win and _picker_win.visible:
+		_close_shader_picker()
+		return
+
 	if _picker_win == null:
 		_build_shader_picker()
 
@@ -1080,7 +1089,7 @@ func _select_shader_from_picker(idx: int) -> void:
 	_shader_btn.text = _visualizer.shaders[idx].name
 	_update_pp_sliders()
 	_update_shader_info()
-	_close_shader_picker()
+	_refresh_picker_list()
 
 
 func _toggle_favorite(stem: String) -> void:
