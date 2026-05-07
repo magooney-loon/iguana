@@ -8,9 +8,9 @@ shader_type canvas_item;
 //  @exposure:       3.00
 //  @tonemap_knee:   0.0
 //  @gamma:          2.69
-//  @vignette_dark:  0.25
+//  @vignette_dark:  0.00
 //  @grain_strength: 0.01
-//  @loop_reinhard:  1.72
+//  @loop_reinhard:  2.05
 // ═══════════════════════════════════════════════════════════════════════
 
 // ── Audio engine · auto-driven by AudioAnalyzer ─────────────────────
@@ -53,7 +53,7 @@ uniform float time_val        = 0.0;                             // elapsed seco
 uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable;
 
 // ── Per-shader tuning ───────────────────────────────────────────────
-uniform float loop_reinhard : hint_range(0.0, 3.0) = 2.36;
+uniform float loop_reinhard : hint_range(0.0, 3.0) = 0.77;
 
 // ── Utility · auto-provided by visualizer.gd ────────────────────────
 uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
@@ -76,160 +76,100 @@ vec2 pmod(vec2 p, float r) {
 	return p * rot(-a);
 }
 
-// Cosine palette (Inigo Quilez)
 vec3 palette(float t, vec3 shift) {
 	return vec3(0.5) + vec3(0.5) * cos(TAU * (t + shift));
 }
 
 // ── SDF primitives ──────────────────────────────────────────────────
-float sd_sphere(vec3 p, vec3 c, float r) {
-	return length(p - c) - r;
-}
-
-float sd_cylinder(vec3 p, vec3 a, vec3 b, float r) {
+float sd_capsule(vec3 p, vec3 a, vec3 b, float r) {
 	vec3 pa = p - a, ba = b - a;
 	float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
 	return length(pa - ba * h) - r;
 }
 
-float sd_torus(vec3 p, vec2 t) {
-	vec2 q = vec2(length(p.xz) - t.x, p.y);
-	return length(q) - t.y;
-}
-
-float sd_box(vec3 p, vec3 b) {
-	vec3 d = abs(p) - b;
-	return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
-}
-
-// ── Metatron's Cube SDF ─────────────────────────────────────────────
+// ── Metatron's Cube — hex-folded for speed ──────────────────────────
+// pmod folds XY into a 60° wedge; only 6 SDF primitives needed
+// instead of ~55. Unfolds to full 13-node + strut pattern via glow.
 float metatron(vec3 p) {
+	vec2 fp = pmod(p.xy, 6.0);
+	vec3 pf = vec3(fp, p.z);
 	float d = 1e10;
-	float node_r = 0.08 + bass * 0.03;
-	float strut_r = 0.02 + sub_bass * 0.01;
+	float nr = 0.1 + bass * 0.04;
+	float sr = 0.025 + sub_bass * 0.01;
 
 	// Center node
-	d = min(d, sd_sphere(p, vec3(0.0), node_r));
+	d = min(d, length(fp) - nr);
 
-	// Inner hexagonal ring: 6 nodes at radius 1.0
-	vec3 inner[6];
-	for (int i = 0; i < 6; i++) {
-		float angle = float(i) * TAU / 6.0;
-		inner[i] = vec3(cos(angle), sin(angle), 0.0);
-		d = min(d, sd_sphere(p, inner[i], node_r));
-	}
+	// Inner ring node — all 6 fold to (1, 0)
+	vec3 n1 = vec3(1.0, 0.0, 0.0);
+	d = min(d, length(fp - n1.xy) - nr);
 
-	// Outer hexagonal ring: 6 nodes at radius 2.0, offset 30°
-	vec3 outer[6];
-	for (int i = 0; i < 6; i++) {
-		float angle = float(i) * TAU / 6.0 + PI / 6.0;
-		outer[i] = vec3(cos(angle) * 2.0, sin(angle) * 2.0, 0.0);
-		d = min(d, sd_sphere(p, outer[i], node_r));
-	}
+	// Outer ring node — all 6 fold to (1.732, -1.0)
+	vec3 n2 = vec3(1.732, -1.0, 0.0);
+	d = min(d, length(fp - n2.xy) - nr);
 
-	// Struts: center → inner
-	for (int i = 0; i < 6; i++) {
-		d = min(d, sd_cylinder(p, vec3(0.0), inner[i], strut_r));
-	}
-	// Struts: inner hexagon edges
-	for (int i = 0; i < 6; i++) {
-		d = min(d, sd_cylinder(p, inner[i], inner[(i + 1) % 6], strut_r));
-	}
-	// Struts: inner → outer radial
-	for (int i = 0; i < 6; i++) {
-		d = min(d, sd_cylinder(p, inner[i], outer[i], strut_r));
-		d = min(d, sd_cylinder(p, inner[i], outer[(i + 5) % 6], strut_r));
-	}
-	// Struts: outer hexagon
-	for (int i = 0; i < 6; i++) {
-		d = min(d, sd_cylinder(p, outer[i], outer[(i + 1) % 6], strut_r));
-	}
-	// Cross bracing — full Metatron depth
-	for (int i = 0; i < 6; i++) {
-		d = min(d, sd_cylinder(p, inner[i], inner[(i + 2) % 6], strut_r * 0.7));
-		d = min(d, sd_cylinder(p, outer[i], outer[(i + 2) % 6], strut_r * 0.5));
-	}
+	// Strut: center → inner
+	d = min(d, sd_capsule(pf, vec3(0.0), n1, sr));
+
+	// Strut: inner → outer
+	d = min(d, sd_capsule(pf, n1, n2, sr));
+
+	// Hex edge stub: inner → sector boundary (suggests hex ring)
+	vec3 n_edge = vec3(0.5, 0.866, 0.0);
+	d = min(d, sd_capsule(pf, n1, n_edge, sr * 0.8));
 
 	return d;
 }
 
-// ── Sri Yantra triangle ring ────────────────────────────────────────
-float sri_triangle_edge(vec2 p, float radius, float rot_off, bool upward) {
-	vec2 v0, v1, v2;
-	if (upward) {
-		v0 = vec2(0.0, radius);
-		v1 = vec2(-radius * 0.866, -radius * 0.5);
-		v2 = vec2(radius * 0.866, -radius * 0.5);
-	} else {
-		v0 = vec2(0.0, -radius);
-		v1 = vec2(-radius * 0.866, radius * 0.5);
-		v2 = vec2(radius * 0.866, radius * 0.5);
-	}
-	mat2 rm = rot(rot_off);
-	v0 = rm * v0; v1 = rm * v1; v2 = rm * v2;
-
-	// Sum distances to 3 edges → outline only
+// ── Sri Yantra — reduced to 4 key triangles ─────────────────────────
+float tri_outline(vec2 p, float sc, bool up) {
+	float s = up ? 1.0 : -1.0;
+	vec2 v0 = vec2(0.0, s * sc);
+	vec2 v1 = vec2(-sc * 0.866, -s * sc * 0.5);
+	vec2 v2 = vec2( sc * 0.866, -s * sc * 0.5);
 	float d = 1e10;
-	vec2 edges[3] = vec2[3](v0, v1, v2);
-	vec2 edges2[3] = vec2[3](v1, v2, v0);
-	for (int i = 0; i < 3; i++) {
-		vec2 a_pt = edges[i];
-		vec2 b_pt = edges2[i];
-		vec2 pa = p - a_pt, ba = b_pt - a_pt;
+	vec2 pts[3] = vec2[3](v0, v1, v2);
+	vec2 pts2[3] = vec2[3](v1, v2, v0);
+	for (int j = 0; j < 3; j++) {
+		vec2 pa = p - pts[j], ba = pts2[j] - pts[j];
 		float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
 		d = min(d, length(pa - ba * h));
 	}
-	float thickness = 0.03 + mid * 0.015;
-	return abs(d) - thickness;
+	float thick = 0.035 + mid * 0.015;
+	return abs(d) - thick;
 }
 
 float sri_yantra(vec2 p) {
 	float d = 1e10;
-	// 4 upward (Shiva) at descending scales
-	float up_sc[4] = float[4](1.0, 0.78, 0.58, 0.38);
-	float up_rt[4] = float[4](0.0, 0.02, -0.01, 0.015);
-	for (int i = 0; i < 4; i++) {
-		d = min(d, sri_triangle_edge(p, up_sc[i], up_rt[i], true));
-	}
-	// 5 downward (Shakti)
-	float dn_sc[5] = float[5](0.92, 0.72, 0.52, 0.32, 0.14);
-	float dn_rt[5] = float[5](0.01, -0.015, 0.008, -0.012, 0.0);
-	for (int i = 0; i < 5; i++) {
-		d = min(d, sri_triangle_edge(p, dn_sc[i], dn_rt[i], false));
-	}
-	// Bindu center
+	// 2 upward (largest Shiva triangles)
+	d = min(d, tri_outline(p, 1.0, true));
+	d = min(d, tri_outline(p, 0.6, true));
+	// 2 downward (largest Shakti triangles)
+	d = min(d, tri_outline(p, 0.9, false));
+	d = min(d, tri_outline(p, 0.5, false));
+	// Bindu + outer ring
 	d = min(d, abs(length(p) - 0.06) - 0.015);
-	// Outer containment
-	d = min(d, abs(length(p) - 1.08) - (0.01 + energy * 0.005));
+	d = min(d, abs(length(p) - 1.08) - 0.01);
 	return d;
 }
 
 // ── Scene map — tiled infinite sacred geometry ───────────────────────
 float map(vec3 p) {
-	// Tile in Z for infinite fly
+	// Metatron layer — tile Z, rotate XY
 	vec3 p1 = p;
 	p1.z = mod(p1.z, 12.0) - 6.0;
-
-	// Metatron's Cube layer — slowly rotates
 	p1.xy *= rot(time_val * 0.15);
 	float met = metatron(p1);
 
-	// Sri Yantra layer — offset Z, counter-rotates
+	// Sri Yantra layer — offset Z, counter-rotate
 	vec3 p2 = p;
 	p2.z = mod(p2.z + 6.0, 12.0) - 6.0;
 	p2.xy *= rot(-time_val * 0.1);
-	float yantra_z = abs(p2.z);
 	float sri = sri_yantra(p2.xy);
-	// Extrude 2D into thin Z slab
-	sri = max(sri, yantra_z - 0.15 - bass * 0.05);
+	float yz = abs(p2.z);
+	sri = max(sri, yz - 0.15 - bass * 0.05);
 
-	// Sacred torus rings — orbiting the path
-	vec3 p3 = p;
-	p3.xy *= rot(time_val * 0.08);
-	p3.xz *= rot(time_val * 0.06);
-	float tor = sd_torus(p3, vec2(3.0 + sin(time_val * 0.2) * 0.5, 0.03 + energy * 0.02));
-
-	return min(min(met, sri), tor);
+	return min(met, sri);
 }
 
 void fragment() {
@@ -237,16 +177,14 @@ void fragment() {
 	float t = time_val;
 
 	// ══════════════════════════════════════════════════════════════════
-	//  PHASE 1: FEEDBACK LOOP — MilkDrop warp / zoom / rotate
+	//  PHASE 1: FEEDBACK LOOP
 	// ══════════════════════════════════════════════════════════════════
 	vec2 center = uv - 0.5;
 	center.x *= rect_size.x / rect_size.y;
 
-	// Zoom: sub_bass breathes inward, onset punches
 	float zoom = 0.970 - sub_bass * 0.014 + onset * 0.010;
 	center *= zoom;
 
-	// Rotate: energy + beat drive spiral
 	float rot_a = 0.005 + energy * 0.007 + beat * 0.004;
 	center = rot(rot_a) * center;
 
@@ -254,7 +192,6 @@ void fragment() {
 	feedback_uv.x /= (rect_size.x / rect_size.y);
 	feedback_uv += 0.5;
 
-	// Per-pixel warp — aggressive like phantom_star
 	vec2 warp = vec2(
 		sin(center.y * 10.0 + t * 1.4) * 0.012,
 		cos(center.x * 8.0  + t * 1.1) * 0.012
@@ -265,14 +202,11 @@ void fragment() {
 	vec2 edge_d = min(sample_uv, 1.0 - sample_uv);
 	float edge_fade = smoothstep(0.0, 0.04, min(edge_d.x, edge_d.y));
 
-	// Chromatic aberration
 	float ca = 0.0012 + energy * 0.0012;
 	vec3 trail;
 	trail.r = texture(prev_frame, sample_uv + vec2(ca, 0.0)).r;
 	trail.g = texture(prev_frame, sample_uv).g;
 	trail.b = texture(prev_frame, sample_uv - vec2(ca, 0.0)).b;
-
-	// Decay: louder music sustains trails
 	trail *= (0.92 + energy * 0.04) * edge_fade;
 
 	// ══════════════════════════════════════════════════════════════════
@@ -281,7 +215,6 @@ void fragment() {
 	float min_dim = min(rect_size.x, rect_size.y);
 	vec2 p = (uv * 2.0 - 1.0) * (rect_size / min_dim);
 
-	// Camera — phantom_star style full camera rig
 	vec3 c_pos = vec3(0.0, 0.0, -3.0 * t);
 	vec3 c_dir = normalize(vec3(0.0, 0.0, -1.0));
 	vec3 c_up = vec3(sin(t * 0.08), 1.0, sin(t * 0.05) * 0.3);
@@ -289,13 +222,13 @@ void fragment() {
 	vec3 ray = normalize(c_side * p.x + c_up * p.y + c_dir);
 
 	float acc = 0.0;
-	float acc2 = 0.0;  // phantom pulse accumulator
+	float acc2 = 0.0;
 	float march_t = 0.0;
-
 	float focal_dist = 4.0 + sin(t * 0.08) * 1.5;
 	float glow_falloff = 3.5 + energy * 4.0;
 
-	for (int i = 0; i < 99; i++) {
+	for (int i = 0; i < 64; i++) {
+		if (march_t > 20.0) break;
 		vec3 pos = c_pos + ray * march_t;
 		float dist = map(pos);
 		dist = max(abs(dist), 0.02);
@@ -303,7 +236,6 @@ void fragment() {
 		float dof = exp(-pow((march_t - focal_dist) * 0.15, 2.0));
 		float a = exp(-dist * glow_falloff) * mix(0.35, 1.0, dof);
 
-		// Phantom pulse — sacred geometry heartbeat synced to beat_phase
 		float phantom_phase = mod(length(pos) + 24.0 * t, 30.0);
 		if (phantom_phase < 3.0) {
 			a *= 2.0;
@@ -314,41 +246,38 @@ void fragment() {
 		march_t += dist * 0.5;
 	}
 
-	// ── Raymarching color — earth + cosmic gold ──
 	float lum = acc * 0.005;
 	float ghost = acc2 * 0.008;
 
+	// High channel separation — prevents muddy gray, keeps colors vivid
 	vec3 rm_col = vec3(
-		lum * (0.35 + bass * 0.8 + kick * 1.2),
-		lum * (0.15 + mid * 0.4) + ghost * (0.1 + energy * 0.5),
-		lum * (0.05 + treble * 0.3) + ghost * 0.1
+		lum * (0.5  + bass * 0.9  + kick * 1.5),
+		lum * (0.04 + mid  * 0.3) + ghost * (0.0 + energy * 0.6),
+		lum * (0.6  + treble * 0.8) + ghost * 0.15
 	);
 
-	// Phantom pulses → sacred emerald / gold flashes
-	rm_col += vec3(0.1, 0.9, 0.3) * ghost * (0.9 + energy * 0.7);
-	rm_col += vec3(0.9, 0.75, 0.1) * ghost * warmth * 0.6;
+	// Phantom pulses — vivid emerald / gold, not pastel
+	rm_col += vec3(0.0, 1.0, 0.25) * ghost * (1.0 + energy * 0.8);
+	rm_col += vec3(1.0, 0.8, 0.0)  * ghost * warmth * 0.7;
 
-	// Hue rotation layered over glow
+	// Hue rotation — earth-biased but still saturated
 	float hue = beat_phase * TAU + t * 0.06;
 	vec3 hue_col = vec3(
 		0.5 + 0.5 * sin(hue),
 		0.5 + 0.5 * sin(hue + 2.09),
 		0.5 + 0.5 * sin(hue + 4.19)
 	);
-	// Earth bias: greens and golds dominate
-	hue_col = mix(hue_col, vec3(0.3, 0.7, 0.2), 0.3 + low_mid * 0.2);
-	rm_col += hue_col * lum * (0.2 + energy * 0.25);
+	rm_col += hue_col * lum * (0.25 + energy * 0.3);
 
-	// Percussion: distinct earth-tone per drum
-	rm_col += vec3(1.0, 0.5, 0.05)  * acc  * 0.014 * kick;
-	rm_col += vec3(0.9, 0.15, 0.4)  * acc2 * 0.016 * snare;
-	rm_col += vec3(0.3, 0.9, 0.5)   * acc  * 0.008 * hihat;
+	// Percussion — pure saturated hues, no cross-contamination
+	rm_col += vec3(1.0, 0.35, 0.0)  * acc  * 0.016 * kick;
+	rm_col += vec3(0.95, 0.0, 0.45) * acc2 * 0.018 * snare;
+	rm_col += vec3(0.2, 1.0, 0.3)   * acc  * 0.009 * hihat;
 
-	// Onset flash
-	rm_col += vec3(1.0, 0.85, 0.2) * onset * 0.35;
-	rm_col += vec3(0.1, 0.7, 0.3)  * onset * onset * 0.20;
+	// Onset — sharp gold flash, not white
+	rm_col += vec3(1.0, 0.75, 0.05) * onset * 0.40;
+	rm_col += vec3(0.0, 0.8, 0.2)   * onset * onset * 0.22;
 
-	// Beat-phase brightness swell
 	float phase_pulse = pow(1.0 - abs(fract(beat_phase * 2.0) - 0.5) * 2.0, 3.0);
 	rm_col *= 1.0 + phase_pulse * beat_confidence * 0.3;
 
@@ -359,14 +288,13 @@ void fragment() {
 	uv_c.x *= rect_size.x / rect_size.y;
 	float r = length(uv_c);
 	float ang = atan(uv_c.y, uv_c.x);
-
 	vec3 overlay = vec3(0.0);
 
 	// ── 3a. Fractal lightning roots ──────────────────────────────────
 	float lightning = 0.0;
-	for (int i = 0; i < 7; i++) {
+	for (int i = 0; i < 5; i++) {
 		float fi = float(i);
-		float angle = fi * TAU / 7.0 + t * 0.03;
+		float angle = fi * TAU / 5.0 + t * 0.03;
 		vec2 dir = vec2(cos(angle), sin(angle));
 		float proj = dot(uv_c, dir);
 		float perp = abs(length(uv_c - dir * max(proj, 0.0)));
@@ -377,39 +305,37 @@ void fragment() {
 		lightning += bolt;
 	}
 	lightning *= (0.4 + energy * 2.5) * activity;
-	overlay += vec3(0.2, 0.9, 0.3) * lightning * 1.4;  // green roots
-	overlay += vec3(0.9, 0.7, 0.1) * lightning * kick * 1.0;  // gold on kick
+	overlay += vec3(0.2, 0.9, 0.3) * lightning * 1.4;
+	overlay += vec3(0.9, 0.7, 0.1) * lightning * kick;
 
-	// ── 3b. Pulsing sacred breath rings ──────────────────────────────
+	// ── 3b. Sacred breath rings ──────────────────────────────────────
 	float rings = 0.0;
-	for (int i = 0; i < 7; i++) {
+	for (int i = 0; i < 5; i++) {
 		float fi = float(i);
-		float ring_r = 0.06 + fi * 0.07 + energy * 0.03 + sub_bass * 0.02;
+		float ring_r = 0.06 + fi * 0.08 + energy * 0.03;
 		float ring = exp(-abs(r - ring_r) * (80.0 + bass * 40.0)) * 0.012;
 		ring *= 0.7 + 0.3 * sin(ang * 6.0 + fi * 1.5 + t * 0.2);
 		rings += ring;
 	}
 	vec3 ring_col = palette(r * 2.0 + t * 0.03,
-		vec3(0.15 + warmth * 0.2, 0.45, 0.35 + brightness * 0.1));
+		vec3(0.15 + warmth * 0.2, 0.45, 0.35));
 	overlay += ring_col * rings * (0.8 + beat_confidence * 0.6);
 
-	// ── 3c. Sri Yantra spiral vortex ─────────────────────────────────
+	// ── 3c. Spiral vortex arms ───────────────────────────────────────
 	float arms = floor(6.0 + bass * 3.0);
 	float spiral = sin(ang * arms + r * 18.0 - t * 3.0 + beat_phase * TAU);
 	spiral = pow(max(spiral, 0.0), 4.0);
 	spiral *= 0.015 * (0.3 + energy);
 	spiral *= smoothstep(0.0, 0.1, r) * smoothstep(0.85, 0.15, r);
-	overlay += vec3(0.05, 0.9, 0.3) * spiral * 1.8;  // emerald spiral
+	overlay += vec3(0.05, 0.9, 0.3) * spiral * 1.8;
 	overlay += vec3(0.9, 0.6, 0.05) * spiral * 0.9;
 
-	// ── 3d. Metatron's Cube mandala — seed of life circles ───────────
+	// ── 3d. Metatron mandala — seed of life ──────────────────────────
 	float mandala = 0.0;
 	float mr = 0.15 + energy * 0.04 + sub_bass * 0.03;
 
-	// Center circle
 	mandala += exp(-abs(r - mr * 0.33) * (120.0 + bass * 40.0)) * 0.012;
 
-	// 6 inner circles + radial lines
 	for (int i = 0; i < 6; i++) {
 		float fi = float(i);
 		float angle = fi * TAU / 6.0 + t * 0.035;
@@ -417,7 +343,6 @@ void fragment() {
 		float d = abs(length(uv_c - cp) - mr);
 		mandala += exp(-d * (100.0 + bass * 40.0)) * 0.010;
 
-		// Radial line: center → node
 		vec2 nd = normalize(cp);
 		float proj_l = dot(uv_c, nd);
 		float perp_l = length(uv_c - nd * clamp(proj_l, 0.0, mr));
@@ -425,7 +350,6 @@ void fragment() {
 		          * smoothstep(0.0, 0.02, proj_l) * smoothstep(mr * 1.05, mr * 0.5, proj_l);
 	}
 
-	// 6 outer circles
 	for (int i = 0; i < 6; i++) {
 		float fi = float(i);
 		float angle = fi * TAU / 6.0 + PI / 6.0 + t * 0.035;
@@ -433,7 +357,6 @@ void fragment() {
 		float d = abs(length(uv_c - cp) - mr);
 		mandala += exp(-d * (80.0 + bass * 30.0)) * 0.007;
 
-		// Connecting lines: inner → outer
 		vec2 inner_p = vec2(cos(angle - PI / 6.0), sin(angle - PI / 6.0)) * mr;
 		vec2 dir_ln = normalize(cp - inner_p);
 		float proj_ln = dot(uv_c - inner_p, dir_ln);
@@ -441,22 +364,19 @@ void fragment() {
 		mandala += exp(-perp_ln * (180.0 + energy * 60.0)) * 0.004;
 	}
 
-	// Containment circles
 	mandala += exp(-abs(r - mr * 2.2) * (60.0 + energy * 25.0)) * 0.006;
 	mandala += exp(-abs(r - mr * 3.0) * (40.0 + energy * 15.0)) * 0.004;
 
-	vec3 met_col = vec3(0.9, 0.7, 0.1);  // sacred gold
+	vec3 met_col = vec3(0.9, 0.7, 0.1);
 	met_col = mix(met_col, vec3(0.9, 0.4, 0.1), warmth * 0.4);
 	overlay += met_col * mandala * (1.0 + beat_confidence * 0.6);
 
 	// ── 3e. Sri Yantra triangle overlay ──────────────────────────────
 	float sri_overlay = 0.0;
-
-	// 4 upward triangles (Shiva)
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 2; i++) {
 		float fi = float(i);
-		float sc = 0.35 - fi * 0.07;
-		float a_off = t * 0.02 + fi * 0.005;
+		float sc = 0.35 - fi * 0.12;
+		float a_off = t * 0.02 + fi * 0.01;
 		for (int vi = 0; vi < 3; vi++) {
 			float v = float(vi);
 			float va = a_off + v * TAU / 3.0 + PI / 2.0;
@@ -466,15 +386,13 @@ void fragment() {
 			vec2 dir_e = tv1 - tv0;
 			float proj_e = dot(uv_c - tv0, dir_e) / dot(dir_e, dir_e);
 			float perp_e = length(uv_c - tv0 - dir_e * clamp(proj_e, 0.0, 1.0));
-			sri_overlay += exp(-perp_e * (160.0 + bass * 50.0)) * 0.006;
+			sri_overlay += exp(-perp_e * (160.0 + bass * 50.0)) * 0.007;
 		}
 	}
-
-	// 5 downward triangles (Shakti)
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < 2; i++) {
 		float fi = float(i);
-		float sc = 0.32 - fi * 0.055;
-		float a_off = -t * 0.015 - fi * 0.004;
+		float sc = 0.30 - fi * 0.10;
+		float a_off = -t * 0.015 - fi * 0.008;
 		for (int vi = 0; vi < 3; vi++) {
 			float v = float(vi);
 			float va = a_off + v * TAU / 3.0 - PI / 2.0;
@@ -484,11 +402,10 @@ void fragment() {
 			vec2 dir_e = tv1 - tv0;
 			float proj_e = dot(uv_c - tv0, dir_e) / dot(dir_e, dir_e);
 			float perp_e = length(uv_c - tv0 - dir_e * clamp(proj_e, 0.0, 1.0));
-			sri_overlay += exp(-perp_e * (160.0 + bass * 50.0)) * 0.006;
+			sri_overlay += exp(-perp_e * (160.0 + bass * 50.0)) * 0.007;
 		}
 	}
 
-	// Bindu glow
 	float bindu_glow = exp(-r * (100.0 + energy * 50.0)) * 0.018;
 	sri_overlay += bindu_glow;
 
@@ -498,15 +415,15 @@ void fragment() {
 
 	// ── 3f. Neon sacred scan lines ───────────────────────────────────
 	float scan = 0.0;
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 3; i++) {
 		float fi = float(i);
-		float y = 0.25 + fi * 0.17 + sin(t * (0.1 + fi * 0.05)) * 0.06;
+		float y = 0.25 + fi * 0.22 + sin(t * (0.1 + fi * 0.05)) * 0.06;
 		float d = abs(uv.y - y);
 		scan += exp(-d * (280.0 + energy * 120.0)) * 0.007;
 	}
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < 2; i++) {
 		float fi = float(i);
-		float x = 0.3 + fi * 0.2 + cos(t * (0.08 + fi * 0.04)) * 0.05;
+		float x = 0.3 + fi * 0.3 + cos(t * (0.08 + fi * 0.04)) * 0.05;
 		float d = abs(uv.x - x);
 		scan += exp(-d * (280.0 + energy * 120.0)) * 0.006;
 	}
@@ -514,9 +431,9 @@ void fragment() {
 	overlay += vec3(0.0, 0.9, 0.5) * scan * 1.6;
 	overlay += vec3(0.9, 0.7, 0.0) * scan * 0.7;
 
-	// ── 3g. Microscopic organisms — sacred pollen ────────────────────
+	// ── 3g. Sacred pollen organisms ──────────────────────────────────
 	float organisms = 0.0;
-	for (int i = 0; i < 12; i++) {
+	for (int i = 0; i < 8; i++) {
 		float fi = float(i);
 		vec2 pos = vec2(
 			0.5 + sin(t * 0.05 + fi * 2.7) * 0.40,
@@ -534,36 +451,9 @@ void fragment() {
 	overlay += vec3(0.0, 0.9, 0.4) * organisms * 0.50;
 	overlay += vec3(0.85, 0.7, 0.0) * organisms * 0.25;
 
-	// ── 3h. Cellular division — voronoi membranes ────────────────────
-	vec2 cell_uv = uv * 5.0;
-	vec2 cell_id = floor(cell_uv);
-	vec2 cell_fract = fract(cell_uv) - 0.5;
-	float min_cell = 1.0;
-	float sec_cell = 1.0;
-	for (int cy = -1; cy <= 1; cy++) {
-		for (int cx = -1; cx <= 1; cx++) {
-			vec2 nb = vec2(float(cx), float(cy));
-			vec2 pt = vec2(
-				sin(t * 0.15 + dot(cell_id + nb, vec2(127.1, 311.7))) * 0.25,
-				cos(t * 0.12 + dot(cell_id + nb, vec2(269.5, 183.3))) * 0.25
-			);
-			float cd = length(nb + pt - cell_fract);
-			if (cd < min_cell) {
-				sec_cell = min_cell;
-				min_cell = cd;
-			} else if (cd < sec_cell) {
-				sec_cell = cd;
-			}
-		}
-	}
-	float membrane = sec_cell - min_cell;
-	float cell_edge = exp(-membrane * 18.0) * 0.018;
-	overlay += vec3(0.1, 0.8, 0.3) * cell_edge * 1.6;
-	overlay += vec3(0.7, 0.5, 0.0) * cell_edge * 0.6;
-
-	// ── 3i. Liquid gold highlights ───────────────────────────────────
+	// ── 3h. Liquid gold highlights ───────────────────────────────────
 	float gold_drop = 0.0;
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < 4; i++) {
 		float fi = float(i);
 		vec2 mc = vec2(
 			0.5 + sin(t * 0.03 + fi * 3.14) * 0.30,
@@ -571,32 +461,15 @@ void fragment() {
 		);
 		float mr2 = length(uv - mc);
 		float mb = exp(-mr2 * mr2 * (35.0 + energy * 25.0));
-		gold_drop += pow(max(mb, 0.0), 3.0);
+		gold_drop += mb * mb * mb;
 	}
 	overlay += vec3(0.9, 0.7, 0.1) * gold_drop * 0.25;
 	overlay += vec3(0.1, 0.8, 0.3) * gold_drop * 0.10;
 
-	// ── 3j. Fibonacci spiral arms ────────────────────────────────────
-	float phi = 1.61803398875;
-	float fib = 0.0;
-	for (int i = 0; i < 6; i++) {
-		float fi = float(i);
-		float spiral_angle = ang + log(max(r, 0.001)) / log(phi) * 4.0 - t * 0.5 + fi * TAU / 6.0;
-		float spiral_line = abs(sin(spiral_angle));
-		spiral_line = pow(max(1.0 - spiral_line, 0.0), 6.0);
-		spiral_line *= 0.014 * (0.3 + energy);
-		spiral_line *= smoothstep(0.0, 0.08, r) * smoothstep(0.75, 0.12, r);
-		fib += spiral_line;
-	}
-	overlay += vec3(0.85, 0.65, 0.05) * fib * 1.5;
-	overlay += vec3(0.15, 0.6, 0.2) * fib * 0.8;
-
-	// ── 3k. Flower of Life — nested vesica piscis arcs ───────────────
+	// ── 3i. Flower of Life arcs ──────────────────────────────────────
 	float flower = 0.0;
 	float fr = 0.10 + energy * 0.03;
-	// Center
 	flower += exp(-abs(r - fr) * (150.0 + bass * 50.0)) * 0.008;
-	// 6 petals around center
 	for (int i = 0; i < 6; i++) {
 		float fi = float(i);
 		float fa = fi * TAU / 6.0 + t * 0.025;
@@ -604,18 +477,10 @@ void fragment() {
 		float fd = abs(length(uv_c - fc) - fr);
 		flower += exp(-fd * (150.0 + bass * 50.0)) * 0.008;
 	}
-	// Second ring: 12 petals
-	for (int i = 0; i < 12; i++) {
-		float fi = float(i);
-		float fa = fi * TAU / 12.0 + t * 0.02;
-		vec2 fc = vec2(cos(fa), sin(fa)) * fr * 2.0;
-		float fd = abs(length(uv_c - fc) - fr);
-		flower += exp(-fd * (100.0 + energy * 40.0)) * 0.005;
-	}
 	overlay += vec3(0.7, 0.5, 0.05) * flower * 1.2;
 	overlay += vec3(0.1, 0.7, 0.25) * flower * 0.6;
 
-	// ── 3l. Onset shockwave ──────────────────────────────────────────
+	// ── 3j. Onset shockwave ──────────────────────────────────────────
 	float shock_phase = fract(beat_phase);
 	float shock_r = shock_phase * 0.55;
 	float shock_w = 0.025 + (1.0 - shock_phase) * 0.035;
@@ -623,11 +488,11 @@ void fragment() {
 	overlay += vec3(0.15, 0.9, 0.35) * shock;
 	overlay += vec3(0.95, 0.7, 0.1) * shock * kick * 1.5;
 
-	// ── 3m. Energy tendrils — noise-based root branching ─────────────
+	// ── 3k. Energy tendrils ──────────────────────────────────────────
 	float tendrils = 0.0;
-	for (int i = 0; i < 8; i++) {
+	for (int i = 0; i < 6; i++) {
 		float fi = float(i);
-		float angle = fi * TAU / 8.0 + t * 0.02;
+		float angle = fi * TAU / 6.0 + t * 0.02;
 		vec2 dir = vec2(cos(angle), sin(angle));
 		float proj = dot(uv_c, dir);
 		float perp = length(uv_c - dir * max(proj, 0.0));
@@ -641,16 +506,26 @@ void fragment() {
 	overlay += vec3(0.15, 0.7, 0.15) * tendrils * 0.6;
 
 	// ══════════════════════════════════════════════════════════════════
-	//  PHASE 4: COMPOSITE — trail + new geometry (additive like phantom_star)
+	//  PHASE 4: COMPOSITE
 	// ══════════════════════════════════════════════════════════════════
 	vec3 new_col = rm_col + overlay;
-
-	// Deep earth void background
 	new_col += mix(vec3(0.01, 0.005, 0.0), vec3(0.0, 0.01, 0.005), uv.y);
 
-	// Additive composite — trails layer under new geometry
-	vec3 col = trail + new_col;
+	// Hybrid composite — trail modulates new_col instead of stacking additively.
+	// Pure `trail + new_col` blows out at low reinhard; this keeps trails visible
+	// without double-counting brightness.
+	float trail_lum = dot(trail, vec3(0.299, 0.587, 0.114));
+	vec3 col = new_col * (1.0 + trail_lum * 0.9) + trail * 0.20;
+
+	// Tonemap
 	col = col / (1.0 + col * loop_reinhard);
+
+	// Post-tonemap saturation boost — Reinhard desaturates; counteract it
+	float gray = dot(col, vec3(0.299, 0.587, 0.114));
+	col = mix(vec3(gray), col, 1.55);
+
+	// Final clamp for safety
+	col = clamp(col, 0.0, 1.0);
 
 	COLOR = vec4(col, 1.0);
 }
