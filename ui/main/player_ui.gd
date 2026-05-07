@@ -166,7 +166,7 @@ func _build_bar() -> void:
 	StylesUI.track_label(_time_label, func(l: Label) -> void:
 		l.modulate.a = StylesUI.theme().a_time_label
 	)
-	_time_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_time_label.size_flags_horizontal = Control.SIZE_SHRINK_END
 	_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	top.add_child(_time_label)
 
@@ -451,6 +451,8 @@ func _on_playlist_changed() -> void:
 		_seek_bar.max_value = 1.0
 		_seek_bar.value = 0.0
 		_refresh_play_btn()
+	else:
+		_refresh_song_label()
 
 
 func _on_playlist_jump(index: int) -> void:
