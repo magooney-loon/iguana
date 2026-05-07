@@ -805,6 +805,7 @@ func _build_shader_picker() -> void:
 	shadow_pad.add_theme_constant_override("margin_bottom", 10)
 	_picker_win.add_child(shadow_pad)
 	_picker_content = shadow_pad
+	_picker_content.pivot_offset = Vector2(PICKER_WIDTH / 2.0, PICKER_HEIGHT / 2.0)
 
 	var bg := PanelContainer.new()
 	StylesUI.track_glass_panel(bg, func(p: Control) -> void:
@@ -812,7 +813,6 @@ func _build_shader_picker() -> void:
 	)
 	StylesUI.apply_aero(bg, true)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.pivot_offset = Vector2(PICKER_WIDTH / 2.0, PICKER_HEIGHT / 2.0)
 	shadow_pad.add_child(bg)
 
 	var col := VBoxContainer.new()
