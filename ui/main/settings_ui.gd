@@ -12,10 +12,21 @@ var _content:      Control
 var _tween:        Tween
 
 # Tabs
-var _tabs:            TabContainer
-var _shader_dropdown: OptionButton
-var _tab_idx:         int = 0
-var _last_shader_idx := -1
+var _tabs:              TabContainer
+var _shader_btn:        Button
+var _tab_idx:           int = 0
+var _last_shader_idx  := -1
+
+# Shader picker modal
+var _picker_win:        Window
+var _picker_content:    Control
+var _picker_tween:      Tween
+var _picker_search:     LineEdit
+var _picker_list:        VBoxContainer
+var _picker_scroll:     ScrollContainer
+var _picker_fav_only:   bool   = false
+var _picker_fav_btn:    Button
+var _picker_entries:    Array  = []   # [{btn, star_btn, idx, stem}]
 
 # General tab — Appearance dropdowns
 var _skin_opt:   OptionButton
@@ -66,6 +77,7 @@ func open() -> void:
 
 
 func close() -> void:
+	_close_shader_picker()
 	if _tween and _tween.is_valid():
 		_tween.kill()
 	var st := StylesUI.style()
@@ -531,20 +543,13 @@ func _build_shaders_tab() -> Control:
 
 	StylesUI.win_section(vbox, "ACTIVE SHADER")
 
-	_shader_dropdown = OptionButton.new()
-	var shaders: Array = _visualizer.SHADERS
-	for i in shaders.size():
-		_shader_dropdown.add_item(shaders[i].name, i)
-	_shader_dropdown.selected = _visualizer._shader_index
-	_shader_dropdown.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_shader_dropdown.focus_mode = Control.FOCUS_NONE
-	_shader_dropdown.item_selected.connect(func(idx: int):
-		_visualizer._switch(idx)
-		_update_pp_sliders()
-		_update_shader_info()
-	)
-	StylesUI.apply_dropdown(_shader_dropdown)
-	vbox.add_child(_shader_dropdown)
+	_shader_btn = Button.new()
+	_shader_btn.text = _visualizer.SHADERS[_visualizer._shader_index].name
+	_shader_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_shader_btn.focus_mode = Control.FOCUS_NONE
+	_shader_btn.pressed.connect(_open_shader_picker)
+	StylesUI.apply_glass_btn(_shader_btn)
+	vbox.add_child(_shader_btn)
 
 	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "SHADER INFO")
@@ -775,6 +780,357 @@ func _reset_post_defaults() -> void:
 	_update_pp_sliders()
 
 
+# ── Shader Picker Modal ─────────────────────────────────────────────────────
+
+const PICKER_WIDTH  := 420
+const PICKER_HEIGHT := 480
+const PICKER_ROW_H  := 38
+
+func _build_shader_picker() -> void:
+	_picker_win = Window.new()
+	_picker_win.title       = "Select Shader"
+	_picker_win.size        = Vector2i(PICKER_WIDTH, PICKER_HEIGHT)
+	_picker_win.min_size    = Vector2i(320, 280)
+	_picker_win.transparent = true
+	_picker_win.borderless  = true
+	_picker_win.close_requested.connect(_close_shader_picker)
+	_picker_win.hide()
+	_win.add_child(_picker_win)
+
+	var shadow_pad := MarginContainer.new()
+	shadow_pad.set_anchors_preset(Control.PRESET_FULL_RECT)
+	shadow_pad.add_theme_constant_override("margin_left",   10)
+	shadow_pad.add_theme_constant_override("margin_right",  10)
+	shadow_pad.add_theme_constant_override("margin_top",    10)
+	shadow_pad.add_theme_constant_override("margin_bottom", 10)
+	_picker_win.add_child(shadow_pad)
+	_picker_content = shadow_pad
+
+	var bg := PanelContainer.new()
+	StylesUI.track_glass_panel(bg, func(p: Control) -> void:
+		p.add_theme_stylebox_override("panel", StylesUI.glass_box(StylesUI.theme().c_glass, 14.0, true))
+	)
+	StylesUI.apply_aero(bg, true)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.pivot_offset = Vector2(PICKER_WIDTH / 2.0, PICKER_HEIGHT / 2.0)
+	shadow_pad.add_child(bg)
+
+	var col := VBoxContainer.new()
+	col.set_anchors_preset(Control.PRESET_FULL_RECT)
+	col.add_theme_constant_override("separation", 4)
+	var col_margin := MarginContainer.new()
+	col_margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	col_margin.add_theme_constant_override("margin_left",   12)
+	col_margin.add_theme_constant_override("margin_right",  12)
+	col_margin.add_theme_constant_override("margin_top",    10)
+	col_margin.add_theme_constant_override("margin_bottom", 10)
+	bg.add_child(col_margin)
+	col_margin.add_child(col)
+
+	# ── Header row (title + close) ────────────────────────────────────
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 6)
+	col.add_child(header)
+
+	var title := Label.new()
+	title.text = "Select Shader"
+	StylesUI.track_label(title, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", StylesUI.theme().font_title)
+		l.modulate = StylesUI.theme().c_text_hi
+	)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+
+	var close_btn := StylesUI.icon_btn("close", "Close", Vector2(26, 26), _close_shader_picker)
+	header.add_child(close_btn)
+
+	StylesUI.win_sep(col)
+
+	# ── Search bar ────────────────────────────────────────────────────
+	var search_row := HBoxContainer.new()
+	search_row.add_theme_constant_override("separation", 6)
+	col.add_child(search_row)
+
+	_picker_search = LineEdit.new()
+	_picker_search.placeholder_text = "Search by name or author..."
+	_picker_search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_picker_search.focus_mode = Control.FOCUS_CLICK
+	_picker_search.clear_button_enabled = true
+	StylesUI.track_glass_panel(_picker_search, func(p: Control) -> void:
+		var sb := StylesUI.glass_box(StylesUI.theme().c_btn, 6.0, true)
+		sb.content_margin_left   = 8.0
+		sb.content_margin_right  = 8.0
+		sb.content_margin_top    = 5.0
+		sb.content_margin_bottom = 5.0
+		p.add_theme_stylebox_override("normal", sb)
+		var sbf := StylesUI.glass_box(StylesUI.theme().c_btn_h, 6.0, true)
+		sbf.content_margin_left   = 8.0
+		sbf.content_margin_right  = 8.0
+		sbf.content_margin_top    = 5.0
+		sbf.content_margin_bottom = 5.0
+		p.add_theme_stylebox_override("focus", sbf)
+	)
+	_picker_search.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+	_picker_search.add_theme_color_override("font_color", StylesUI.theme().c_text_hi)
+	_picker_search.add_theme_color_override("font_placeholder_color", StylesUI.theme().c_text_dim)
+	_picker_search.add_theme_color_override("caret_color", StylesUI.theme().c_text_hi)
+	_picker_search.text_changed.connect(_on_picker_search)
+	search_row.add_child(_picker_search)
+
+	# Favorites toggle button
+	_picker_fav_btn = Button.new()
+	_picker_fav_btn.tooltip_text = "Show favorites only"
+	_picker_fav_btn.toggle_mode = true
+	_picker_fav_btn.button_pressed = false
+	_picker_fav_btn.custom_minimum_size = Vector2(32, 28)
+	_picker_fav_btn.focus_mode = Control.FOCUS_NONE
+	var star_tex := StylesUI.load_icon("star")
+	if star_tex:
+		_picker_fav_btn.icon = star_tex
+		_picker_fav_btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_picker_fav_btn.expand_icon = true
+	StylesUI.apply_glass_btn(_picker_fav_btn)
+	_picker_fav_btn.toggled.connect(_on_picker_fav_toggle)
+	search_row.add_child(_picker_fav_btn)
+
+	StylesUI.win_sep(col)
+
+	# ── Scrollable shader list ────────────────────────────────────────
+	_picker_scroll = ScrollContainer.new()
+	_picker_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_picker_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_child(_picker_scroll)
+
+	_picker_list = VBoxContainer.new()
+	_picker_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_picker_list.add_theme_constant_override("separation", 2)
+	_picker_scroll.add_child(_picker_list)
+
+	# Build entries
+	_picker_entries.clear()
+	var shaders: Array = _visualizer.SHADERS
+	for i in shaders.size():
+		var meta: Dictionary = shaders[i]
+		var stem: String = meta.get("path", "").get_file().get_basename()
+
+		var row := PanelContainer.new()
+		StylesUI.track_glass_panel(row, func(p: Control) -> void:
+			var sb := StylesUI.glass_box(StylesUI.theme().c_btn, 6.0, true)
+			sb.content_margin_left   = 6.0
+			sb.content_margin_right  = 6.0
+			sb.content_margin_top    = 5.0
+			sb.content_margin_bottom = 5.0
+			sb.border_color = Color(0, 0, 0, 0)
+			sb.set_border_width_all(0)
+			p.add_theme_stylebox_override("panel", sb)
+		)
+		row.custom_minimum_size.y = PICKER_ROW_H
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.mouse_filter = Control.MOUSE_FILTER_PASS
+		row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		_picker_list.add_child(row)
+
+		var hbox := HBoxContainer.new()
+		hbox.add_theme_constant_override("separation", 6)
+		row.add_child(hbox)
+
+		# Star / favorite button
+		var star_btn := Button.new()
+		star_btn.custom_minimum_size = Vector2(28, 28)
+		star_btn.focus_mode = Control.FOCUS_NONE
+		star_btn.toggle_mode = false
+		star_btn.icon = star_tex
+		star_btn.expand_icon = true
+		star_btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var is_fav := stem in Config.favorite_shaders
+		star_btn.modulate.a = 1.0 if is_fav else 0.3
+		# Flat icon-only style — no padding that crushes the star
+		var star_n := StyleBoxFlat.new()
+		star_n.bg_color = Color(0, 0, 0, 0)
+		star_n.set_border_width_all(0)
+		star_n.set_corner_radius_all(4)
+		star_n.content_margin_left   = 2.0
+		star_n.content_margin_right  = 2.0
+		star_n.content_margin_top    = 2.0
+		star_n.content_margin_bottom = 2.0
+		var star_h := star_n.duplicate()
+		star_h.bg_color = Color(1, 1, 1, 0.06)
+		var star_p := star_n.duplicate()
+		star_p.bg_color = Color(1, 1, 1, 0.03)
+		star_btn.add_theme_stylebox_override("normal",  star_n)
+		star_btn.add_theme_stylebox_override("hover",   star_h)
+		star_btn.add_theme_stylebox_override("pressed", star_p)
+		var captured_idx := i
+		var captured_stem := stem
+		star_btn.pressed.connect(func() -> void:
+			_toggle_favorite(captured_stem)
+		)
+		hbox.add_child(star_btn)
+
+		# Shader name + author
+		var info_col := VBoxContainer.new()
+		info_col.add_theme_constant_override("separation", 0)
+		info_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(info_col)
+
+		var name_lbl := Label.new()
+		name_lbl.text = meta.get("name", stem)
+		StylesUI.track_label(name_lbl, func(l: Label) -> void:
+			l.add_theme_font_size_override("font_size", StylesUI.theme().font_title)
+			l.add_theme_color_override("font_color", StylesUI.theme().c_text_hi)
+		)
+		info_col.add_child(name_lbl)
+
+		var author_lbl := Label.new()
+		author_lbl.text = meta.get("author", "")
+		StylesUI.track_label(author_lbl, func(l: Label) -> void:
+			l.add_theme_font_size_override("font_size", StylesUI.theme().font_section)
+			l.modulate.a = StylesUI.theme().a_info_text
+		)
+		info_col.add_child(author_lbl)
+
+		var entry := {
+			"row":        row,
+			"star_btn":   star_btn,
+			"name_lbl":   name_lbl,
+			"author_lbl": author_lbl,
+			"idx":        i,
+			"stem":       stem,
+		}
+		_picker_entries.append(entry)
+
+		# Click on row → select shader
+		row.gui_input.connect(func(event: InputEvent) -> void:
+			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+				_select_shader_from_picker(captured_idx)
+		)
+
+
+func _open_shader_picker() -> void:
+	if _picker_win == null:
+		_build_shader_picker()
+
+	if _picker_tween and _picker_tween.is_valid():
+		_picker_tween.kill()
+
+	# Center on main viewport
+	var vp := get_viewport().get_visible_rect()
+	var win_size := Vector2(PICKER_WIDTH, PICKER_HEIGHT)
+	_picker_win.position = Vector2i(
+		int(vp.position.x + (vp.size.x - win_size.x) / 2.0),
+		int(vp.position.y + (vp.size.y - win_size.y) / 2.0)
+	)
+	_picker_win.size = Vector2i(int(win_size.x), int(win_size.y))
+
+	# Reset search
+	_picker_search.text = ""
+	_picker_fav_only = false
+	_picker_fav_btn.button_pressed = false
+	_refresh_picker_list()
+
+	# Animate in — scale up + fade
+	var st := StylesUI.style()
+	_picker_content.modulate.a = 0.0
+	_picker_content.scale = Vector2(0.92, 0.92)
+	_picker_win.show()
+
+	_picker_tween = create_tween().set_parallel(true)
+	_picker_tween.tween_property(_picker_content, "scale", Vector2.ONE, st.anim_win_open_duration)\
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	_picker_tween.tween_property(_picker_content, "modulate:a", 1.0, st.anim_win_fade_in)\
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+
+	_picker_search.grab_focus()
+
+
+func _close_shader_picker() -> void:
+	if not _picker_win or not _picker_win.visible:
+		return
+
+	if _picker_tween and _picker_tween.is_valid():
+		_picker_tween.kill()
+
+	var st := StylesUI.style()
+	_picker_tween = create_tween().set_parallel(true)
+	_picker_tween.tween_property(_picker_content, "scale", Vector2(0.92, 0.92), st.anim_win_close_duration)\
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	_picker_tween.tween_property(_picker_content, "modulate:a", 0.0, st.anim_win_fade_out)\
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	_picker_tween.set_parallel(false)
+	_picker_tween.tween_callback(_picker_win.hide)
+
+
+func _select_shader_from_picker(idx: int) -> void:
+	_visualizer._switch(idx)
+	_shader_btn.text = _visualizer.SHADERS[idx].name
+	_update_pp_sliders()
+	_update_shader_info()
+	_close_shader_picker()
+
+
+func _toggle_favorite(stem: String) -> void:
+	if stem in Config.favorite_shaders:
+		Config.favorite_shaders.erase(stem)
+	else:
+		Config.favorite_shaders.append(stem)
+	Config.save()
+	_refresh_picker_star_states()
+	if _picker_fav_only:
+		_refresh_picker_list()
+
+
+func _refresh_picker_star_states() -> void:
+	for entry in _picker_entries:
+		var is_fav: bool = entry.stem in Config.favorite_shaders
+		entry.star_btn.modulate.a = 1.0 if is_fav else 0.3
+
+
+func _on_picker_search(_text: String) -> void:
+	_refresh_picker_list()
+
+
+func _on_picker_fav_toggle(on: bool) -> void:
+	_picker_fav_only = on
+	_refresh_picker_list()
+
+
+func _refresh_picker_list() -> void:
+	var query := _picker_search.text.strip_edges().to_lower() if _picker_search else ""
+	var shaders: Array = _visualizer.SHADERS
+
+	for entry in _picker_entries:
+		var meta: Dictionary = shaders[entry.idx]
+		var sname:  String = meta.get("name", "").to_lower()
+		var author: String = meta.get("author", "").to_lower()
+		var stem:  String = (entry.stem as String).to_lower()
+
+		var matches_search := query.is_empty() or sname.find(query) >= 0 or author.find(query) >= 0 or stem.find(query) >= 0
+		var matches_fav: bool = (not _picker_fav_only) or (entry.stem in Config.favorite_shaders)
+
+		entry.row.visible = matches_search and matches_fav
+
+		# Highlight active shader row
+		var is_active: bool = entry.idx == _visualizer._shader_index
+		var active_sb := StylesUI.glass_box(StylesUI.theme().c_active_row, 6.0, false)
+		active_sb.content_margin_left   = 6.0
+		active_sb.content_margin_right  = 6.0
+		active_sb.content_margin_top    = 5.0
+		active_sb.content_margin_bottom = 5.0
+		active_sb.border_color = Color(0, 0, 0, 0)
+		active_sb.set_border_width_all(0)
+		if is_active and entry.row.visible:
+			entry.row.add_theme_stylebox_override("panel", active_sb)
+		else:
+			var idle_sb := StylesUI.glass_box(StylesUI.theme().c_btn, 6.0, true)
+			idle_sb.content_margin_left   = 6.0
+			idle_sb.content_margin_right  = 6.0
+			idle_sb.content_margin_top    = 5.0
+			idle_sb.content_margin_bottom = 5.0
+			idle_sb.border_color = Color(0, 0, 0, 0)
+			idle_sb.set_border_width_all(0)
+			entry.row.add_theme_stylebox_override("panel", idle_sb)
+
+
 # ── Keymap tab ────────────────────────────────────────────────────────────────
 
 func _build_keymap_tab() -> Control:
@@ -965,12 +1321,12 @@ func _dbg_row(parent: VBoxContainer, display: String, key: String, max_val: floa
 # ── Sync ──────────────────────────────────────────────────────────────────────
 
 func _sync() -> void:
-	# Keep shader dropdown in sync when Q/E are pressed outside the window
+	# Keep shader button in sync when Q/E are pressed outside the window
 	var idx: int = _visualizer._shader_index
 	if idx != _last_shader_idx:
 		_last_shader_idx = idx
-		if _shader_dropdown:
-			_shader_dropdown.selected = idx
+		if _shader_btn:
+			_shader_btn.text = _visualizer.SHADERS[idx].name
 		_update_pp_sliders()
 	# Shuffle state
 	_shuffle_check.set_block_signals(true)

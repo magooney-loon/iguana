@@ -25,6 +25,7 @@ var crossfade_duration  := 2.0  # seconds
 var auto_hide_player   := false
 var vsync_enabled      := true
 var max_fps            := 60
+var favorite_shaders   : Array[String] = []
 var skin_name          := "iguana"
 var theme_name         := "iguana"
 var style_name         := "iguana"
@@ -77,6 +78,9 @@ func save() -> void:
 		var section := "shader_%s" % key
 		for pp_key in shader_pp_configs[key]:
 			cfg.set_value(section, pp_key, shader_pp_configs[key][pp_key])
+
+	# Favorites
+	cfg.set_value("general", "favorite_shaders", favorite_shaders)
 
 	var err := cfg.save(SETTINGS_PATH)
 	if err != OK:
@@ -142,6 +146,15 @@ func load_settings() -> void:
 			skin_name = theme_name
 		else:
 			skin_name = "custom"
+
+	# Favorites
+	if cfg.has_section_key("general", "favorite_shaders"):
+		var loaded_favs: Variant = cfg.get_value("general", "favorite_shaders")
+		if loaded_favs is Array:
+			favorite_shaders.clear()
+			for fav in loaded_favs:
+				if fav is String:
+					favorite_shaders.append(fav)
 
 	# Resolve shader_name → shader_index
 	shader_index = 0  # default
