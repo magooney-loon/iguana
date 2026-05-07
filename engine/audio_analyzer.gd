@@ -32,9 +32,9 @@ var _presence := 0.0
 var _treble   := 0.0
 
 # Previous raw values for spectral flux
-var _prev_bas := 0.0
-var _prev_mid_raw := 0.0
-var _prev_tr  := 0.0
+var _prev_bass_raw   := 0.0
+var _prev_mid_raw    := 0.0
+var _prev_treble_raw := 0.0
 
 # Smoothed spectral flux per band
 var _flux_bass   := 0.0
@@ -171,13 +171,13 @@ func _analyze(delta: float) -> void:
 	_treble   = _smooth_ar(_treble,   raw_tr,   8.0,  3.0, delta)
 
 	# --- Spectral flux: positive onset per band, amplified and smoothed ---
-	var rf_bas := maxf(0.0, raw_bas - _prev_bas) * 4.0
-	var rf_mid := maxf(0.0, raw_mid - _prev_mid_raw) * 4.0
-	var rf_tr  := maxf(0.0, raw_tr  - _prev_tr)  * 4.0
+	var rf_bas := maxf(0.0, raw_bas - _prev_bass_raw)   * 4.0
+	var rf_mid := maxf(0.0, raw_mid - _prev_mid_raw)    * 4.0
+	var rf_tr  := maxf(0.0, raw_tr  - _prev_treble_raw) * 4.0
 	_flux_bass   = _smooth_ar(_flux_bass,   rf_bas, 20.0, 8.0, delta)
 	_flux_mid    = _smooth_ar(_flux_mid,    rf_mid, 20.0, 8.0, delta)
 	_flux_treble = _smooth_ar(_flux_treble, rf_tr,  20.0, 8.0, delta)
-	_prev_bas = raw_bas; _prev_mid_raw = raw_mid; _prev_tr = raw_tr
+	_prev_bass_raw = raw_bas; _prev_mid_raw = raw_mid; _prev_treble_raw = raw_tr
 	var raw_onset := maxf(maxf(_flux_bass, _flux_mid), _flux_treble)
 	_onset = _smooth_ar(_onset, raw_onset, 24.0, 7.0, delta)
 

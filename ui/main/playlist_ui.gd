@@ -277,15 +277,11 @@ func _detect_diff(old: Array[String], new: Array[String]) -> Dictionary:
 	# Same size — check for reorder
 	if old.size() == new.size():
 		var diffs := 0
-		var _diff_idx := -1
 		for i in old.size():
 			if old[i] != new[i]:
 				diffs += 1
-				_diff_idx = i
 		if diffs == 0:
 			return {"type": "none"}
-		if diffs <= 2:
-			return {"type": "reorder"}
 		return {"type": "reorder"}
 
 	# One item added

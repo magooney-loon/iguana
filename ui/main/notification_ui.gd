@@ -8,10 +8,6 @@ var _label: Label
 var _label_timer := 0.0
 
 
-func setup(_analyzer: AudioAnalyzer, _shaders: Array, _visualizer: ColorRect) -> void:
-	pass
-
-
 func _ready() -> void:
 	set_anchors_preset(PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -32,10 +28,6 @@ func show_label(text: String) -> void:
 	_label.modulate.a = 1.0
 	_label.show()
 	_label_timer = 2.0
-
-
-func on_shader_changed(_index: int) -> void:
-	pass
 
 
 func process_ui(delta: float) -> void:

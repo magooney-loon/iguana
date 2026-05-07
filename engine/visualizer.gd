@@ -65,7 +65,6 @@ const PP_DEFAULTS := {
 }
 
 
-
 func _discover_shaders() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var dir := DirAccess.open("res://shaders")
@@ -195,7 +194,6 @@ func _ready() -> void:
 	# UI lives on the container so it is NOT captured in the feedback texture.
 	# If it were inside the SubViewport its labels would trail and spiral forever.
 	_ui = NotificationUI.new()
-	_ui.setup(_analyzer, SHADERS, self)
 
 	# Defer add_child calls: parent nodes are still setting up at _ready() time.
 	# post_display goes in before UI/overlay so UI renders above it.
@@ -269,7 +267,6 @@ func _switch(idx: int) -> void:
 	_shader_index  = idx
 	_shuffle_timer = 0.0
 	(material as ShaderMaterial).shader = _loaded_shaders[idx]
-	_ui.on_shader_changed(idx)
 	_ui.show_label("< %s >" % SHADERS[idx].name)
 
 	# Apply new shader's post-processing config
