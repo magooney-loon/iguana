@@ -2,7 +2,7 @@ shader_type canvas_item;
 
 // ═══════════════════════════════════════════════════════════════════════
 //  @name:          Nebula
-//  @author:        Magooney
+//  @author:        magooney
 //  @website:       github.com/magooney-loon
 //  @description:   Domain-warped plasma clouds with billowing feedback trails
 //
