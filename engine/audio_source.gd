@@ -15,6 +15,7 @@ var _crossfade_tween: Tween
 # ── Crossfade ────────────────────────────────────────────────────────────────
 var _near_end_triggered := false
 var _crossfading        := false
+var _stopping           := false
 var crossfade_duration  := 2.0
 
 # ── Volume ───────────────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ func play(path: String) -> void:
 	if stream == null:
 		return
 	_cancel_crossfade()
+	_stopping = false
 	_player.stop()
 	_player.stream = stream
 	_player.volume_db = 0.0
@@ -73,6 +75,7 @@ func crossfade_to(path: String) -> void:
 		_player.volume_db = 0.0
 		_fade_player.stop()
 		_fade_player.volume_db = -80.0
+	_stopping = false
 
 	# Start the new track on the fade player at silence
 	_fade_player.stream = stream
@@ -104,6 +107,7 @@ func crossfade_to(path: String) -> void:
 
 
 func stop() -> void:
+	_stopping = true
 	_cancel_crossfade()
 	_player.stop()
 	_player.stream = null
@@ -214,7 +218,10 @@ func process_frame(delta: float) -> void:
 # ── Internal ─────────────────────────────────────────────────────────────────
 
 func _on_player_finished() -> void:
-	# Ignore if crossfade is handling the transition
+	if _stopping:
+		return
+	if _crossfading:
+		return
 	if _crossfade_tween and _crossfade_tween.is_valid():
 		return
 	_near_end_triggered = false
@@ -244,6 +251,9 @@ func _cancel_crossfade() -> void:
 	_fade_player.volume_db = -80.0
 	_crossfading = false
 	_near_end_triggered = false
+	_stopping = true
+	# Reset the stopping guard after signals have drained
+	(func() -> void: _stopping = false).call_deferred()
 
 
 func _load_stream(path: String) -> AudioStream:

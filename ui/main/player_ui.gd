@@ -531,6 +531,7 @@ func _on_play_pause() -> void:
 		if not _playlist.is_empty():
 			AudioSource.play(_playlist.get_current_track())
 			_refresh_song_label()
+		_refresh_play_btn()
 		return
 	if AudioSource.is_paused():
 		AudioSource.set_paused(false)
