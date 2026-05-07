@@ -723,7 +723,8 @@ func _restart_desc_marquee() -> void:
 	if _shader_desc_clip.size.x > 0.0:
 		_setup_desc_marquee()
 	else:
-		_shader_desc_clip.resized.connect(_setup_desc_marquee, CONNECT_ONE_SHOT)
+		if not _shader_desc_clip.resized.is_connected(_setup_desc_marquee):
+			_shader_desc_clip.resized.connect(_setup_desc_marquee, CONNECT_ONE_SHOT)
 
 
 func _setup_desc_marquee() -> void:
