@@ -173,8 +173,8 @@ void fragment() {
 	vec2 center = uv - 0.5;
 	center.x *= aspect;
 
-	// Shared zoom — sub_bass breathes inward, onset pushes
-	float zoom = 0.980 - sub_bass * 0.006 - onset * 0.004;
+	// Shared zoom — smooth breathe: sub_bass + onset + kick pulse
+	float zoom = 0.980 - sub_bass * 0.006 - onset * 0.004 - kick * 0.012;
 	vec2 zoomed = center * zoom;
 
 	// Per-channel rotation — diverges over hundreds of frames
@@ -186,11 +186,19 @@ void fragment() {
 	vec2 guv = rot2(ang_g) * zoomed;
 	vec2 buv = rot2(ang_b) * zoomed;
 
-	// Per-channel directional flow — bass amplifies the shimmer
+	// Per-channel radial + tangential flow — bass amplifies the shimmer
+	// Radial component breathes in/out, tangential component spirals.
+	// Neither can accumulate into net lateral drift.
+	float dist_c = length(center);
+	vec2 radial = dist_c > 0.001 ? center / dist_c : vec2(0.0, 1.0);
+	vec2 tangential = vec2(-radial.y, radial.x);
 	float flow = 0.003 * (1.0 + bass * 2.0);
-	ruv += vec2(sin(center.y * 8.0 + t * 1.2), 0.0) * flow;
-	guv += vec2(sin(center.x * 7.0 + t * 0.9), cos(center.y * 6.0 + t * 1.1)) * flow * 0.7;
-	buv += vec2(0.0, cos(center.x * 6.0 + t * 1.5)) * flow;
+	ruv += (radial * sin(dist_c * 8.0 + t * 1.2)
+	      + tangential * cos(dist_c * 5.0 + t * 0.7) * 0.6) * flow;
+	guv += (radial * sin(dist_c * 7.0 + t * 0.9)
+	      + tangential * sin(dist_c * 4.5 + t * 1.1) * 0.5) * flow * 0.7;
+	buv += (radial * cos(dist_c * 6.0 + t * 1.5)
+	      + tangential * sin(dist_c * 6.0 + t * 0.5) * 0.55) * flow;
 
 	// Undo aspect correction, shift to 0–1 range
 	ruv = vec2(ruv.x / aspect, ruv.y) + 0.5;
@@ -235,16 +243,16 @@ void fragment() {
 	vec2 l = (2.0 * fc - res) / res.x * 0.4 + vec2(-1.95, -0.8);
 	vec2 n = vec2(0.0);
 
-	// Initial scale — kick pulse expands fractal detail
-	float s = 6.0 + kick * 0.5;
+	// Initial scale
+	float s = 6.0;
 	float h = 0.0;
 
 	// Distance weighting — vignette/spotlight around offset center
 	// dot(l + vec2(1.7), l) = |l|² + 1.7*(l.x + l.y)
 	float L = dot(l + vec2(1.7), l);
 
-	// Audio-reactive time — energy makes the brain writhe
-	float t_speed = t * (1.0 + energy * 0.2);
+	// Audio-reactive time — energy + kick make the brain writhe
+	float t_speed = t * (1.0 + energy * 0.2 + kick * 0.35);
 
 	// Precompute rotation matrices (constant across iterations)
 	mat2 l_rot = rot2(5.0);
@@ -286,7 +294,21 @@ void fragment() {
 	// Output — max clamps negatives, tanh compresses for safe feedback
 	// emission ×0.10 keeps equilibrium ≤ 1.0 with decay ~0.89
 	vec3 raw = max(-h * 0.5 * base_col, 0.0);
+
+	// Energy intensity breathe — fractal brightness pulses with the music
+	raw *= 1.0 + energy * 0.35 + kick * 0.25;
+
 	vec3 new_col = tanh(raw) * 0.10;
+
+	// Kick radial pulse — smooth warm glow from center
+	new_col += base_col * kick * exp(-dist_c * 3.5) * 0.18;
+
+	// Nervous system pulse — thin concentric rings on kicks only
+	float ring_freq = 10.0 + energy * 5.0;
+	float ring_speed = t * 1.5 + beat_phase * TAU;
+	float ring = pow(max(sin(dist_c * ring_freq - ring_speed), 0.0), 8.0);
+	ring *= exp(-dist_c * 2.5) * kick * 0.25;
+	new_col += base_col * ring;
 
 	// ══════════════════════════════════════════════════════════════════
 	//  3. COMPOSITE — blend trail + new geometry, apply loop_reinhard
