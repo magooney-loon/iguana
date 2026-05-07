@@ -1,0 +1,945 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Iguana — audio visualizer/player</title>
+<link rel="icon" href="public/icon.webp" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<script src="image-slot.js"></script>
+<style>
+  :root{
+    --bg:        #0a1d10;
+    --bg-2:      #0e2818;
+    --surf:      #143a22;
+    --surf-2:    #1c4f2e;
+    --surf-hi:   #246b3e;
+    --line:      #2f7a47;
+    --line-soft: #1f5230;
+    --green-1:   #7cc46a;
+    --green-2:   #b6e89a;
+    --green-3:   #d8f5b7;
+    --ink:       #e8f7d4;
+    --ink-dim:   #9bc080;
+    --ink-mute:  #5e8c4a;
+    --amber:     #f4b942;
+    --amber-2:   #ffcd5e;
+    --amber-dim: #c8902a;
+    --rust:      #d97a2c;
+    --shadow:    rgba(0,0,0,.55);
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+    --term: 'VT323', 'JetBrains Mono', monospace;
+    --disp: 'Space Grotesk', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:14px;line-height:1.55}
+  body{
+    background-color: var(--bg);
+    background-image:
+      /* dither dots */
+      radial-gradient(circle at 1px 1px, rgba(124,196,106,.08) 1px, transparent 1.5px),
+      /* faint scanlines */
+      repeating-linear-gradient(0deg, rgba(0,0,0,0) 0 3px, rgba(0,0,0,.18) 3px 4px);
+    background-size: 8px 8px, 100% 4px;
+  }
+  a{color:var(--amber);text-decoration:none;border-bottom:1px dotted var(--amber-dim)}
+  a:hover{color:var(--amber-2);background:rgba(244,185,66,.12)}
+  ::selection{background:var(--amber);color:#1a1300}
+
+  /* ============== shell ============== */
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 28px 80px}
+
+  /* top status bar — looks like a 90s app titlebar */
+  .titlebar{
+    display:flex;align-items:center;gap:0;
+    background:linear-gradient(180deg,#246b3e 0%,#143a22 100%);
+    border:2px solid #000;
+    box-shadow: inset 1px 1px 0 var(--green-2), inset -1px -1px 0 #061a0c, 4px 4px 0 #000;
+    padding:4px 6px;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--green-3);
+    margin-bottom:18px;
+  }
+  .titlebar .dots{display:flex;gap:4px;margin-right:10px}
+  .titlebar .dots span{width:10px;height:10px;border:1px solid #000;background:#7cc46a;box-shadow:inset 1px 1px 0 #b6e89a, inset -1px -1px 0 #1f5230}
+  .titlebar .dots span:nth-child(2){background:var(--amber)}
+  .titlebar .dots span:nth-child(3){background:var(--rust)}
+  .titlebar .name{font-weight:700;letter-spacing:.05em;text-transform:lowercase}
+  .titlebar .name b{color:#fff}
+  .titlebar .spacer{flex:1}
+  .titlebar .meta{opacity:.85;display:flex;gap:14px}
+  .titlebar .meta span::before{content:"▸ ";color:var(--amber)}
+
+  /* ============== hero ============== */
+  .hero{
+    position:relative;
+    border:2px solid #000;
+    background:#000;
+    box-shadow: inset 1px 1px 0 var(--surf-hi), 6px 6px 0 #000;
+    overflow:hidden;
+    margin-bottom:30px;
+  }
+  .hero-screen{
+    position:relative;
+    aspect-ratio: 16 / 8.4;
+    background:
+      radial-gradient(ellipse 60% 80% at 30% 50%, rgba(244,185,66,.55) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 90% at 75% 60%, rgba(57,255,122,.55) 0%, transparent 55%),
+      radial-gradient(ellipse 40% 60% at 60% 30%, rgba(217,122,44,.45) 0%, transparent 60%),
+      conic-gradient(from 200deg at 50% 50%, #0a3d22 0deg, #1c4f2e 60deg, #0a1d10 140deg, #246b3e 220deg, #0a3d22 360deg),
+      #000;
+    background-blend-mode: screen, screen, screen, normal, normal;
+    filter: saturate(1.15) contrast(1.05);
+  }
+  .hero-screen::before{
+    /* feedback streak pattern */
+    content:"";
+    position:absolute;inset:0;
+    background:
+      repeating-radial-gradient(circle at 50% 55%, rgba(255,255,255,0) 0 22px, rgba(124,196,106,.10) 22px 24px, rgba(0,0,0,0) 24px 46px),
+      repeating-linear-gradient(115deg, rgba(244,185,66,.05) 0 18px, transparent 18px 40px);
+    mix-blend-mode: screen;
+    pointer-events:none;
+  }
+  .hero-screen::after{
+    /* scanlines */
+    content:"";position:absolute;inset:0;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.35) 2px 3px);
+    pointer-events:none;
+    mix-blend-mode:multiply;
+  }
+  .hero-overlay{
+    position:absolute; inset:0;
+    display:grid; grid-template-columns: 1fr auto;
+    align-items:end; gap:24px;
+    padding: 28px 32px;
+    color:#fff;
+    z-index:2;
+  }
+  .hero-mark{
+    position:absolute;
+    top:24px; left:32px;
+    display:flex; align-items:center; gap:14px;
+    background: rgba(10,29,16,.78);
+    border:2px solid #000;
+    padding:10px 14px 10px 10px;
+    box-shadow: inset 1px 1px 0 var(--surf-hi), 3px 3px 0 #000;
+  }
+  .hero-mark img{
+    width:56px;height:56px;display:block;
+    filter: drop-shadow(0 2px 0 #000);
+    image-rendering: pixelated;
+  }
+  .hero-mark .lab{font-family:var(--term);font-size:26px;line-height:.9;color:var(--amber);letter-spacing:.06em}
+  .hero-mark .lab small{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--green-2);text-transform:uppercase;margin-top:4px}
+
+  .hero-title{
+    font-family:var(--disp);
+    font-weight:700;
+    font-size: clamp(56px, 9.2vw, 132px);
+    line-height:.85;
+    letter-spacing:-.04em;
+    text-transform:lowercase;
+    color:#fff;
+    text-shadow:
+      4px 4px 0 #000,
+      8px 8px 0 rgba(244,185,66,.55);
+    margin:0;
+  }
+  .hero-title .accent{color:var(--amber)}
+  .hero-tag{
+    font-family:var(--term);
+    font-size:28px;
+    color:var(--green-3);
+    margin-top:10px;
+    text-shadow:2px 2px 0 #000;
+  }
+  .hero-tag .blink{display:inline-block;width:.55em;height:1em;background:var(--amber);vertical-align:-2px;margin-left:4px;animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+
+  .hero-side{
+    background: rgba(10,29,16,.85);
+    border:2px solid #000;
+    box-shadow: inset 1px 1px 0 var(--surf-hi), 3px 3px 0 #000;
+    padding: 14px 16px;
+    min-width: 240px;
+    font-size:12px;
+  }
+  .hero-side h4{margin:0 0 8px 0; font-family:var(--term); font-size:20px; color:var(--amber); letter-spacing:.05em; font-weight:400}
+  .hero-side ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;color:var(--green-2)}
+  .hero-side ul li::before{content:"› ";color:var(--amber)}
+
+  /* corner sticker */
+  .sticker{
+    position:absolute; top:-14px; right:-14px;
+    width:120px;height:120px;
+    background: var(--amber);
+    color:#1a1300;
+    border:2px solid #000;
+    box-shadow: 3px 3px 0 #000;
+    display:grid; place-items:center;
+    transform: rotate(8deg);
+    text-align:center;
+    font-family:var(--term);
+    font-size:18px;
+    line-height:1;
+    z-index:5;
+  }
+  .sticker b{display:block;font-size:34px;font-family:var(--disp);font-weight:700;letter-spacing:-.03em;margin-bottom:2px}
+  .sticker s{display:block;font-size:12px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.15em;text-decoration:none;margin-top:4px}
+
+  /* ============== ctas ============== */
+  .ctas{
+    display:grid; grid-template-columns: 1fr 1fr; gap:18px;
+    margin: 0 0 40px;
+  }
+  .cta{
+    display:block;
+    border:2px solid #000;
+    padding:18px 22px;
+    text-decoration:none;
+    box-shadow: 5px 5px 0 #000;
+    transition: transform .08s ease, box-shadow .08s ease;
+  }
+  .cta:hover{transform:translate(-2px,-2px); box-shadow: 7px 7px 0 #000; background-color: inherit}
+  .cta:active{transform:translate(2px,2px); box-shadow: 2px 2px 0 #000}
+  .cta-primary{
+    background: var(--amber);
+    color:#1a1300;
+    border-bottom: 1px dotted #000; /* override link border */
+  }
+  .cta-secondary{
+    background: var(--surf);
+    color: var(--green-3);
+    border-bottom: 1px dotted #000;
+  }
+  .cta .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .cta .top em{
+    font-style:normal;
+    font-family:var(--term);
+    font-size:18px;
+    background:#1a1300;
+    color:var(--amber);
+    padding:1px 8px;
+    letter-spacing:.05em;
+  }
+  .cta-secondary .top em{background:#000;color:var(--green-2)}
+  .cta h3{
+    margin:6px 0 4px 0;
+    font-family:var(--disp); font-weight:700;
+    font-size:30px; letter-spacing:-.02em;
+    text-transform:lowercase;
+  }
+  .cta p{margin:0;font-size:12px;font-family:var(--mono);opacity:.85}
+  .cta .platforms{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .cta .pf{
+    font-family:var(--term);font-size:16px;
+    background:#1a1300;color:var(--amber);
+    padding:0 8px; line-height:22px;
+    border:1px solid #000;
+  }
+  .cta-secondary .pf{background:#000;color:var(--green-2)}
+
+  /* ============== generic section ============== */
+  section.block{margin: 0 0 56px}
+  .sec-h{
+    display:flex;align-items:flex-end;gap:14px;
+    margin-bottom:18px;
+    border-bottom:1px dashed var(--line);
+    padding-bottom:8px;
+  }
+  .sec-h .num{
+    font-family:var(--term);font-size:32px;line-height:.9;
+    color:var(--amber);
+    background:#1a1300;
+    padding:2px 10px 0;
+    border:2px solid #000;
+    box-shadow:3px 3px 0 #000;
+    transform:translateY(-2px);
+  }
+  .sec-h h2{
+    margin:0;
+    font-family:var(--disp);font-weight:700;
+    font-size:38px; letter-spacing:-.03em;
+    text-transform:lowercase;
+    color:var(--ink);
+  }
+  .sec-h h2 .accent{color:var(--amber)}
+  .sec-h .ks{
+    margin-left:auto;
+    font-family:var(--term);font-size:18px;
+    color:var(--ink-dim);
+  }
+
+  /* ============== demo video ============== */
+  .video-wrap{
+    position:relative;
+    border:2px solid #000;
+    box-shadow:6px 6px 0 #000;
+    background:#000;
+  }
+  .video-wrap image-slot{
+    --is-bg:#06140b;
+    --is-fg:var(--green-2);
+    --is-stripe:#0e2818;
+    width:100%;
+    aspect-ratio:16/9;
+    display:block;
+  }
+  .video-chrome{
+    position:absolute; left:0; right:0; bottom:0;
+    display:flex; align-items:center; gap:10px;
+    padding:8px 12px;
+    background: linear-gradient(180deg, rgba(10,29,16,0) 0%, rgba(10,29,16,.92) 60%);
+    color:var(--green-2); font-family:var(--term); font-size:18px;
+    pointer-events:none;
+  }
+  .video-chrome .play{
+    width:36px;height:36px;border:2px solid var(--amber);background:rgba(244,185,66,.15);
+    display:grid;place-items:center;color:var(--amber);
+  }
+  .video-chrome .bar{flex:1;height:6px;background:#0a1d10;border:1px solid var(--line-soft);position:relative}
+  .video-chrome .bar::after{content:"";position:absolute;left:0;top:0;bottom:0;width:33%;background:var(--amber)}
+  .video-chrome .time{color:var(--amber)}
+  .video-cap{
+    margin-top:10px;font-size:12px;color:var(--ink-dim);
+    display:flex;justify-content:space-between;
+  }
+  .video-cap span::before{content:"// ";color:var(--amber)}
+
+  /* ============== screenshots gallery ============== */
+  .gallery{
+    display:grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-rows: 220px 220px;
+    gap:14px;
+  }
+  .shot{
+    position:relative;
+    border:2px solid #000;
+    box-shadow:4px 4px 0 #000;
+    overflow:hidden;
+    background:#06140b;
+  }
+  .shot image-slot{
+    --is-bg:#06140b;
+    --is-fg:var(--green-2);
+    --is-stripe:#0e2818;
+    width:100%; height:100%; display:block;
+  }
+  .shot .label{
+    position:absolute; top:8px; left:8px; z-index:2;
+    background:#1a1300; color:var(--amber);
+    border:1px solid #000; padding:2px 8px;
+    font-family:var(--term); font-size:16px;
+    letter-spacing:.05em;
+  }
+  .shot.big{grid-column:1 / span 1; grid-row:1 / span 2}
+
+  /* ============== feature highlights ============== */
+  .feat-grid{
+    display:grid; grid-template-columns: repeat(3, 1fr); gap:18px;
+  }
+  .feat{
+    background:var(--bg-2);
+    border:2px solid #000;
+    box-shadow:4px 4px 0 #000;
+    padding:18px 18px 16px;
+    position:relative;
+    display:flex; flex-direction:column;
+  }
+  .feat .icon{
+    width:46px;height:46px;
+    background:#1a1300;
+    color:var(--amber);
+    border:2px solid #000;
+    display:grid;place-items:center;
+    font-family:var(--term);font-size:28px;line-height:1;
+    margin-bottom:10px;
+    box-shadow:2px 2px 0 #000;
+  }
+  .feat h3{
+    margin:0 0 6px;
+    font-family:var(--disp); font-weight:700; font-size:22px; letter-spacing:-.02em;
+    color:var(--ink);
+    text-transform:lowercase;
+  }
+  .feat p{margin:0;font-size:12.5px;color:var(--ink-dim);line-height:1.55}
+  .feat .tag{
+    margin-top:auto; padding-top:10px;
+    font-family:var(--term);font-size:16px;color:var(--amber);
+  }
+
+  /* ============== architecture / pipeline ============== */
+  .pipe{
+    background:var(--bg-2);
+    border:2px solid #000;
+    box-shadow:5px 5px 0 #000;
+    padding:22px;
+  }
+  .pipe pre{
+    margin:0;
+    font-family:var(--mono);
+    font-size:12.5px;
+    color:var(--green-3);
+    overflow:auto;
+    line-height:1.7;
+    white-space:pre;
+  }
+  .pipe pre b{color:var(--amber);font-weight:700}
+  .pipe pre i{color:var(--ink-dim);font-style:normal}
+
+  /* ============== docs preview ============== */
+  .docs-grid{
+    display:grid; grid-template-columns: 1fr 1fr; gap:20px;
+  }
+  .doc-card{
+    background:var(--bg-2);
+    border:2px solid #000;
+    box-shadow:5px 5px 0 #000;
+  }
+  .doc-card .head{
+    background:linear-gradient(180deg,#246b3e,#143a22);
+    border-bottom:2px solid #000;
+    padding:8px 12px;
+    display:flex; align-items:center; gap:10px;
+    color:var(--green-3);
+    font-family:var(--mono); font-size:12px;
+  }
+  .doc-card .head .dot{width:9px;height:9px;background:var(--amber);border:1px solid #000}
+  .doc-card .head .title{flex:1;font-weight:700;letter-spacing:.04em}
+  .doc-card .head .x{font-family:var(--term); font-size:18px; color:var(--ink-dim)}
+  .doc-card .body{padding:16px 18px;font-family:var(--mono);font-size:12.5px;color:var(--ink);line-height:1.6}
+  .doc-card .body h4{
+    margin:0 0 6px;font-family:var(--term);font-size:22px;color:var(--amber);letter-spacing:.04em;font-weight:400;
+  }
+  .doc-card .body code{
+    display:block;
+    background:#06140b;
+    border:1px dashed var(--line-soft);
+    padding:10px 12px;
+    color:var(--green-2);
+    font-size:12px;
+    margin:8px 0;
+    white-space:pre;
+    overflow:auto;
+  }
+  .doc-card .body code .k{color:var(--amber)}
+  .doc-card .body code .c{color:var(--ink-mute)}
+  .doc-card .body p{margin:6px 0}
+  .doc-card .footer{
+    border-top:1px dashed var(--line-soft);
+    padding:10px 14px;
+    display:flex; justify-content:space-between;
+    font-family:var(--term);font-size:16px;color:var(--ink-dim);
+  }
+  .doc-card .footer a{color:var(--amber)}
+
+  /* ============== author / donate ============== */
+  .author-row{
+    display:grid; grid-template-columns: 1.4fr 1fr; gap:20px;
+  }
+  .author{
+    background:var(--bg-2);
+    border:2px solid #000;
+    box-shadow:5px 5px 0 #000;
+    padding:20px;
+    display:grid; grid-template-columns: 96px 1fr; gap:18px;
+  }
+  .author .avatar{
+    width:96px;height:96px;
+    background:#06140b;
+    border:2px solid #000;
+    box-shadow:inset 1px 1px 0 var(--surf-hi);
+    display:grid;place-items:center;
+    overflow:hidden;
+  }
+  .author .avatar image-slot{
+    --is-bg:#06140b; --is-fg:var(--green-2); --is-stripe:#0e2818;
+    width:100%;height:100%;display:block;
+  }
+  .author h3{
+    margin:0; font-family:var(--disp);font-weight:700;font-size:24px;letter-spacing:-.02em;
+    text-transform:lowercase; color:var(--ink);
+  }
+  .author .handle{font-family:var(--term);font-size:18px;color:var(--amber)}
+  .author p{margin:8px 0 12px;font-size:12.5px;color:var(--ink-dim);line-height:1.6}
+  .author .links{display:flex;gap:8px;flex-wrap:wrap}
+  .author .links a{
+    font-family:var(--term);font-size:16px;
+    background:#1a1300;color:var(--amber);
+    padding:2px 10px; border:1px solid #000;
+    border-bottom:1px solid #000;
+  }
+  .author .links a:hover{background:var(--amber);color:#1a1300}
+
+  .donate{
+    background: var(--amber);
+    color:#1a1300;
+    border:2px solid #000;
+    box-shadow:5px 5px 0 #000;
+    padding:20px;
+    position:relative;
+  }
+  .donate::before{
+    content:"♥"; position:absolute; top:-12px; right:14px;
+    background:#d04848; color:#fff; border:2px solid #000; padding:2px 10px;
+    font-size:18px; box-shadow:2px 2px 0 #000;
+  }
+  .donate h3{
+    margin:0 0 8px; font-family:var(--disp);font-weight:700;font-size:26px;letter-spacing:-.02em;
+    text-transform:lowercase;
+  }
+  .donate p{margin:0 0 12px;font-size:12.5px;line-height:1.55}
+  .donate .row{display:flex;flex-direction:column;gap:8px}
+  .donate .row a{
+    display:flex;justify-content:space-between;align-items:center;
+    background:#1a1300;color:var(--amber);
+    padding:8px 12px;
+    border:2px solid #000;
+    font-family:var(--term);font-size:18px;
+    border-bottom:2px solid #000;
+  }
+  .donate .row a:hover{background:#000;color:var(--amber-2)}
+  .donate .row a span{font-size:14px;color:var(--green-2);font-family:var(--mono)}
+
+  /* ============== link strip / footer ============== */
+  .strip{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:14px;
+    margin-top: 30px;
+  }
+  .strip a{
+    background:var(--bg-2);
+    border:2px solid #000;
+    box-shadow:3px 3px 0 #000;
+    padding:14px 14px 12px;
+    color:var(--ink);
+    border-bottom:2px solid #000;
+    display:flex;flex-direction:column;gap:2px;
+  }
+  .strip a:hover{background:var(--surf);color:var(--ink)}
+  .strip a .k{font-family:var(--term);font-size:16px;color:var(--amber);letter-spacing:.05em}
+  .strip a .v{font-family:var(--mono);font-size:13px;color:var(--ink)}
+  .strip a .v::before{content:"› "}
+
+  footer.foot{
+    margin-top:50px;
+    border-top:2px dashed var(--line);
+    padding-top:18px;
+    display:flex; justify-content:space-between; align-items:flex-end; gap:16px;
+    color:var(--ink-dim); font-size:12px;
+  }
+  footer.foot .lic{
+    background:#1a1300;color:var(--amber);
+    padding:4px 10px; border:1px solid #000;
+    font-family:var(--term);font-size:18px; letter-spacing:.05em;
+  }
+  footer.foot .ig{
+    width:36px;height:36px;display:inline-block;vertical-align:middle;margin-right:8px;
+    image-rendering:pixelated;
+  }
+
+  /* ── tablet / large phone ── */
+  @media (max-width: 860px){
+    .wrap{padding:20px 16px 60px}
+    .titlebar .meta{display:none}
+    .sticker{display:none}
+    .hero-overlay{grid-template-columns:1fr; padding:18px 20px}
+    .hero-side{display:none}
+    .hero-title{font-size:56px}
+    .sec-h h2{font-size:28px}
+    .sec-h .num{font-size:24px}
+    .ctas{grid-template-columns:1fr}
+    .gallery{grid-template-columns:1fr 1fr; grid-template-rows:180px 180px 180px}
+    .shot.big{grid-column:1 / span 2; grid-row:auto}
+    .feat-grid{grid-template-columns:1fr}
+    .docs-grid{grid-template-columns:1fr}
+    .author-row{grid-template-columns:1fr}
+    .strip{grid-template-columns:1fr 1fr}
+  }
+
+  /* ── small phone ── */
+  @media (max-width: 480px){
+    .wrap{padding:12px 10px 36px}
+    .hero-title{font-size:36px}
+    .hero-tag{font-size:20px}
+    .hero-mark{top:12px; left:12px; padding:6px 10px 6px 8px; gap:10px}
+    .hero-mark img{width:38px; height:38px}
+    .hero-mark .lab{font-size:18px}
+    .hero-overlay{padding:14px}
+    .sec-h h2{font-size:20px}
+    .sec-h .num{font-size:20px}
+    .cta h3{font-size:22px}
+    .gallery{grid-template-columns:1fr; grid-template-rows:auto}
+    .shot{aspect-ratio:16/9; height:auto}
+    .shot.big{grid-column:auto; grid-row:auto}
+    .strip{grid-template-columns:1fr}
+    footer.foot{flex-direction:column; gap:10px; align-items:flex-start}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- =============================================== -->
+  <!-- TITLEBAR / STATUS                                -->
+  <!-- =============================================== -->
+  <div class="titlebar" role="banner">
+    <div class="dots"><span></span><span></span><span></span></div>
+    <div class="name">iguana.exe — <b>v0.9.4</b> [public preview]</div>
+    <div class="spacer"></div>
+    <div class="meta">
+      <span>godot 4.6</span>
+      <span>forward+</span>
+      <span>agpl-v3</span>
+      <span>build 2026.05.07</span>
+    </div>
+  </div>
+
+  <!-- =============================================== -->
+  <!-- HERO                                             -->
+  <!-- =============================================== -->
+  <section class="hero">
+    <div class="hero-screen" role="img" aria-label="Iguana shader output preview"></div>
+
+    <div class="hero-mark">
+      <img src="public/icon.webp" alt="Iguana icon" />
+      <div class="lab">IGUANA<small>audio · feedback · shaders</small></div>
+    </div>
+
+    <div class="hero-overlay">
+      <div>
+        <h1 class="hero-title">iguana<span class="accent">.</span></h1>
+        <div class="hero-tag">it really licks the eyeball<span class="blink"></span></div>
+      </div>
+      <aside class="hero-side">
+        <h4>system requirements</h4>
+        <ul>
+          <li>godot 4.6+ · forward+</li>
+          <li>gpu: anything that boots</li>
+          <li>audio in: any device</li>
+          <li>disk: ~120 mb</li>
+          <li>ram: 256 mb</li>
+        </ul>
+      </aside>
+    </div>
+  </section>
+
+  <!-- =============================================== -->
+  <!-- CTAs                                             -->
+  <!-- =============================================== -->
+  <div class="ctas">
+    <a class="cta cta-primary" href="#download">
+      <div class="top">
+        <strong style="font-family:var(--term);font-size:22px;letter-spacing:.05em">▼ DOWNLOAD</strong>
+        <em>FREE · 38 MB</em>
+      </div>
+      <h3>get iguana</h3>
+      <p>standalone build · no installer · drop-in skin folders.</p>
+      <div class="platforms">
+        <span class="pf">windows</span>
+        <span class="pf">macos</span>
+        <span class="pf">linux</span>
+        <span class="pf">build from src</span>
+      </div>
+    </a>
+    <a class="cta cta-secondary" href="#source">
+      <div class="top">
+        <strong style="font-family:var(--term);font-size:22px;letter-spacing:.05em;color:var(--amber)">‹ / › SOURCE</strong>
+        <em>github</em>
+      </div>
+      <h3>view on github</h3>
+      <p>gdscript + gdshader. star it, fork it, write a shader.</p>
+      <div class="platforms">
+        <span class="pf">issues</span>
+        <span class="pf">discussions</span>
+        <span class="pf">releases</span>
+        <span class="pf">wiki</span>
+      </div>
+    </a>
+  </div>
+
+  <!-- =============================================== -->
+  <!-- DEMO VIDEO                                       -->
+  <!-- =============================================== -->
+  <section class="block" id="demo">
+    <div class="sec-h">
+      <div class="num">01</div>
+      <h2>watch it <span class="accent">wiggle</span></h2>
+      <div class="ks">[ press SPC to play ]</div>
+    </div>
+    <div class="video-wrap">
+      <image-slot id="demo-video" placeholder="drop demo.mp4 / poster.png · 16:9"></image-slot>
+      <div class="video-chrome">
+        <div class="play">▶</div>
+        <span class="time">00:42</span>
+        <div class="bar"></div>
+        <span class="time">02:08</span>
+        <span style="color:var(--amber)">⚙ HD</span>
+      </div>
+    </div>
+    <div class="video-cap">
+      <span>recorded live · iguana_green skin · "supersaw_drift.gdshader"</span>
+      <span>1080p60 · audio: aphex twin — windowlicker</span>
+    </div>
+  </section>
+
+  <!-- =============================================== -->
+  <!-- SCREENSHOTS                                      -->
+  <!-- =============================================== -->
+  <section class="block" id="shots">
+    <div class="sec-h">
+      <div class="num">02</div>
+      <h2>screenshot <span class="accent">gallery</span></h2>
+      <div class="ks">[ click any to enlarge ]</div>
+    </div>
+    <div class="gallery">
+      <div class="shot big">
+        <span class="label">kitty skin · "warpfield"</span>
+        <image-slot id="shot-1" placeholder="full-window screenshot · 16:10"></image-slot>
+      </div>
+      <div class="shot">
+        <span class="label">aero · playlist</span>
+        <image-slot id="shot-2" placeholder="ui screenshot"></image-slot>
+      </div>
+      <div class="shot">
+        <span class="label">iguana · settings</span>
+        <image-slot id="shot-3" placeholder="ui screenshot"></image-slot>
+      </div>
+      <div class="shot">
+        <span class="label">"transient_bloom"</span>
+        <image-slot id="shot-4" placeholder="shader screenshot"></image-slot>
+      </div>
+      <div class="shot">
+        <span class="label">"feedback_lattice"</span>
+        <image-slot id="shot-5" placeholder="shader screenshot"></image-slot>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================== -->
+  <!-- FEATURES                                         -->
+  <!-- =============================================== -->
+  <section class="block" id="features">
+    <div class="sec-h">
+      <div class="num">03</div>
+      <h2>features <span class="accent">&amp;</span> guts</h2>
+      <div class="ks">[ pgdn for more ]</div>
+    </div>
+    <div class="feat-grid">
+      <div class="feat">
+        <div class="icon">∿</div>
+        <h3>real-time fft</h3>
+        <p>AudioEffectSpectrumAnalyzer feeds 30+ uniforms — frequency bands, transients, mood — into the shader every frame.</p>
+        <div class="tag">~30 uniforms · per-frame</div>
+      </div>
+      <div class="feat">
+        <div class="icon">◌</div>
+        <h3>feedback pipeline</h3>
+        <p>two-viewport ping-pong. the shader samples its previous frame, accumulating visual history the milkdrop way.</p>
+        <div class="tag">subviewport · ping-pong</div>
+      </div>
+      <div class="feat">
+        <div class="icon">▦</div>
+        <h3>auto-discovered shaders</h3>
+        <p>drop a <code style="font-family:var(--mono);background:#06140b;padding:1px 5px;color:var(--amber)">.gdshader</code> into <code style="font-family:var(--mono);background:#06140b;padding:1px 5px;color:var(--amber)">res://shaders/</code> with valid <code style="font-family:var(--mono);background:#06140b;padding:1px 5px;color:var(--amber)">@meta</code> tags. it appears in the picker.</p>
+        <div class="tag">hot · zero config</div>
+      </div>
+      <div class="feat">
+        <div class="icon">◇</div>
+        <h3>swappable skins</h3>
+        <p>theme + style + icons in self-contained folders. ships with aero, iguana, kitty. mix &amp; match at runtime — no restart.</p>
+        <div class="tag">3 skins included</div>
+      </div>
+      <div class="feat">
+        <div class="icon">⌨</div>
+        <h3>rebindable everything</h3>
+        <p>keymap.gd registers every action. play/pause, next shader, fullscreen, screenshot, crossfade — all yours.</p>
+        <div class="tag">vim-friendly</div>
+      </div>
+      <div class="feat">
+        <div class="icon">▤</div>
+        <h3>post-process, outside</h3>
+        <p>tonemap, gamma, vignette, grain run on a layer above the feedback loop so they don't compound or trail.</p>
+        <div class="tag">no smear · no haze</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================== -->
+  <!-- ARCHITECTURE PIPELINE                            -->
+  <!-- =============================================== -->
+  <section class="block" id="pipeline">
+    <div class="sec-h">
+      <div class="num">04</div>
+      <h2>the <span class="accent">pipeline</span></h2>
+      <div class="ks">[ engine/visualizer.gd ]</div>
+    </div>
+    <div class="pipe">
+<pre>  <b>AudioEffectSpectrumAnalyzer</b>
+              │
+              ▼
+  <b>AudioAnalyzer.process()</b>           <i>// runs every frame via AudioSource</i>
+              │
+              ▼
+  <b>_push_uniforms()</b>                  <i>// 30+ values → active ShaderMaterial</i>
+              │
+              ▼
+  <b>FeedbackViewport</b>  (SubViewport)   <i>// shader renders here</i>
+              │
+              ▼
+  <b>BackbufferViewport</b> (SubViewport)  <i>// copies feedback output each frame</i>
+              │
+              ▼
+  <b>prev_frame</b> uniform                <i>// shader reads completed last frame</i>
+              │
+              ▼
+  <b>PostProcessDisplay</b> (ColorRect)    <i>// tonemap · gamma · vignette · grain</i>
+
+  <i>// a shader cannot sample its own render target —</i>
+  <i>// two viewports give us a real, completed previous frame to read from.</i></pre>
+    </div>
+  </section>
+
+  <!-- =============================================== -->
+  <!-- DOCS PREVIEW (custom shaders + skins)            -->
+  <!-- =============================================== -->
+  <section class="block" id="docs">
+    <div class="sec-h">
+      <div class="num">05</div>
+      <h2>roll your <span class="accent">own</span></h2>
+      <div class="ks">[ docs/ ]</div>
+    </div>
+    <div class="docs-grid">
+
+      <article class="doc-card">
+        <div class="head">
+          <span class="dot"></span>
+          <span class="title">SHADER.md — adding a visualizer</span>
+          <span class="x">[ ─ □ × ]</span>
+        </div>
+        <div class="body">
+          <h4>1. start from the template</h4>
+          <p>copy <code style="display:inline;padding:1px 5px;background:#06140b;color:var(--amber)">shaders/utils/shader_template.gdshader</code> and rename it. drop your file anywhere in <code style="display:inline;padding:1px 5px;background:#06140b;color:var(--amber)">res://shaders/</code> — subfolders fine.</p>
+          <h4>2. tag it</h4>
+<code><span class="c">// @meta</span>
+<span class="k">@name</span>     "supersaw drift"
+<span class="k">@author</span>   you@here
+<span class="k">@feedback</span> true
+<span class="k">@tags</span>     ["bass", "smooth"]</code>
+          <h4>3. read the uniforms</h4>
+<code>uniform <span class="k">sampler2D</span> prev_frame;
+uniform <span class="k">float</span> bass, mids, treble;
+uniform <span class="k">float</span> transient, mood;
+uniform <span class="k">float</span> time, beat;</code>
+          <p>iguana scans on launch — your shader appears in the picker. <a href="#">read the full doc →</a></p>
+        </div>
+        <div class="footer">
+          <span>docs/SHADER.md</span>
+          <a href="#">open ↗</a>
+        </div>
+      </article>
+
+      <article class="doc-card">
+        <div class="head">
+          <span class="dot"></span>
+          <span class="title">APPEARANCE.md — authoring a skin</span>
+          <span class="x">[ ─ □ × ]</span>
+        </div>
+        <div class="body">
+          <h4>folder layout</h4>
+<code><span class="c">ui/appearance/your_skin/</span>
+  theme.tres        <span class="c">// colors</span>
+  style.tres        <span class="c">// glass shader params</span>
+  style.gdshader    <span class="c">// ui overlay</span>
+  Geist.ttf         <span class="c">// optional font</span>
+  icons/*.svg       <span class="c">// icon set</span></code>
+          <h4>mix &amp; match</h4>
+          <p>users can run your <i>theme</i> with someone else's <i>icons</i>. all three pieces are independent — keep them honest.</p>
+          <h4>live swap</h4>
+          <p>no restart needed. iguana hot-reloads <code style="display:inline;padding:1px 5px;background:#06140b;color:var(--amber)">.tres</code> on save during dev. <a href="#">full skin guide →</a></p>
+        </div>
+        <div class="footer">
+          <span>docs/APPEARANCE.md</span>
+          <a href="#">open ↗</a>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- =============================================== -->
+  <!-- AUTHOR + DONATE                                  -->
+  <!-- =============================================== -->
+  <section class="block" id="author">
+    <div class="sec-h">
+      <div class="num">06</div>
+      <h2>made <span class="accent">by</span></h2>
+      <div class="ks">[ one human · zero vc ]</div>
+    </div>
+    <div class="author-row">
+      <div class="author">
+        <div class="avatar">
+          <image-slot id="avatar" placeholder="avatar"></image-slot>
+        </div>
+        <div>
+          <h3>your name here</h3>
+          <div class="handle">@yourhandle</div>
+          <p>writes shaders, breaks them, writes them again. iguana started as a weekend port of a milkdrop preset and grew into whatever this is. built in godot because the hot-reload is too good to give up.</p>
+          <div class="links">
+            <a href="#">github ↗</a>
+            <a href="#">mastodon ↗</a>
+            <a href="#">bluesky ↗</a>
+            <a href="#">website ↗</a>
+            <a href="#">email ↗</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="donate">
+        <h3>buy me a lettuce</h3>
+        <p>iguana is free and AGPL. if it licked your eyeballs nicely, you can throw a few bucks at the iguana's terrarium fund.</p>
+        <div class="row">
+          <a href="#"><span style="display:flex;gap:8px;align-items:center">☕ ko-fi</span><span>one-time tip</span></a>
+          <a href="#"><span style="display:flex;gap:8px;align-items:center">♡ github sponsors</span><span>monthly</span></a>
+          <a href="#"><span style="display:flex;gap:8px;align-items:center">₿ btc / eth</span><span>onchain</span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================================== -->
+  <!-- LINKS / SOURCE STRIP                             -->
+  <!-- =============================================== -->
+  <section class="block" id="source">
+    <div class="sec-h">
+      <div class="num">07</div>
+      <h2>source <span class="accent">&amp;</span> friends</h2>
+      <div class="ks">[ choose your portal ]</div>
+    </div>
+    <div class="strip">
+      <a href="#"><span class="k">github</span><span class="v">github.com/iguana/iguana</span></a>
+      <a href="#"><span class="k">issues</span><span class="v">report bugs · request shaders</span></a>
+      <a href="#"><span class="k">discord</span><span class="v">#shaders · #skins · #help</span></a>
+      <a href="#"><span class="k">mirror</span><span class="v">codeberg.org/iguana</span></a>
+    </div>
+  </section>
+
+  <!-- =============================================== -->
+  <!-- FOOTER                                           -->
+  <!-- =============================================== -->
+  <footer class="foot">
+    <div>
+      <img class="ig" src="public/icon.webp" alt="" />
+      <span>iguana © 2026 — gdscript + gdshader, godot 4.6+</span><br />
+      <span style="margin-left:44px;display:inline-block;margin-top:6px">"a shader cannot sample its own render target." — but it can sample yesterday's.</span>
+    </div>
+    <span class="lic">AGPL-V3 · COPYLEFT 4 LIFE</span>
+  </footer>
+
+</div>
+</body>
+</html>
