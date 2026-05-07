@@ -33,8 +33,8 @@ uniform float fresnel_width     : hint_range(0.01, 0.2, 0.01) = 0.06;
 uniform float bevel_strength    : hint_range(0.0, 0.3, 0.01)  = 0.0;
 uniform float bevel_width       : hint_range(0.005, 0.1, 0.005) = 0.0;
 uniform float gloss_texture_str : hint_range(0.0, 0.1, 0.005) = 0.0;
-uniform float caustic_scale     : hint_range(1.0, 20.0, 0.5)  = 6.0;
-uniform float iridescence       : hint_range(0.0, 1.0, 0.05)  = 0.55;
+uniform float caustic_scale     : hint_range(1.0, 40.0, 0.5)  = 18.0;
+uniform float iridescence       : hint_range(0.0, 1.0, 0.05)  = 0.70;
 
 
 // ── Hash / noise helpers ─────────────────────────────────────────────────────
@@ -91,36 +91,56 @@ float fbm(vec2 p) {
 // )
 
 vec4 scale_field(vec2 uv, float density, float t, float ws, float beat_amt, float bass_amt) {
-	// Scale UV to density
 	vec2 s_uv = uv * density;
 
-	// ── Organic flow distortion ──
-	// Layered noise displacement makes the whole scale field undulate
-	// slowly, like skin breathing.  Bass makes it deeper, beat adds snap.
-	float flow_t = t * 0.08;
-	vec2 flow_off = vec2(
-		fbm(s_uv * 0.15 + vec2(flow_t, flow_t * 0.7) + ws * 0.3),
-		fbm(s_uv * 0.15 + vec2(-flow_t * 0.6, flow_t * 1.1) + ws * 0.5)
-	);
-	float flow_str = 0.25 + bass_amt * 0.35;
-	s_uv += (flow_off - 0.5) * flow_str;
+	// ── Multi-layer organic flow distortion ──
+	// Three noise layers at different scales break any grid regularity.
+	// Bass deepens the warp, beat adds snap.
+	float flow_t = t * 0.06;
+	float ws_n = ws * 0.17;
 
-	// Beat ripple — radially expanding distortion from a wandering point
-	vec2 beat_origin = vec2(
-		sin(ws * 2.17) * 3.0,
-		cos(ws * 1.53) * 3.0
+	// Layer 1: large slow drift
+	vec2 flow1 = vec2(
+		fbm(s_uv * 0.12 + vec2(flow_t, flow_t * 0.7) + ws_n),
+		fbm(s_uv * 0.12 + vec2(-flow_t * 0.6, flow_t * 1.1) + ws_n * 1.3)
 	);
-	float beat_rdist = length(s_uv - beat_origin);
-	float ripple = sin(beat_rdist * 3.0 - t * 4.0) * beat_amt * 0.12;
-	ripple *= exp(-beat_rdist * 0.3); // attenuate with distance
-	s_uv += normalize(s_uv - beat_origin + 0.001) * ripple;
 
-	// ── Staggered hex grid ──
-	// Rows are offset every other line for the classic scale overlap pattern
+	// Layer 2: medium turbulence
+	vec2 flow2 = vec2(
+		vnoise(s_uv * 0.4 + vec2(flow_t * 1.3, -flow_t * 0.5) + ws_n * 0.7),
+		vnoise(s_uv * 0.4 + vec2(flow_t * 0.9, flow_t * 1.4) + ws_n * 0.9)
+	);
+
+	// Layer 3: fine grain warp — breaks the checkerboard entirely
+	vec2 flow3 = vec2(
+		vnoise(s_uv * 1.2 + vec2(-flow_t * 2.0, flow_t * 0.8) + ws_n * 2.1),
+		vnoise(s_uv * 1.2 + vec2(flow_t * 1.5, -flow_t * 1.7) + ws_n * 1.8)
+	);
+
+	float flow_str = 0.35 + bass_amt * 0.45;
+	s_uv += (flow1 - 0.5) * flow_str;
+	s_uv += (flow2 - 0.5) * flow_str * 0.5;
+	s_uv += (flow3 - 0.5) * flow_str * 0.25;
+
+	// Beat ripple — two wandering sources for asymmetric distortion
+	for (int ri = 0; ri < 2; ri++) {
+		float rf = float(ri);
+		vec2 beat_origin = vec2(
+			sin(ws * (2.17 + rf * 1.3)) * 3.0,
+			cos(ws * (1.53 + rf * 0.9)) * 3.0
+		);
+		float beat_rdist = length(s_uv - beat_origin);
+		float ripple = sin(beat_rdist * 4.0 - t * 5.0 + rf * 1.5) * beat_amt * 0.10;
+		ripple *= exp(-beat_rdist * 0.25);
+		s_uv += normalize(s_uv - beat_origin + 0.001) * ripple;
+	}
+
+	// ── Organic noise-based stagger ──
+	// Replace hard `step(0.5, row_half) * 0.5` with per-row noise offset.
+	// This breaks the checkerboard completely while still overlapping.
 	float row = floor(s_uv.y);
-	float row_half = fract(row * 0.5);
-	float stagger = step(0.5, row_half) * 0.5;
-	s_uv.x += stagger;
+	float row_noise = hash12(vec2(row * 1.37, ws * 0.07));
+	s_uv.x += row_noise * 0.8 - 0.1; // 0-0.7 range, varies per row
 
 	// Voronoi: find nearest and second-nearest cell centers
 	vec2 cell_uv = s_uv;
@@ -129,7 +149,7 @@ vec4 scale_field(vec2 uv, float density, float t, float ws, float beat_amt, floa
 
 	float min_dist = 10.0;
 	float second_dist = 10.0;
-	vec2 cell_a = nearest_cell; // closest cell id
+	vec2 cell_a = nearest_cell;
 
 	// 3x3 neighbor search
 	for (int j = -1; j <= 1; j++) {
@@ -137,16 +157,20 @@ vec4 scale_field(vec2 uv, float density, float t, float ws, float beat_amt, floa
 			vec2 neighbor = vec2(float(i), float(j));
 			vec2 cell_id = nearest_cell + neighbor;
 
-			// Per-cell jitter for organic irregularity
-			vec2 jitter = (hash22(cell_id + ws * 0.01) - 0.5) * 0.25;
+			// Stronger per-cell jitter — 0.4 range for organic irregularity
+			vec2 jitter = (hash22(cell_id + ws * 0.007) - 0.5) * 0.4;
 
-			// Animate cell centers gently — each scale sways
+			// Animate cell centers — each scale sways independently
 			jitter += vec2(
-				sin(t * 0.2 + hash12(cell_id) * 6.28 + ws) * 0.04,
-				cos(t * 0.18 + hash12(cell_id + 7.0) * 6.28 + ws) * 0.03
+				sin(t * 0.15 + hash12(cell_id) * 6.28 + ws) * 0.06,
+				cos(t * 0.13 + hash12(cell_id + 7.0) * 6.28 + ws) * 0.05
 			) * (1.0 + bass_amt);
 
-			vec2 diff = neighbor + jitter - nearest_local;
+			// Non-uniform distance metric — slightly stretches cells organically
+			float cell_hash = hash12(cell_id + ws * 0.003);
+			vec2 stretch = vec2(1.0 + cell_hash * 0.15, 1.0 - cell_hash * 0.1);
+
+			vec2 diff = (neighbor + jitter - nearest_local) * stretch;
 			float d = length(diff);
 
 			if (d < min_dist) {
@@ -160,22 +184,22 @@ vec4 scale_field(vec2 uv, float density, float t, float ws, float beat_amt, floa
 	}
 
 	// ── Scale geometry ──
-	// Edge detection: the seam between two Voronoi cells
-	// sharpness controls how crisp the scale ridges are
+	// Softer edges — wider smoothstep blends scales into each other
 	float edge_raw = second_dist - min_dist;
-	float cell_edge = smoothstep(0.0, 0.12, edge_raw);  // 0 at seam, 1 inside
+	float cell_edge = smoothstep(0.0, 0.18, edge_raw); // wider = softer blend
 
-	// Curvature: distance from cell center → dome shape
-	// This gives each scale a 3D curved surface feel
-	float curvature = 1.0 - smoothstep(0.0, 0.65, min_dist);
+	// Curvature: dome shape, slightly tighter for smaller scales
+	float curvature = 1.0 - smoothstep(0.0, 0.55, min_dist);
 
-	// Ridge highlight: thin bright line at the seam (like raised scale edges)
-	float ridge = smoothstep(0.08, 0.0, edge_raw) * 0.6;
+	// Ridge highlight: thin bright line at the seam
+	float ridge = smoothstep(0.10, 0.0, edge_raw) * 0.5;
 
 	// Per-cell random value for iridescence
-	float cell_rand = hash12(cell_a + ws * 0.01);
+	float cell_rand = hash12(cell_a + ws * 0.007);
 
-	return vec4(cell_edge, curvature, cell_rand, row_half + cell_rand * 0.2);
+	float row_phase = fract(row * 0.5) + cell_rand * 0.2;
+
+	return vec4(cell_edge, curvature, cell_rand, row_phase);
 }
 
 

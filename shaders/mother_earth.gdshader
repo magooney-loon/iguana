@@ -3,7 +3,7 @@ shader_type canvas_item;
 //  @name:          Mother Earth
 //  @author:        magooney
 //  @website:       github.com/magooney-loon
-//  @description:   Metatron's Cube × Sri Yantra — sacred geometry phantom fly-through
+//  @description:   Agressive sacred geometry phantom witness fly-through
 //
 //  @exposure:       3.00
 //  @tonemap_knee:   0.0
