@@ -893,18 +893,9 @@ func _build_shader_picker() -> void:
 	search_row.add_child(_picker_search)
 
 	# Favorites toggle button
-	_picker_fav_btn = Button.new()
-	_picker_fav_btn.tooltip_text = "Show favorites only"
+	_picker_fav_btn = StylesUI.icon_btn("star", "Show favorites only")
 	_picker_fav_btn.toggle_mode = true
 	_picker_fav_btn.button_pressed = false
-	_picker_fav_btn.custom_minimum_size = Vector2(32, 28)
-	_picker_fav_btn.focus_mode = Control.FOCUS_NONE
-	var star_tex := StylesUI.load_icon("star")
-	if star_tex:
-		_picker_fav_btn.icon = star_tex
-		_picker_fav_btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_picker_fav_btn.expand_icon = true
-	StylesUI.apply_glass_btn(_picker_fav_btn)
 	_picker_fav_btn.toggled.connect(_on_picker_fav_toggle)
 	search_row.add_child(_picker_fav_btn)
 
@@ -954,7 +945,9 @@ func _build_shader_picker() -> void:
 		star_btn.custom_minimum_size = Vector2(28, 28)
 		star_btn.focus_mode = Control.FOCUS_NONE
 		star_btn.toggle_mode = false
-		star_btn.icon = star_tex
+		var _star_tex := StylesUI.load_icon("star")
+		if _star_tex:
+			star_btn.icon = _star_tex
 		star_btn.expand_icon = true
 		star_btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		var is_fav := stem in Config.favorite_shaders

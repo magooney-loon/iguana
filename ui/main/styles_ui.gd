@@ -618,6 +618,8 @@ static func set_icon(btn: Button, icon_name: String) -> void:
 	btn.text = ""
 
 
+
+
 static func make_link_label(text: String, url: String, font_size: int = -1) -> Label:
 	var lbl := Label.new()
 	lbl.text = text
