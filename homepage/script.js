@@ -65,9 +65,16 @@ void main() {
     col = 1.0 - (1.0 - col) * (1.0 - bc2 * g2);
     col = 1.0 - (1.0 - col) * (1.0 - bc3 * g3);
 
-    // Concentric rings
-    float rd   = length((uv - vec2(0.5, 0.55)) * vec2(asp, 1.0));
-    float ring = pow(sin(rd*(u_res.y/22.0)*TAU - t*1.5)*0.5+0.5, 5.0)
+    // Warped ripple rings — angular waves distort the radius so rings
+    // look like pulsing, wobbly organic ripples instead of perfect circles
+    vec2  rv   = (uv - vec2(0.5, 0.55)) * vec2(asp, 1.0);
+    float rd   = length(rv);
+    float rang = atan(rv.y, rv.x);
+    float rdw  = rd
+               + sin(rang * 4.0 + t * 0.9)  * 0.045
+               + sin(rang * 7.0 - t * 1.4)  * 0.022
+               + sin(rang * 2.0 + t * 0.5)  * 0.030;
+    float ring = pow(sin(rdw*(u_res.y/22.0)*TAU - t*1.5)*0.5+0.5, 5.0)
                  * 0.28 * smoothstep(1.05, 0.0, rd) * smoothstep(0.0, 0.04, rd);
     vec3  rc   = mix(vec3(0.30,0.85,0.45), vec3(0.90,0.65,0.10), smoothstep(0.0,0.7,rd));
     col = 1.0 - (1.0 - col) * (1.0 - rc * ring);
