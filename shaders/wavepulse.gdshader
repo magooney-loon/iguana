@@ -166,12 +166,11 @@ float wave_height(vec2 p, vec2 a1, vec2 a2, float t) {
 
 // Render one wave mesh layer — ray-cast, parallax, grid, lighting, color.
 // Each layer uses different camera, attractors, grid step, palette,
-// and ground-plane tilt (vec2: x-tilt, y-tilt → sheared plane normal).
-vec3 render_wave_layer(vec3 eye, vec2 a1, vec2 a2, float t,
+// ground-plane tilt, and look-at target to fill different screen areas.
+vec3 render_wave_layer(vec3 eye, vec3 target, vec2 a1, vec2 a2, float t,
                        vec2 ndc, float aspect, float fov, float grid_step,
                        vec3 col_pos, vec3 col_neg, vec3 col_flat,
                        vec3 light_dir, vec2 tilt) {
-	vec3 target = vec3(0.0, 0.0, 0.0);
 	vec3 cam_up = vec3(0.0, 0.0, -1.0);
 
 	vec3 fwd   = normalize(target - eye);
@@ -202,7 +201,7 @@ vec3 render_wave_layer(vec3 eye, vec2 a1, vec2 a2, float t,
 		p.z = h;
 	}
 
-	if (abs(p.x) > 700.0 || abs(p.y) > 700.0) return vec3(0.0);
+	if (abs(p.x) > 900.0 || abs(p.y) > 900.0) return vec3(0.0);
 
 	// Grid lines
 	float gx = abs(fract(p.x / grid_step + 0.5) - 0.5) * 2.0;
@@ -213,7 +212,7 @@ vec3 render_wave_layer(vec3 eye, vec2 a1, vec2 a2, float t,
 
 	// Fade with distance from center
 	float fade = min(3.0e6 / max(dot(p.xy, p.xy), 100.0), 1.0);
-	fade *= smoothstep(650.0, 600.0, max(abs(p.x), abs(p.y)));
+	fade *= smoothstep(850.0, 750.0, max(abs(p.x), abs(p.y)));
 
 	// Height-based color + radial gradient + position-based hue shift
 	float h0 = p.z;
@@ -331,13 +330,14 @@ void fragment() {
 	float cam_h = 500.0 + sin(t * 0.03) * 80.0 + energy * 50.0;
 	float att_amp = 350.0 * (1.0 + bass * 0.3 + sub_bass * 0.2);
 
-	// ── Layer 1: Main — teal/amber, full scale, bass-driven ──────────
-	vec3 eye1 = vec3(700.0, 700.0, cam_h);
+	// ── Layer 1: Main — teal/amber, centered, bass-driven ───────────
+	vec3 eye1 = vec3(200.0, 500.0, cam_h);
+	vec3 tgt1 = vec3(-50.0, -50.0, 0.0);   // slightly offset to fill lower-left
 	vec2 a1_1 = vec2(sin(t * 0.17)        * att_amp,
 	                 cos(t * 0.23 + 1.0)  * att_amp);
 	vec2 a2_1 = vec2(sin(t * 0.13 + 2.0)  * att_amp,
 	                 cos(t * 0.19 + 3.0)  * att_amp);
-	vec3 col1 = render_wave_layer(eye1, a1_1, a2_1, t,
+	vec3 col1 = render_wave_layer(eye1, tgt1, a1_1, a2_1, t,
 		ndc, aspect, 1.5, 9.0,
 		vec3(0.05, 0.85, 0.95),   // peaks: teal
 		vec3(0.95, 0.35, 0.08),   // troughs: amber
@@ -345,32 +345,34 @@ void fragment() {
 		light_dir,
 		vec2(0.0, 0.0));          // no tilt — reference plane
 
-	// ── Layer 2: Rotated 40°, blue/violet, mid-driven ──────────────
-	vec2 eye2_xy = rot2(0.70) * vec2(700.0, 700.0);
-	vec3 eye2 = vec3(eye2_xy, cam_h * 0.92);
+	// ── Layer 2: Rotated 40°, shifted upper-right, mid-driven ──────
+	vec2 eye2_xy = rot2(0.70) * vec2(1200.0, 900.0);
+	vec3 eye2 = vec3(eye2_xy, cam_h * 0.88);
+	vec3 tgt2 = vec3(120.0, -180.0, 0.0);  // look toward upper-right area
 	float att_amp2 = att_amp * (0.8 + mid * 0.3);
 	vec2 a1_2 = vec2(sin(t * 0.21 + 4.0)  * att_amp2,
 	                 cos(t * 0.19 + 5.0)  * att_amp2);
 	vec2 a2_2 = vec2(sin(t * 0.15 + 6.0)  * att_amp2,
 	                 cos(t * 0.25 + 7.0)  * att_amp2);
-	vec3 col2 = render_wave_layer(eye2, a1_2, a2_2, t * 0.85,
-		ndc, aspect, 1.6, 11.0,
+	vec3 col2 = render_wave_layer(eye2, tgt2, a1_2, a2_2, t * 0.85,
+		ndc, aspect, 1.4, 11.0,
 		vec3(0.4, 0.5, 0.95),    // peaks: blue-violet
 		vec3(0.95, 0.55, 0.25),  // troughs: warm orange
 		vec3(0.35, 0.22, 0.15),  // flat: warm umber
 		light_dir,
 		vec2(0.30, 0.12));       // tilted right + slightly forward
 
-	// ── Layer 3: Rotated -25°, green/magenta, treble-driven ────────
-	vec2 eye3_xy = rot2(-0.44) * vec2(650.0, 650.0);
-	vec3 eye3 = vec3(eye3_xy, cam_h * 1.08);
+	// ── Layer 3: Rotated -25°, shifted upper-left, treble-driven ────
+	vec2 eye3_xy = rot2(-0.44) * vec2(750.0, 750.0);
+	vec3 eye3 = vec3(eye3_xy, cam_h * 0.95);
+	vec3 tgt3 = vec3(-160.0, -120.0, 0.0); // look toward upper-left area
 	float att_amp3 = att_amp * (0.6 + treble * 0.4);
 	vec2 a1_3 = vec2(sin(t * 0.14 + 8.0)  * att_amp3,
 	                 cos(t * 0.22 + 9.0)  * att_amp3);
 	vec2 a2_3 = vec2(sin(t * 0.18 + 10.0) * att_amp3,
 	                 cos(t * 0.16 + 11.0) * att_amp3);
-	vec3 col3 = render_wave_layer(eye3, a1_3, a2_3, t * 1.15,
-		ndc, aspect, 1.7, 7.0,
+	vec3 col3 = render_wave_layer(eye3, tgt3, a1_3, a2_3, t * 1.15,
+		ndc, aspect, 1.55, 7.0,
 		vec3(0.1, 0.9, 0.6),     // peaks: emerald
 		vec3(0.9, 0.2, 0.5),     // troughs: magenta
 		vec3(0.3, 0.2, 0.18),    // flat: warm sienna
@@ -378,10 +380,15 @@ void fragment() {
 		vec2(-0.25, 0.10));      // tilted left + slightly forward
 
 	// ── Combine layers ───────────────────────────────────────────────
-	// Audio color shift applied to combined result
 	vec3 audio_tint = vec3(warmth * 0.12, -warmth * 0.06, -warmth * 0.1);
-	vec3 new_col = col1 + col2 * 0.6 * (1.0 + audio_tint) + col3 * 0.45;
+	vec3 new_col = col1 + col2 * 0.65 * (1.0 + audio_tint) + col3 * 0.5;
 	new_col *= 1.0 + energy * 0.25 + kick * 0.15;
+
+	// Background glow — subtle fill for empty outer areas
+	float outer = smoothstep(0.3, 0.9, dist_c);
+	vec3 bg_warm = vec3(0.06, 0.03, 0.015);
+	vec3 bg_cool = vec3(0.02, 0.03, 0.05);
+	new_col += mix(bg_warm, bg_cool, outer) * outer * (0.8 + energy * 0.4);
 
 	// Kick radial pulse — warm glow from center
 	new_col += vec3(0.3, 0.5, 0.7) * kick * exp(-dist_c * 3.5) * 0.1;
