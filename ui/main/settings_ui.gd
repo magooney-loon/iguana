@@ -1448,6 +1448,19 @@ func _build_about_tab() -> Control:
 	StylesUI.win_sep(vbox)
 	StylesUI.win_section(vbox, "LINKS")
 
+	var web_row := HBoxContainer.new()
+	web_row.add_theme_constant_override("separation", 8)
+	var web_lbl := Label.new()
+	web_lbl.text = "Website"
+	StylesUI.track_label(web_lbl, func(l: Label) -> void:
+		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
+		l.modulate.a = StylesUI.theme().a_label_text
+	)
+	web_lbl.custom_minimum_size.x = 80
+	web_row.add_child(web_lbl)
+	web_row.add_child(StylesUI.make_link_label("Homepage", "https://magooney-loon.github.io/iguana"))
+	vbox.add_child(web_row)
+
 	var gh_row := HBoxContainer.new()
 	gh_row.add_theme_constant_override("separation", 8)
 	var gh_lbl := Label.new()
@@ -1487,22 +1500,36 @@ func _build_about_tab() -> Control:
 	rd_row.add_child(StylesUI.make_link_label("u/SubjectHealthy2409", "https://www.reddit.com/user/SubjectHealthy2409/"))
 	vbox.add_child(rd_row)
 
-	var em_row := HBoxContainer.new()
-	em_row.add_theme_constant_override("separation", 8)
-	var em_lbl := Label.new()
-	em_lbl.text = "Contact"
-	StylesUI.track_label(em_lbl, func(l: Label) -> void:
-		l.add_theme_font_size_override("font_size", StylesUI.theme().font_body)
-		l.modulate.a = StylesUI.theme().a_label_text
-	)
-	em_lbl.custom_minimum_size.x = 80
-	em_row.add_child(em_lbl)
-	em_row.add_child(StylesUI.make_link_label("contact@magooney.org", "mailto:contact@magooney.org"))
-	vbox.add_child(em_row)
+
 
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(spacer)
+
+	# Factory Reset
+	var reset_btn := Button.new()
+	reset_btn.text = "Factory Reset"
+	reset_btn.tooltip_text = "Reset all settings to defaults and restart"
+	reset_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	reset_btn.set_meta("armed", false)
+	StylesUI.apply_glass_btn(reset_btn)
+	reset_btn.pressed.connect(func() -> void:
+		if not reset_btn.get_meta("armed"):
+			reset_btn.set_meta("armed", true)
+			reset_btn.text = "Confirm Reset?"
+			reset_btn.modulate = StylesUI.theme().c_accent
+			# Auto-disarm after 3 seconds
+			get_tree().create_timer(3.0).timeout.connect(func() -> void:
+				if is_instance_valid(reset_btn):
+					reset_btn.set_meta("armed", false)
+					reset_btn.text = "Factory Reset"
+					reset_btn.modulate = Color.WHITE
+			)
+		else:
+			Config.factory_reset()
+			get_tree().quit()
+	)
+	vbox.add_child(reset_btn)
 
 	# Version stamp
 	var ver_lbl := Label.new()

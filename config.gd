@@ -89,6 +89,37 @@ func save() -> void:
 		push_warning("Config: failed to save settings (%d)" % err)
 
 
+## Reset all settings to defaults and overwrite the config file.
+## The caller should then restart the app so defaults take full effect.
+func factory_reset() -> void:
+	# Reset all cached values to defaults
+	shuffle_on        = false
+	shuffle_interval  = 45.0
+	post_enabled      = true
+	fullscreen        = false
+	shader_index      = 0
+	shader_name       = ""
+	play_mode         = 1  # Playlist.PlayMode.LOOP_ALL
+	volume            = 1.0
+	crossfade_duration = 2.0
+	auto_hide_player  = false
+	vsync_enabled     = true
+	max_fps           = 60
+	shuffle_favorites = false
+	favorite_shaders.clear()
+	skin_name         = "iguana"
+	theme_name        = "iguana"
+	style_name        = "iguana"
+	icon_pack_name    = "iguana"
+
+	# Reset per-shader PP configs to defaults
+	for key in shader_pp_configs:
+		for pp_key in PP_DEFAULTS:
+			shader_pp_configs[key][pp_key] = PP_DEFAULTS[pp_key]
+
+	save()
+
+
 func load_settings() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS_PATH) != OK:
