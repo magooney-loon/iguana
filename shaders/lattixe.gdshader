@@ -1,10 +1,12 @@
 shader_type canvas_item;
 
 // ═══════════════════════════════════════════════════════════════════════
-//  @name:          Cyclone
-//  @author:        XorDev (magooney rmx)
-//  @website:       xordev.com
-//  @description:   IFS spiral cyclone with domain-warped sine arms
+//  @name:          Lattixe
+//  @author:        magooney
+//  @website:       github.com/magooney-loon
+//  @description:   Voronoi crystal lattice. Cells breathe
+//                  with bass, edges ignite on treble/hihat, kick sends
+//                  radial shockwaves, snare flashes edges white-hot.
 //
 //  Post-processing defaults — tune these to taste, then leave them.
 //  @exposure:       1.3
@@ -15,20 +17,15 @@ shader_type canvas_item;
 //  @loop_reinhard:  0.0
 // ═══════════════════════════════════════════════════════════════════════
 //
-//  Original tweet-shader by XorDev — a 10-iteration IFS spiral.
-//  Each step rotates coordinates by ~-36.87° (mat2 with cos=0.8,
-//  sin=-0.6), creating the cyclone pattern. Domain warping via
-//  sin(p + sin(p+t).yx) feeds each axis's sine into the other,
-//  producing organic flowing spiral arms colored by cosine phases.
-//  Adapted to the Iguana feedback pipeline with audio-reactive
-//  spiral tightness, warp speed, and color shifting.
-//
-//  Decompressed algorithm:
-//    p = (fragCoord*2 - resolution) / resY / 0.1    // centered UV ×10
-//    for 10 iterations:
-//      p *= 0.1 * mat2(8,-6,6,8)                    // rotate ~-36.87°
-//      glow += cos(p.x + phase) / |domain_warp(p,t)| / 0.2
-//    output = tanh(glow / scale)
+//  Algorithm:
+//    Voronoi with animated cell centers (Lissajous-phase hash offsets).
+//    Each fragment finds its two nearest cell centers to compute d1
+//    (interior distance) and edge_dist = d2 - d1 (boundary proximity).
+//    Interior glows with sub_bass; edges ignite with treble/presence.
+//    A radial ripple term rides the kick. Colors use a cosine palette
+//    keyed on d1 so neighboring cells get distinct hues.
+//    Feedback uses pure zoom + wave-warp (no rotation) so trails
+//    accumulate as expanding halos rather than spirals.
 // ═══════════════════════════════════════════════════════════════════════
 
 // ── Audio engine · auto-driven by AudioAnalyzer ─────────────────────
@@ -83,13 +80,15 @@ uniform vec2  rect_size = vec2(1600.0, 900.0);
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-mat2 rot2(float a) {
-	float c = cos(a), s = sin(a);
-	return mat2(vec2(c, s), vec2(-s, c));
-}
-
 vec3 reinhard(vec3 col, float k) {
 	return k > 0.0 ? col / (col + k) * (1.0 + k) : col;
+}
+
+// Low-cost hash: maps a cell grid coord to a pseudo-random vec2 in [0,1)
+vec2 hash2(vec2 p) {
+	p = fract(p * vec2(0.1031, 0.1030));
+	p += dot(p, p.yx + 33.33);
+	return fract((p.x + p.y) * p);
 }
 
 // ── Fragment ─────────────────────────────────────────────────────────
@@ -104,16 +103,17 @@ void fragment() {
 	center.x *= aspect;
 
 	// ── 1. FEEDBACK ──────────────────────────────────────────────────
+	// No rotation — avoids spiral buildup in trails.
+	// Pure zoom + wave-warp so feedback halos expand outward uniformly.
 
 	float zoom = 0.993 - energy * 0.004 - onset * 0.006;
 	vec2 warped = center * zoom;
-	warped = rot2(0.003 + bass * 0.005) * warped;
 
 	vec2 warp = vec2(
-		sin(warped.y * 6.0 + t * 0.9) * 0.006,
-		cos(warped.x * 5.0 + t * 1.1) * 0.006
+		sin(warped.y * 6.0 + t * 0.9) * 0.005,
+		cos(warped.x * 5.0 + t * 1.1) * 0.005
 	);
-	warp *= 1.0 + bass * 2.0 + energy * 1.5;
+	warp *= 1.0 + bass * 1.5 + energy * 1.0;
 	warped += warp;
 
 	vec2 sample_uv = warped;
@@ -123,57 +123,69 @@ void fragment() {
 	vec2 edge_d = min(sample_uv, 1.0 - sample_uv);
 	float edge_fade = smoothstep(0.0, 0.04, min(edge_d.x, edge_d.y));
 
-	vec3 trail = texture(prev_frame, sample_uv).rgb;
-	trail *= edge_fade;
+	vec3 trail = texture(prev_frame, sample_uv).rgb * edge_fade;
 
-	// ── 2. GEOMETRY — Cyclone ────────────────────────────────────────
+	// ── 2. GEOMETRY — Voronoi Lattice ─────────────────────────────────
 
-	// Centered UV scaled ×10
-	// Original: (FC.xy*2 - r) / r.y / 0.1
-	vec2 p = vec2((uv.x * 2.0 - 1.0) * aspect, uv.y * 2.0 - 1.0) * 10.0;
+	float dist_c = length(center);
 
-	// Spiral rotation — original 0.1*mat2(8,-6,6,8) is a pure rotation
-	// cos(θ)=0.8, sin(θ)=-0.6, θ≈-36.87° = -0.6435 rad
-	// Bass tightens/loosens the spiral
-	float spiral_angle = -0.6435 + bass * 0.15;
-	float cs = cos(spiral_angle);
-	float sn = sin(spiral_angle);
-	mat2 spiral_mat = mat2(vec2(cs, sn), vec2(-sn, cs));
+	// Kick deforms space radially (shockwave expanding from origin)
+	float kick_deform = kick * 0.3 * exp(-dist_c * 3.5);
+	// Bass breathes cell size — low end makes cells bigger/smaller
+	vec2 p = center * (1.0 + kick_deform) * (4.5 + bass * 2.0);
 
-	// Kick adds slight zoom per iteration
-	float spiral_zoom = 1.0 + kick * 0.03;
+	// Cell animation speed — energy can push it slightly faster
+	float t_anim = t * 0.35 + energy * 0.1;
 
-	// Color phase — warmth shifts red, brightness shifts blue
-	vec3 color_phase = vec3(2.0 + warmth * 0.5, 1.0, brightness * 0.3);
+	// ── Voronoi: 5×5 grid search ─────────────────────────────────────
+	vec2 ip = floor(p);
+	vec2 fp = fract(p);
+	float d1 = 8.0, d2 = 8.0;
 
-	// Time speed — energy accelerates the domain warping
-	float t_speed = t * (1.0 + energy * 0.3);
-
-	// Structure brightness — treble sharpens the sine detail
-	float struct_scale = 0.2 - treble * 0.05;
-
-	// IFS iteration — 10 rotations with glow accumulation
-	vec3 glow = vec3(0.0);
-
-	for (int i = 0; i < 10; i++) {
-		// Rotate coordinates (body runs before accumulation)
-		p = p * spiral_mat * spiral_zoom;
-
-		// Domain warping: sin(p + sin(p+t).yx)
-		// Each axis feeds the other's sine — organic flowing arms
-		vec2 warp_src = sin(p + t_speed);
-		vec2 domain = sin(p + warp_src.yx);
-		float structure = max(length(domain), 0.001);
-
-		// Accumulate — cosine coloring, inverse-structure intensity
-		vec3 color = (cos(p.x + color_phase) + 1.0) / structure / max(struct_scale, 0.05);
-		glow += color;
+	for (int j = -2; j <= 2; j++) {
+		for (int i = -2; i <= 2; i++) {
+			vec2 g  = vec2(float(i), float(j));
+			vec2 h  = hash2(ip + g);
+			// Each cell center traces its own Lissajous path
+			vec2 o  = 0.5 + 0.45 * sin(t_anim + TAU * h);
+			vec2 r  = g + o - fp;
+			float d = dot(r, r);
+			if (d < d1) { d2 = d1; d1 = d; }
+			else if (d < d2) { d2 = d; }
+		}
 	}
 
-	// Tanh tonemapping — scale keeps per-frame output low enough that
-	// feedback equilibrium stays ≤ 1.0.  See README § Feedback Brightness.
-	float glow_scale = max(300.0 - energy * 100.0, 100.0);
-	vec3 new_col = tanh(glow / glow_scale);
+	d1 = sqrt(d1);
+	d2 = sqrt(d2);
+	float edge_dist = d2 - d1;  // approaches 0 at cell boundaries
+
+	// ── Interior glow — sub_bass + beat breathe the cell bodies ──────
+	float interior = exp(-d1 * 2.5) * (0.25 + sub_bass * 0.5 + beat * 0.2);
+
+	// ── Edge glow — treble/presence/hihat ignite cell walls ──────────
+	float edge_w = 0.06 + treble * 0.05;
+	float edges  = (1.0 - smoothstep(0.0, edge_w, edge_dist))
+	             * (0.65 + presence * 0.45 + hihat * 0.3 + snare * 0.2);
+
+	// ── Concentric ripple radiating from center on kick ───────────────
+	float ripple = sin(dist_c * 18.0 - t * 3.5 + kick * PI) * 0.5 + 0.5;
+	ripple *= exp(-dist_c * 2.5) * (kick * 0.4 + bass * 0.1);
+
+	// ── Color palette — cosine, keyed on cell seed via d1 ────────────
+	float hue      = d1 * 3.5 + t * 0.12 + warmth;
+	vec3 col_inner = cos(vec3(0.0, 2.094, 4.189) + hue) * 0.5 + 0.5;
+	vec3 col_edge  = cos(vec3(0.8, 2.9, 5.0)    + hue + brightness * 1.5) * 0.5 + 0.5;
+
+	// Snare: edges tint brighter but don't blow to white
+	col_edge = mix(col_edge, vec3(1.0, 0.95, 0.8), snare * 0.3);
+
+	vec3 new_col = col_inner * (interior + ripple) + col_edge * edges;
+
+	// Kick center burst — warm flash from origin
+	new_col += vec3(1.0, 0.75, 0.4) * kick * exp(-dist_c * 5.0) * 0.4;
+
+	// Gentler tanh knee — keeps saturation without blowing to white
+	new_col = tanh(new_col * 2.2);
 
 	// ── 3. COMPOSITE ─────────────────────────────────────────────────
 
