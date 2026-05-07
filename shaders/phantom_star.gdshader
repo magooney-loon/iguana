@@ -5,12 +5,12 @@ shader_type canvas_item;
 //  @website:       shadertoy.com/view/ttKGDt
 //  @description:   IFS phantom raymarching with fractal lightning arcs and neon scan lines
 //
-//  @exposure:       1.6
-//  @tonemap_knee:   0.3
-//  @gamma:          1.9
+//  @exposure:       3.00
+//  @tonemap_knee:   0.00
+//  @gamma:          2.69
 //  @vignette_dark:  0.25
-//  @grain_strength: 0.008
-//  @loop_reinhard:  1.2
+//  @grain_strength: 0.01
+//  @loop_reinhard:  2.36
 // ═══════════════════════════════════════════════════════════════════════
 
 // ── Audio engine · auto-driven by AudioAnalyzer ─────────────────────
