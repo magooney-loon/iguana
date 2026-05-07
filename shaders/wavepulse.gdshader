@@ -8,8 +8,8 @@ shader_type canvas_item;
 //
 //  Post-processing defaults
 //  @exposure:       1.80
-//  @tonemap_knee:   0.0
-//  @gamma:          3.00
+//  @tonemap_knee:   0.22
+//  @gamma:          1.00
 //  @vignette_dark:  0.30
 //  @grain_strength: 0.006
 //  @loop_reinhard:  0.00
@@ -164,7 +164,76 @@ float wave_height(vec2 p, vec2 a1, vec2 a2, float t) {
 	return clamp(h, -60.0, 60.0);
 }
 
-// ── Fragment ─────────────────────────────────────────────────────────
+// Render one wave mesh layer — ray-cast, parallax, grid, lighting, color.
+// Each layer uses different camera, attractors, grid step, palette,
+// and ground-plane tilt (vec2: x-tilt, y-tilt → sheared plane normal).
+vec3 render_wave_layer(vec3 eye, vec2 a1, vec2 a2, float t,
+                       vec2 ndc, float aspect, float fov, float grid_step,
+                       vec3 col_pos, vec3 col_neg, vec3 col_flat,
+                       vec3 light_dir, vec2 tilt) {
+	vec3 target = vec3(0.0, 0.0, 0.0);
+	vec3 cam_up = vec3(0.0, 0.0, -1.0);
+
+	vec3 fwd   = normalize(target - eye);
+	vec3 right_v = normalize(cross(fwd, cam_up));
+	vec3 up_v    = normalize(cross(right_v, fwd));
+
+	vec3 ray = normalize(fwd + right_v * ndc.x / fov
+	                            + up_v    * ndc.y / fov);
+
+	// Tilted plane: normal = normalize(-tilt.x, -tilt.y, 1)
+	// tilt.x shears left/right, tilt.y shears front/back
+	vec3 plane_n = normalize(vec3(-tilt.x, -tilt.y, 1.0));
+
+	float denom = dot(plane_n, ray);
+	if (denom >= -0.01) return vec3(0.0);
+
+	float t_hit = -dot(plane_n, eye) / denom;
+	if (t_hit <= 0.0) return vec3(0.0);
+
+	vec3 p = eye + ray * t_hit;
+
+	// Parallax correction — damped, 4 steps
+	for (int i = 0; i < 4; i++) {
+		float h = wave_height(p.xy, a1, a2, t);
+		if (abs(ray.z) > 0.01) {
+			p -= ray / ray.z * (p.z - h) * 0.5;
+		}
+		p.z = h;
+	}
+
+	if (abs(p.x) > 700.0 || abs(p.y) > 700.0) return vec3(0.0);
+
+	// Grid lines
+	float gx = abs(fract(p.x / grid_step + 0.5) - 0.5) * 2.0;
+	float gy = abs(fract(p.y / grid_step + 0.5) - 0.5) * 2.0;
+	float dist_to_eye = length(p - eye);
+	float line_w = 0.06 + dist_to_eye / 18000.0;
+	float grid_line = 1.0 - smoothstep(0.0, line_w, min(gx, gy));
+
+	// Fade with distance from center
+	float fade = min(3.0e6 / max(dot(p.xy, p.xy), 100.0), 1.0);
+	fade *= smoothstep(650.0, 600.0, max(abs(p.x), abs(p.y)));
+
+	// Height-based color
+	float h0 = p.z;
+	vec3 wave_col = mix(col_neg, col_pos, smoothstep(-25.0, 25.0, h0));
+	wave_col = mix(wave_col, col_flat, exp(-abs(h0) * 0.015));
+
+	// Surface normal + lighting
+	float eps = 3.0;
+	float hx = wave_height(p.xy + vec2(eps, 0.0), a1, a2, t);
+	float hy = wave_height(p.xy + vec2(0.0, eps), a1, a2, t);
+	vec3 normal = normalize(vec3(h0 - hx, h0 - hy, eps));
+
+	float diffuse  = max(dot(normal, light_dir), 0.0);
+	float specular = pow(max(dot(reflect(-light_dir, normal),
+	                           normalize(eye - p)), 0.0), 12.0);
+
+	vec3 lit = wave_col * (0.4 + diffuse * 0.4 + specular * 0.2);
+
+	return lit * fade * 0.09 + lit * grid_line * fade * 0.07;
+}
 
 void fragment() {
 	vec2 uv = UV;
@@ -222,106 +291,75 @@ void fragment() {
 	trail.b = texture(prev_frame, buv).b * decay * edge_fade;
 
 	// ══════════════════════════════════════════════════════════════════
-	//  2. GEOMETRY — Wavepulse 3D mesh
+	//  2. GEOMETRY — Wavepulse 3 interlapping mesh layers
 	//
-	//  Two attractor points wander the grid (sinusoidal ≈ bouncing).
-	//  Each pixel casts a ray from an oblique camera; parallax
-	//  correction iterates to find the wave surface intersection.
-	//  Grid lines + normal-based lighting produce the wireframe look.
+	//  Three wave interference meshes viewed from different oblique
+	//  angles. Each layer has its own camera rotation, attractor
+	//  phase, grid scale, and color tint. The overlapping grids and
+	//  wave patterns create rich visual depth.
 	// ══════════════════════════════════════════════════════════════════
 
-	// Attractor positions — incommensurate frequencies ≈ bouncing
-	float att_amp = 350.0 * (1.0 + bass * 0.3 + sub_bass * 0.2);
-	vec2 att1 = vec2(sin(t * 0.17)        * att_amp,
-	                 cos(t * 0.23 + 1.0)  * att_amp);
-	vec2 att2 = vec2(sin(t * 0.13 + 2.0)  * att_amp,
-	                 cos(t * 0.19 + 3.0)  * att_amp);
-
-	// Camera — oblique flyover (matching Processing's camera(700,700,..., 0,0,-1))
-	float cam_h = 500.0 + sin(t * 0.03) * 80.0 + energy * 50.0;
-	vec3 eye    = vec3(700.0, 700.0, cam_h);
-	vec3 target = vec3(0.0, 0.0, 0.0);
-	vec3 cam_up = vec3(0.0, 0.0, -1.0);   // Processing uses -Z up
-
-	// View basis
-	vec3 fwd     = normalize(target - eye);
-	vec3 right_v = normalize(cross(fwd, cam_up));
-	vec3 up_v    = normalize(cross(right_v, fwd));
-
-	// Ray for this pixel (pinhole camera)
 	vec2 ndc = (uv - 0.5) * 2.0;
 	ndc.x *= aspect;
-	float fov_scale = 1.5;
-	vec3 ray = normalize(fwd + right_v * ndc.x / fov_scale
-	                            + up_v    * ndc.y / fov_scale);
-
-	// Ray–ground intersection (z = 0 plane)
-	vec3 p = vec3(0.0);
-	float grid_line = 0.0;
-	float fade = 0.0;
-	float h0 = 0.0;
-
-	if (ray.z < -0.01) {
-		float t_hit = -eye.z / ray.z;
-		if (t_hit > 0.0) {
-			p = eye + ray * t_hit;
-
-			// Parallax correction — damped, 4 steps
-			for (int i = 0; i < 4; i++) {
-				float h = wave_height(p.xy, att1, att2, t);
-				p -= ray / ray.z * (p.z - h) * 0.5;
-				p.z = h;
-			}
-			h0 = p.z;
-
-			// Bail if parallax diverged
-			if (abs(p.x) < 700.0 && abs(p.y) < 700.0) {
-				// Grid lines (step 9, matching Processing)
-				float gx = abs(fract(p.x / 9.0 + 0.5) - 0.5) * 2.0;
-				float gy = abs(fract(p.y / 9.0 + 0.5) - 0.5) * 2.0;
-				float grid = min(gx, gy);
-
-				float dist_to_eye = length(p - eye);
-				float line_w = 0.06 + dist_to_eye / 18000.0;
-				grid_line = 1.0 - smoothstep(0.0, line_w, grid);
-
-				// Fade with distance from center
-				fade = min(3.0e6 / max(dot(p.xy, p.xy), 100.0), 1.0);
-				fade *= smoothstep(650.0, 600.0, max(abs(p.x), abs(p.y)));
-			}
-		}
-	}
-
-	// Height-based color — saturated teal peaks, amber troughs
-	vec3 col_pos  = vec3(0.05, 0.85, 0.95);
-	vec3 col_neg  = vec3(0.95, 0.35, 0.08);
-	vec3 col_flat = vec3(0.08, 0.35, 0.45);
-	vec3 wave_col = mix(col_neg, col_pos, smoothstep(-25.0, 25.0, h0));
-
-	// Surface normal via finite differences (for lighting)
-	float eps = 3.0;
-	float hx = wave_height(p.xy + vec2(eps, 0.0), att1, att2, t);
-	float hy = wave_height(p.xy + vec2(0.0, eps), att1, att2, t);
-	vec3 normal = normalize(vec3(h0 - hx, h0 - hy, eps));
-
-	// Directional light
 	vec3 light_dir = normalize(vec3(-1.0, -1.0, 2.0));
-	float diffuse  = max(dot(normal, light_dir), 0.0);
-	float specular = pow(max(dot(reflect(-light_dir, normal),
-	                           normalize(eye - p)), 0.0), 12.0);
 
-	// Audio color shifts
-	wave_col += vec3(warmth * 0.12, -warmth * 0.06, -warmth * 0.1);
+	float cam_h = 500.0 + sin(t * 0.03) * 80.0 + energy * 50.0;
+	float att_amp = 350.0 * (1.0 + bass * 0.3 + sub_bass * 0.2);
 
-	// Combine: filled surface + brighter wireframe overlay
-	vec3 lit = wave_col * (0.4 + diffuse * 0.4 + specular * 0.2);
-	lit *= 1.0 + energy * 0.25 + kick * 0.15;
+	// ── Layer 1: Main — teal/amber, full scale, bass-driven ──────────
+	vec3 eye1 = vec3(700.0, 700.0, cam_h);
+	vec2 a1_1 = vec2(sin(t * 0.17)        * att_amp,
+	                 cos(t * 0.23 + 1.0)  * att_amp);
+	vec2 a2_1 = vec2(sin(t * 0.13 + 2.0)  * att_amp,
+	                 cos(t * 0.19 + 3.0)  * att_amp);
+	vec3 col1 = render_wave_layer(eye1, a1_1, a2_1, t,
+		ndc, aspect, 1.5, 9.0,
+		vec3(0.05, 0.85, 0.95),   // peaks: teal
+		vec3(0.95, 0.35, 0.08),   // troughs: amber
+		vec3(0.08, 0.35, 0.45),   // flat: deep teal
+		light_dir,
+		vec2(0.0, 0.0));          // no tilt — reference plane
 
-	vec3 new_col = lit * fade * 0.09;                  // filled surface
-	new_col += lit * grid_line * fade * 0.07;           // wireframe overlay
+	// ── Layer 2: Rotated 40°, blue/violet, mid-driven ──────────────
+	vec2 eye2_xy = rot2(0.70) * vec2(700.0, 700.0);
+	vec3 eye2 = vec3(eye2_xy, cam_h * 0.92);
+	float att_amp2 = att_amp * (0.8 + mid * 0.3);
+	vec2 a1_2 = vec2(sin(t * 0.21 + 4.0)  * att_amp2,
+	                 cos(t * 0.19 + 5.0)  * att_amp2);
+	vec2 a2_2 = vec2(sin(t * 0.15 + 6.0)  * att_amp2,
+	                 cos(t * 0.25 + 7.0)  * att_amp2);
+	vec3 col2 = render_wave_layer(eye2, a1_2, a2_2, t * 0.85,
+		ndc, aspect, 1.6, 11.0,
+		vec3(0.4, 0.5, 0.95),    // peaks: blue-violet
+		vec3(0.95, 0.55, 0.25),  // troughs: warm orange
+		vec3(0.1, 0.15, 0.4),    // flat: deep indigo
+		light_dir,
+		vec2(0.30, 0.12));       // tilted right + slightly forward
+
+	// ── Layer 3: Rotated -25°, green/magenta, treble-driven ────────
+	vec2 eye3_xy = rot2(-0.44) * vec2(650.0, 650.0);
+	vec3 eye3 = vec3(eye3_xy, cam_h * 1.08);
+	float att_amp3 = att_amp * (0.6 + treble * 0.4);
+	vec2 a1_3 = vec2(sin(t * 0.14 + 8.0)  * att_amp3,
+	                 cos(t * 0.22 + 9.0)  * att_amp3);
+	vec2 a2_3 = vec2(sin(t * 0.18 + 10.0) * att_amp3,
+	                 cos(t * 0.16 + 11.0) * att_amp3);
+	vec3 col3 = render_wave_layer(eye3, a1_3, a2_3, t * 1.15,
+		ndc, aspect, 1.7, 7.0,
+		vec3(0.1, 0.9, 0.6),     // peaks: emerald
+		vec3(0.9, 0.2, 0.5),     // troughs: magenta
+		vec3(0.05, 0.3, 0.25),   // flat: deep green
+		light_dir,
+		vec2(-0.25, 0.10));      // tilted left + slightly forward
+
+	// ── Combine layers ───────────────────────────────────────────────
+	// Audio color shift applied to combined result
+	vec3 audio_tint = vec3(warmth * 0.12, -warmth * 0.06, -warmth * 0.1);
+	vec3 new_col = col1 + col2 * 0.6 * (1.0 + audio_tint) + col3 * 0.45;
+	new_col *= 1.0 + energy * 0.25 + kick * 0.15;
 
 	// Kick radial pulse — warm glow from center
-	new_col += wave_col * kick * exp(-dist_c * 3.5) * 0.12;
+	new_col += vec3(0.3, 0.5, 0.7) * kick * exp(-dist_c * 3.5) * 0.1;
 
 	// ══════════════════════════════════════════════════════════════════
 	//  3. COMPOSITE — blend trail + new geometry, apply loop_reinhard
