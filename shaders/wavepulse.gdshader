@@ -7,11 +7,11 @@ shader_type canvas_item;
 //  @description:   3D wireframe wave interference mesh with chromatic split feedback
 //
 //  Post-processing defaults
-//  @exposure:       1.80
+//  @exposure:       1.82
 //  @tonemap_knee:   0.22
-//  @gamma:          1.00
-//  @vignette_dark:  0.30
-//  @grain_strength: 0.006
+//  @gamma:          1.97
+//  @vignette_dark:  0.90
+//  @grain_strength: 0.08
 //  @loop_reinhard:  0.00
 // ═══════════════════════════════════════════════════════════════════════
 //
@@ -220,18 +220,19 @@ vec3 render_wave_layer(vec3 eye, vec2 a1, vec2 a2, float t,
 	float dist_from_center = length(p.xy);
 	float angle_from_center = atan(p.y, p.x);
 
-	// Hue shift rotates around the grid — each region gets its own tint
-	float hue_shift = angle_from_center * 0.15 + dist_from_center * 0.002 + t * 0.08;
-	vec3 hue_tint = cos(vec3(0.0, 2.094, 4.189) + hue_shift) * 0.12 + vec3(1.0);
+	// Hue shift — wider sweep so all colors appear around the grid
+	float hue_shift = angle_from_center * 0.3 + dist_from_center * 0.004 + t * 0.12;
+	vec3 hue_tint = cos(vec3(0.0, 2.094, 4.189) + hue_shift) * 0.18 + vec3(1.0);
 
 	vec3 wave_col = mix(col_neg, col_pos, smoothstep(-25.0, 25.0, h0));
-	wave_col = mix(wave_col, col_flat, exp(-abs(h0) * 0.015));
+	wave_col = mix(wave_col, col_flat, exp(-abs(h0) * 0.008));
 
-	// Radial gradient — center warmer, edges cooler
+	// Radial gradient — warm gold center → rose edges (not blue)
 	float radial_t = smoothstep(0.0, 500.0, dist_from_center);
-	vec3 warm_edge = vec3(1.0, 0.85, 0.7);
-	vec3 cool_edge = vec3(0.7, 0.8, 1.0);
-	wave_col = mix(wave_col, mix(warm_edge, cool_edge, radial_t) * wave_col * 1.3, 0.25);
+	vec3 warm_center = vec3(1.0, 0.9, 0.75);
+	vec3 rose_edge   = vec3(0.95, 0.75, 0.85);
+	vec3 gradient_tint = mix(warm_center, rose_edge, radial_t);
+	wave_col = mix(wave_col, gradient_tint * wave_col * 1.2, 0.3);
 
 	// Apply hue tint
 	wave_col *= hue_tint;
@@ -340,7 +341,7 @@ void fragment() {
 		ndc, aspect, 1.5, 9.0,
 		vec3(0.05, 0.85, 0.95),   // peaks: teal
 		vec3(0.95, 0.35, 0.08),   // troughs: amber
-		vec3(0.08, 0.35, 0.45),   // flat: deep teal
+		vec3(0.35, 0.28, 0.2),    // flat: warm brown
 		light_dir,
 		vec2(0.0, 0.0));          // no tilt — reference plane
 
@@ -356,7 +357,7 @@ void fragment() {
 		ndc, aspect, 1.6, 11.0,
 		vec3(0.4, 0.5, 0.95),    // peaks: blue-violet
 		vec3(0.95, 0.55, 0.25),  // troughs: warm orange
-		vec3(0.1, 0.15, 0.4),    // flat: deep indigo
+		vec3(0.35, 0.22, 0.15),  // flat: warm umber
 		light_dir,
 		vec2(0.30, 0.12));       // tilted right + slightly forward
 
@@ -372,7 +373,7 @@ void fragment() {
 		ndc, aspect, 1.7, 7.0,
 		vec3(0.1, 0.9, 0.6),     // peaks: emerald
 		vec3(0.9, 0.2, 0.5),     // troughs: magenta
-		vec3(0.05, 0.3, 0.25),   // flat: deep green
+		vec3(0.3, 0.2, 0.18),    // flat: warm sienna
 		light_dir,
 		vec2(-0.25, 0.10));      // tilted left + slightly forward
 
