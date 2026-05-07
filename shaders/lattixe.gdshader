@@ -4,16 +4,14 @@ shader_type canvas_item;
 //  @name:          Lattixe
 //  @author:        magooney
 //  @website:       github.com/magooney-loon
-//  @description:   Voronoi crystal lattice. Cells breathe
-//                  with bass, edges ignite on treble/hihat, kick sends
-//                  radial shockwaves, snare flashes edges white-hot.
+//  @description:   Voronoi crystal lattice. Cells breathe with reactivity.
 //
 //  Post-processing defaults — tune these to taste, then leave them.
-//  @exposure:       1.3
+//  @exposure:       0.86
 //  @tonemap_knee:   0.0
 //  @gamma:          2.2
-//  @vignette_dark:  0.30
-//  @grain_strength: 0.006
+//  @vignette_dark:  0.00
+//  @grain_strength: 0.01
 //  @loop_reinhard:  0.0
 // ═══════════════════════════════════════════════════════════════════════
 //
