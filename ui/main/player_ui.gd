@@ -547,6 +547,9 @@ func _on_play_pause() -> void:
 
 func _on_stop() -> void:
 	AudioSource.stop()
+	_seek_bar.max_value = 1.0
+	_seek_bar.value = 0.0
+	_time_label.text = "0:00 / 0:00"
 	_refresh_play_btn()
 	_notify("Stopped")
 
