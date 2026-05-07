@@ -564,16 +564,9 @@ func _create_row(idx: int, force_active: int = -2) -> Dictionary:
 	remove_btn.mouse_filter = Control.MOUSE_FILTER_STOP
 	remove_btn.modulate.a = StylesUI.theme().a_dim_icon
 	remove_btn.tooltip_text = "Remove from playlist"
-	var _rs := func(bg: Color) -> StyleBoxFlat:
-		var s := StylesUI.glass_box(bg, 5.0, false)
-		s.content_margin_left   = 4.0
-		s.content_margin_right  = 4.0
-		s.content_margin_top    = 3.0
-		s.content_margin_bottom = 3.0
-		return s
-	remove_btn.add_theme_stylebox_override("normal", _rs.call(StylesUI.theme().c_btn))
-	remove_btn.add_theme_stylebox_override("hover", _rs.call(StylesUI.theme().c_btn_h))
-	remove_btn.add_theme_stylebox_override("pressed", _rs.call(StylesUI.theme().c_btn_p))
+	remove_btn.add_theme_stylebox_override("normal",  _remove_btn_style(StylesUI.theme().c_btn))
+	remove_btn.add_theme_stylebox_override("hover",   _remove_btn_style(StylesUI.theme().c_btn_h))
+	remove_btn.add_theme_stylebox_override("pressed", _remove_btn_style(StylesUI.theme().c_btn_p))
 	remove_btn.pressed.connect(func() -> void:
 		var entry_idx: int = row.get_meta("list_index")
 		_playlist.remove(entry_idx)
@@ -751,6 +744,15 @@ func _on_clear_pressed() -> void:
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+static func _remove_btn_style(bg: Color) -> StyleBoxFlat:
+	var s := StylesUI.glass_box(bg, 5.0, false)
+	s.content_margin_left   = 4.0
+	s.content_margin_right  = 4.0
+	s.content_margin_top    = 3.0
+	s.content_margin_bottom = 3.0
+	return s
+
 
 static func _fmt_duration(secs: float) -> String:
 	if secs <= 0.0:

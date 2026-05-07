@@ -72,6 +72,7 @@ All six numeric tags are overridden per-user in the Settings window and saved to
 | Uniform | Type | Description |
 |---|---|---|
 | `prev_frame` | `sampler2D` | Last frame's output — the feedback texture |
+| `noise_tex` | `sampler2D` | Seamless 512×512 simplex noise texture |
 | `rect_size` | `vec2` | Viewport size in pixels |
 | `time_val` | `float` | Elapsed seconds |
 | `frame` | `int` | Frame counter (absolute, from engine start) |
@@ -86,11 +87,10 @@ All six numeric tags are overridden per-user in the Settings window and saved to
 | `mid` | 0–1 | 800 Hz–4 kHz |
 | `presence` | 0–1 | 4–8 kHz |
 | `treble` | 0–1 | 8–16 kHz |
-| `kick_envelope` | 0–1 | Kick drum transient envelope |
-| `snare_envelope` | 0–1 | Snare transient envelope |
-| `hihat_envelope` | 0–1 | Hi-hat transient envelope |
-| `beat_envelope` | 0–1 | General beat envelope |
-| `beat` | 0–1 | Beat pulse (alias, same as beat_envelope) |
+| `beat` | 0–1 | General beat pulse |
+| `kick` | 0–1 | Kick drum transient envelope |
+| `snare` | 0–1 | Snare transient envelope |
+| `hihat` | 0–1 | Hi-hat transient envelope |
 | `beat_confidence` | 0–1 | How confident the engine is a beat occurred |
 | `beat_phase` | 0–1 | Position within the current beat cycle |
 | `flux_bass` | 0–1 | Spectral flux in the bass band |
@@ -202,7 +202,7 @@ vec3 col = palette(hue,
 
 ```glsl
 // Adds a white flash on kick, fades out over ~10 frames
-float flash = kick_envelope * 0.4;
+float flash = kick * 0.4;
 col += flash;
 ```
 

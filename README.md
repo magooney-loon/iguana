@@ -42,6 +42,7 @@ PostProcessDisplay (ColorRect)   — tonemap / gamma / vignette / grain on top
 │   ├── audio_analyzer.gd      # Full audio analysis pipeline (FFT → uniforms)
 │   ├── audio_source.gd        # AudioStreamPlayer wrapper + crossfade logic
 │   ├── keymap.gd              # Rebindable key action registry
+│   ├── playlist.gd            # Playlist data model (tracks, shuffle, play modes)
 │   └── visualizer.gd          # Shader switching, feedback buffer, uniform push
 ├── shaders/
 │   ├── utils/
@@ -52,7 +53,6 @@ PostProcessDisplay (ColorRect)   — tonemap / gamma / vignette / grain on top
 │   ├── main/                  # GDScript UI files
 │   │   ├── player_ui.gd
 │   │   ├── settings_ui.gd
-│   │   ├── playlist.gd
 │   │   ├── playlist_ui.gd
 │   │   ├── styles_ui.gd
 │   │   ├── notification_ui.gd

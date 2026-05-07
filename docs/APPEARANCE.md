@@ -290,8 +290,9 @@ fullscreen.svg  loop_all.svg    loop_none.svg
 loop_one.svg    next.svg        pause.svg
 play.svg        playlist.svg    prev.svg
 remove.svg      reset.svg       save.svg
-settings.svg    shuffle.svg     stop.svg
-volume_high.svg volume_low.svg  volume_muted.svg
+settings.svg    shuffle.svg     star.svg
+stop.svg        volume_high.svg volume_low.svg
+volume_muted.svg
 ```
 
 Missing icons fall back to an empty texture with a console warning, so you can ship a partial pack if you only want to replace specific icons.

@@ -2,7 +2,7 @@ class_name NotificationUI
 extends Control
 
 ## Minimal overlay: just the shader-name label that fades out after switching.
-## All shader selection and debug display live in the settings window (player_ui.gd).
+## All shader selection and debug display live in the settings window (settings_ui.gd).
 
 var _label: Label
 var _label_timer := 0.0

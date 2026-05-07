@@ -12,21 +12,6 @@ shader_type canvas_item;
 //  @grain_strength: 0.015
 //  @loop_reinhard:  1.0
 // ═══════════════════════════════════════════════════════════════════════
-//
-//  Pipeline:
-//    1. FEEDBACK  — warp / zoom / rotate prev_frame into trailing echoes
-//    2. GEOMETRY  — draw fresh visuals (raymarching, overlays, effects)
-//    3. COMPOSITE — trail + new_col, tonemapped with loop_reinhard
-//
-//  All uniforms below are pushed automatically by visualizer.gd.
-//  Per-shader post-processing (exposure, gamma, vignette, grain) runs
-//  in a SEPARATE post_process pass — it never feeds back into the loop.
-//
-//  Writing a new shader?
-//    · Copy shader_template.gdshader into res://shaders/utils/ and fill in the @meta tags
-//    · Implement the three pipeline phases in fragment()
-//    · Tweak loop_reinhard to control how bright trails feed back
-// ═══════════════════════════════════════════════════════════════════════
 
 // ── Audio engine · auto-driven by AudioAnalyzer ─────────────────────
 //

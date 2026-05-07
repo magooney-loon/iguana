@@ -85,18 +85,18 @@ vec3 reinhard(vec3 col, float k) {
 	return k > 0.0 ? col / (col + k) * (1.0 + k) : col;
 }
 
-float Pow2(float x) { return x * x; }
-float Pow3(float x) { return x * x * x; }
-float Pow4(float x) { return Pow2(Pow2(x)); }
+float pow2(float x) { return x * x; }
+float pow3(float x) { return x * x * x; }
+float pow4(float x) { return pow2(pow2(x)); }
 
-float SqrLen(float v) { return v * v; }
-float SqrLen(vec2 v)  { return dot(v, v); }
-float SqrLen(vec3 v)  { return dot(v, v); }
+float sqr_len(float v) { return v * v; }
+float sqr_len(vec2 v)  { return dot(v, v); }
+float sqr_len(vec3 v)  { return dot(v, v); }
 
 // ── Ray–Sphere intersection ──────────────────────────────────────────
 // Returns vec3: x = hit flag (>0 hit, <0 behind, 0 miss), y = t_near, z = t_far
 
-vec3 IntersectRaySphere(vec3 rp, vec3 rd, vec3 sp, float sr2) {
+vec3 intersect_ray_sphere(vec3 rp, vec3 rd, vec3 sp, float sr2) {
 	rp -= sp;
 	float a = dot(rd, rd);
 	float b = 2.0 * dot(rp, rd);
@@ -159,15 +159,15 @@ vec3 id2sf(float i, float n) {
 
 // ── Disk / sphere projection helpers ─────────────────────────────────
 
-float ProjSphereArea(float rdz, vec3 p, float rr) {
+float proj_sphere_area(float rdz, vec3 p, float rr) {
 	float zz = p.z * p.z;
 	float ll = dot(p, p);
 	float denom = rr - ll;
 	if (abs(denom) < 0.0001) return 0.0;
-	return PI * rdz * rdz * rr * inversesqrt(max(abs(Pow3(rr - zz) / denom), 0.0001));
+	return PI * rdz * rdz * rr * inversesqrt(max(abs(pow3(rr - zz) / denom), 0.0001));
 }
 
-vec4 ProjDisk(vec3 rd, vec3 p, vec3 n, float rr) {
+vec4 proj_disk(vec3 rd, vec3 p, vec3 n, float rr) {
 	vec3 np0 = n * p.xyz;
 	vec3 np1 = n * p.yzx;
 	vec3 np2 = n * p.zxy;
@@ -190,11 +190,11 @@ vec4 ProjDisk(vec3 rd, vec3 p, vec3 n, float rr) {
 	return vec4(g.xy, 0.0, v);
 }
 
-float SphX0(float d, float rr0, float rr1) { return 0.5 * (d + (rr0 - rr1) / d); }
+float sph_x0(float d, float rr0, float rr1) { return 0.5 * (d + (rr0 - rr1) / d); }
 
 // ── Scene evaluation ─────────────────────────────────────────────────
 
-vec3 EvalScene(vec3 cpos, mat3 cam_mat, float focalLen, vec2 uv0) {
+vec3 eval_scene(vec3 cpos, mat3 cam_mat, float focalLen, vec2 uv0) {
 	// Background tinted by energy
 	vec3 cBG = 0.014 * vec3(0.9, 1.0, 1.2) * (1.0 + energy * 0.4);
 
@@ -205,7 +205,7 @@ vec3 EvalScene(vec3 cpos, mat3 cam_mat, float focalLen, vec2 uv0) {
 	vec3 rdir = normalize(cam_mat * rdir0);   // world-space ray
 
 	// Ray vs unit sphere
-	vec3 hit_info = IntersectRaySphere(cpos, rdir, vec3(0.0), 1.0);
+	vec3 hit_info = intersect_ray_sphere(cpos, rdir, vec3(0.0), 1.0);
 	if (hit_info.x <= 0.0) return cBG;
 
 	vec3 pf = cpos + rdir * hit_info.y;       // front intersection point
@@ -222,17 +222,17 @@ vec3 EvalScene(vec3 cpos, mat3 cam_mat, float focalLen, vec2 uv0) {
 	// Pulsing phase — kick adds transient burst
 	float arg = (-u_val * 615.5 * 2.0 * s) + time_val * 1.0 + kick * 3.0;
 	float rra = sin(arg);
-	rra = mix(abs(rra), Pow2(rra), 0.75);
+	rra = mix(abs(rra), pow2(rra), 0.75);
 
 	float rr = 0.0025 / s * rra;
 
 	vec3 n2 = normalize(p2);
 	const float maskS = 0.5;
 
-	if (SqrLen(pf - p2) > rr) return cBG;
+	if (sqr_len(pf - p2) > rr) return cBG;
 
 	float d = length(p2);
-	float x0 = SphX0(d, 1.0, rr);
+	float x0 = sph_x0(d, 1.0, rr);
 	vec3 d0c = n2 * x0;
 	float d0rr = 1.0 - x0 * x0;
 
@@ -240,7 +240,7 @@ vec3 EvalScene(vec3 cpos, mat3 cam_mat, float focalLen, vec2 uv0) {
 	vec3 dn_c = n2 * cam_mat;
 
 	// Analytical disk coverage (outer)
-	vec4 r = ProjDisk(rdir0, dp_c, dn_c, d0rr);
+	vec4 r = proj_disk(rdir0, dp_c, dn_c, d0rr);
 	float rsq = dot(r.xy, r.xy);
 	float cmask = rsq > 0.0 ? clamp(-r.w * inversesqrt(rsq) * focalLen * maskS, 0.0, 1.0) : 0.0;
 
@@ -248,13 +248,13 @@ vec3 EvalScene(vec3 cpos, mat3 cam_mat, float focalLen, vec2 uv0) {
 	float cmask2 = 0.0;
 	{
 		vec3 d1c = n2 * (x0 - 0.005);
-		vec4 r2 = ProjDisk(rdir0, (d1c - cpos) * cam_mat, n2 * cam_mat, (1.0 - x0 * x0) * rra);
+		vec4 r2 = proj_disk(rdir0, (d1c - cpos) * cam_mat, n2 * cam_mat, (1.0 - x0 * x0) * rra);
 		float rsq2 = dot(r2.xy, r2.xy);
 		cmask2 = rsq2 > 0.0 ? clamp(-r2.w * inversesqrt(rsq2) * focalLen * maskS, 0.0, 1.0) : 0.0;
 	}
 
 	// Area-based coverage guard
-	float A = ProjSphereArea(rdir0.z, dp_c, d0rr);
+	float A = proj_sphere_area(rdir0.z, dp_c, d0rr);
 	A *= focalLen * focalLen;
 	float NdV = abs(dot(dn_c, normalize(dp_c)));
 	A *= NdV;
@@ -335,7 +335,7 @@ void fragment() {
 	cpos.y += 0.75;
 
 	vec2 uv0 = uv * rect_size;             // pixel coordinates
-	vec3 new_col = EvalScene(cpos, cam_mat, focalLen, uv0);
+	vec3 new_col = eval_scene(cpos, cam_mat, focalLen, uv0);
 
 	// ── 3. COMPOSITE ─────────────────────────────────────────────────
 

@@ -559,7 +559,7 @@ func _build_shaders_tab() -> Control:
 	StylesUI.win_section(vbox, "ACTIVE SHADER")
 
 	_shader_btn = Button.new()
-	_shader_btn.text = _visualizer.SHADERS[_visualizer._shader_index].name
+	_shader_btn.text = _visualizer.shaders[_visualizer._shader_index].name
 	_shader_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_shader_btn.focus_mode = Control.FOCUS_NONE
 	_shader_btn.pressed.connect(_open_shader_picker)
@@ -714,7 +714,7 @@ func _get_pp_value(param: String) -> float:
 
 
 func _update_shader_info() -> void:
-	var meta: Dictionary = _visualizer.SHADERS[_visualizer._shader_index]
+	var meta: Dictionary = _visualizer.shaders[_visualizer._shader_index]
 	if _shader_author_label:
 		_shader_author_label.text  = "Author:   " + meta.get("author",  "N/A")
 	if _shader_website_label:
@@ -783,7 +783,7 @@ func _update_pp_sliders() -> void:
 
 func _reset_post_defaults() -> void:
 	var idx: int = _visualizer._shader_index
-	var shader_meta: Dictionary = _visualizer.SHADERS[idx]
+	var shader_meta: Dictionary = _visualizer.shaders[idx]
 	var global: Dictionary = _visualizer.PP_DEFAULTS
 	_visualizer.pp_exposure       = shader_meta.get("exposure",       global["exposure"])
 	_visualizer.pp_tonemap_knee   = shader_meta.get("tonemap_knee",   global["tonemap_knee"])
@@ -923,7 +923,7 @@ func _build_shader_picker() -> void:
 
 	# Build entries
 	_picker_entries.clear()
-	var shaders: Array = _visualizer.SHADERS
+	var shaders: Array = _visualizer.shaders
 	for i in shaders.size():
 		var meta: Dictionary = shaders[i]
 		var stem: String = meta.get("path", "").get_file().get_basename()
@@ -1077,7 +1077,7 @@ func _close_shader_picker() -> void:
 
 func _select_shader_from_picker(idx: int) -> void:
 	_visualizer._switch(idx)
-	_shader_btn.text = _visualizer.SHADERS[idx].name
+	_shader_btn.text = _visualizer.shaders[idx].name
 	_update_pp_sliders()
 	_update_shader_info()
 	_close_shader_picker()
@@ -1127,7 +1127,7 @@ func _refresh_shuffle_fav_state() -> void:
 
 func _refresh_picker_list() -> void:
 	var query := _picker_search.text.strip_edges().to_lower() if _picker_search else ""
-	var shaders: Array = _visualizer.SHADERS
+	var shaders: Array = _visualizer.shaders
 
 	for entry in _picker_entries:
 		var meta: Dictionary = shaders[entry.idx]
@@ -1357,7 +1357,7 @@ func _sync() -> void:
 	if idx != _last_shader_idx:
 		_last_shader_idx = idx
 		if _shader_btn:
-			_shader_btn.text = _visualizer.SHADERS[idx].name
+			_shader_btn.text = _visualizer.shaders[idx].name
 		_update_pp_sliders()
 	# Shuffle state
 	_shuffle_check.set_block_signals(true)

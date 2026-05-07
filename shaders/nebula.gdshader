@@ -42,15 +42,19 @@ uniform float warmth      : hint_range(0.0, 1.0) = 0.0;
 uniform float brightness  : hint_range(0.0, 1.0) = 0.0;
 uniform float density     : hint_range(0.0, 1.0) = 0.0;
 
-// ── Beat tracking ────────────────────────────────────────────────────
+// ── Timing ───────────────────────────────────────────────────────────
 uniform float beat_phase      : hint_range(0.0, 1.0) = 0.0;
 uniform float beat_confidence : hint_range(0.0, 1.0) = 0.0;
 uniform float bpm             = 120.0;
 uniform float time_val        = 0.0;
 
-// ── Feedback / utility ───────────────────────────────────────────────
+// ── Feedback loop ────────────────────────────────────────────────────
 uniform sampler2D prev_frame : hint_default_black, filter_linear, repeat_disable;
-uniform float     loop_reinhard : hint_range(0.0, 3.0) = 0.85;
+
+// ── Per-shader Reinhard · tunable in Settings UI ────────────────────
+uniform float loop_reinhard : hint_range(0.0, 3.0) = 0.85;
+
+// ── Utility · auto-provided ──────────────────────────────────────────
 uniform sampler2D noise_tex : hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform vec2      rect_size = vec2(1600.0, 900.0);
 
@@ -83,10 +87,10 @@ vec3 nebula_pal(float t, float w) {
 void fragment() {
 	vec2  uv  = UV;
 	float t   = time_val;
-	float asp = rect_size.x / rect_size.y;
+	float aspect = rect_size.x / rect_size.y;
 
 	vec2 center = uv - 0.5;
-	center.x *= asp;
+	center.x *= aspect;
 
 	// ── 1. FEEDBACK ──────────────────────────────────────────────────
 	// Slow inward zoom — sub_bass breathes the tunnel, onset = hard rush
@@ -106,7 +110,7 @@ void fragment() {
 
 	// Back to UV space, edge fade, sample
 	vec2 sample_uv = warped;
-	sample_uv.x /= asp;
+	sample_uv.x /= aspect;
 	sample_uv += 0.5;
 
 	vec2 ed = min(sample_uv, 1.0 - sample_uv);

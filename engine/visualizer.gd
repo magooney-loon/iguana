@@ -3,7 +3,7 @@ extends ColorRect
 # Populated at runtime by _discover_shaders() — each entry has "path", "name",
 # "author", "description", "loop_reinhard". Add a new shader by dropping a
 # .gdshader file in res://shaders/ with @meta tags in its header.
-var SHADERS: Array[Dictionary] = []
+var shaders: Array[Dictionary] = []
 
 var _analyzer: AudioAnalyzer
 var _loaded_shaders: Array[Shader] = []
@@ -135,7 +135,7 @@ func _ready() -> void:
 		if shader == null:
 			push_warning("Shader loader: failed to load '%s', skipping" % def.path)
 			continue
-		SHADERS.append(def)
+		shaders.append(def)
 		_loaded_shaders.append(shader)
 
 	# Initialize per-shader PP configs: start from global defaults, override with shader header values
@@ -144,9 +144,9 @@ func _ready() -> void:
 	for i in _loaded_shaders.size():
 		var cfg := PP_DEFAULTS.duplicate()
 		for key in PP_DEFAULTS.keys():
-			if SHADERS[i].has(key):
-				cfg[key] = SHADERS[i][key]
-		var stem: String = SHADERS[i].path.get_file().get_basename()
+			if shaders[i].has(key):
+				cfg[key] = shaders[i][key]
+		var stem: String = shaders[i].path.get_file().get_basename()
 		_shader_pp_configs[stem] = cfg
 		keys.append(stem)
 	Config.shader_keys = keys
@@ -267,7 +267,7 @@ func _switch(idx: int) -> void:
 	_shader_index  = idx
 	_shuffle_timer = 0.0
 	(material as ShaderMaterial).shader = _loaded_shaders[idx]
-	_ui.show_label("< %s >" % SHADERS[idx].name)
+	_ui.show_label("< %s >" % shaders[idx].name)
 
 	# Apply new shader's post-processing config
 	_apply_pp_config(idx)
@@ -292,8 +292,8 @@ func _shuffle() -> void:
 	if _shuffle_favs and Config.favorite_shaders.size() > 0:
 		# Only pick from favorited shaders
 		var fav_indices: Array[int] = []
-		for fi in SHADERS.size():
-			var fstem: String = SHADERS[fi].path.get_file().get_basename()
+		for fi in shaders.size():
+			var fstem: String = shaders[fi].path.get_file().get_basename()
 			if fstem in Config.favorite_shaders:
 				fav_indices.append(fi)
 		if fav_indices.size() <= 1:
@@ -412,9 +412,9 @@ func _push_uniforms(mat: ShaderMaterial) -> void:
 # ── Per-shader post-processing config ──────────────────────────────
 
 func _shader_key(idx: int) -> String:
-	if idx < 0 or idx >= SHADERS.size():
+	if idx < 0 or idx >= shaders.size():
 		return ""
-	return SHADERS[idx].path.get_file().get_basename()
+	return shaders[idx].path.get_file().get_basename()
 
 
 func _apply_pp_config(idx: int) -> void:
