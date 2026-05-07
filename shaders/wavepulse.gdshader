@@ -215,10 +215,26 @@ vec3 render_wave_layer(vec3 eye, vec2 a1, vec2 a2, float t,
 	float fade = min(3.0e6 / max(dot(p.xy, p.xy), 100.0), 1.0);
 	fade *= smoothstep(650.0, 600.0, max(abs(p.x), abs(p.y)));
 
-	// Height-based color
+	// Height-based color + radial gradient + position-based hue shift
 	float h0 = p.z;
+	float dist_from_center = length(p.xy);
+	float angle_from_center = atan(p.y, p.x);
+
+	// Hue shift rotates around the grid — each region gets its own tint
+	float hue_shift = angle_from_center * 0.15 + dist_from_center * 0.002 + t * 0.08;
+	vec3 hue_tint = cos(vec3(0.0, 2.094, 4.189) + hue_shift) * 0.12 + vec3(1.0);
+
 	vec3 wave_col = mix(col_neg, col_pos, smoothstep(-25.0, 25.0, h0));
 	wave_col = mix(wave_col, col_flat, exp(-abs(h0) * 0.015));
+
+	// Radial gradient — center warmer, edges cooler
+	float radial_t = smoothstep(0.0, 500.0, dist_from_center);
+	vec3 warm_edge = vec3(1.0, 0.85, 0.7);
+	vec3 cool_edge = vec3(0.7, 0.8, 1.0);
+	wave_col = mix(wave_col, mix(warm_edge, cool_edge, radial_t) * wave_col * 1.3, 0.25);
+
+	// Apply hue tint
+	wave_col *= hue_tint;
 
 	// Surface normal + lighting
 	float eps = 3.0;
@@ -246,6 +262,7 @@ void fragment() {
 	//  Radial + tangential flow keeps trails swirling and breathing
 	//  without any net lateral drift. Per-channel rotation diverges
 	//  over hundreds of frames → prismatic rainbow-edged echoes.
+	//  Kick/snare burst the rotation; beat_phase drives flow rhythm.
 	// ══════════════════════════════════════════════════════════════════
 
 	vec2 center = uv - 0.5;
@@ -255,25 +272,32 @@ void fragment() {
 	vec2 radial     = dist_c > 0.001 ? center / dist_c : vec2(0.0, 1.0);
 	vec2 tangential = vec2(-radial.y, radial.x);
 
-	float zoom = 0.985 - energy * 0.005 - kick * 0.01;
+	float zoom = 0.985 - energy * 0.005 - kick * 0.015 - onset * 0.008;
 	vec2 zoomed = center * zoom;
 
-	float ang_r = 0.002 + energy * 0.002;
-	float ang_g = 0.004 + energy * 0.003;
-	float ang_b = 0.006 + energy * 0.004;
+	// Per-channel rotation — kick bursts, snare stutters, beat_phase oscillates
+	float beat_rhythm = sin(beat_phase * TAU) * 0.5 + 0.5;
+	float ang_r = 0.002 + energy * 0.002 + kick * 0.008 + beat_rhythm * 0.003;
+	float ang_g = 0.004 + energy * 0.003 + snare * 0.006 - beat_rhythm * 0.002;
+	float ang_b = 0.006 + energy * 0.004 + kick * 0.005 + snare * 0.004;
 
-	float flow = 0.002 * (1.0 + bass * 1.5);
+	// Flow pulses with kick and beat_phase
+	float flow = 0.002 * (1.0 + bass * 1.5 + kick * 2.0 + beat_rhythm * 0.5);
 
 	vec2 ruv = rot2(ang_r) * zoomed;
 	vec2 guv = rot2(ang_g) * zoomed;
 	vec2 buv = rot2(ang_b) * zoomed;
 
-	ruv += (radial * sin(dist_c * 8.0 + t * 1.2)
-	      + tangential * cos(dist_c * 5.0 + t * 0.7) * 0.5) * flow;
-	guv += (radial * sin(dist_c * 7.0 + t * 0.9)
-	      + tangential * sin(dist_c * 4.5 + t * 1.1) * 0.4) * flow * 0.7;
-	buv += (radial * cos(dist_c * 6.0 + t * 1.5)
-	      + tangential * sin(dist_c * 6.0 + t * 0.5) * 0.45) * flow;
+	float flow_ph_r = t * 1.2 + kick * 3.0;
+	float flow_ph_g = t * 0.9 + snare * 2.5;
+	float flow_ph_b = t * 1.5 + beat_phase * TAU;
+
+	ruv += (radial * sin(dist_c * 8.0 + flow_ph_r)
+	      + tangential * cos(dist_c * 5.0 + flow_ph_r * 0.6) * 0.5) * flow;
+	guv += (radial * sin(dist_c * 7.0 + flow_ph_g)
+	      + tangential * sin(dist_c * 4.5 + flow_ph_g * 0.8) * 0.4) * flow * 0.7;
+	buv += (radial * cos(dist_c * 6.0 + flow_ph_b)
+	      + tangential * sin(dist_c * 6.0 + flow_ph_b * 0.4) * 0.45) * flow;
 
 	ruv = vec2(ruv.x / aspect, ruv.y) + 0.5;
 	guv = vec2(guv.x / aspect, guv.y) + 0.5;
