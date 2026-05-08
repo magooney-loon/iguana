@@ -260,6 +260,11 @@ func _load_stream(path: String) -> AudioStream:
 	var ext := path.get_extension().to_lower()
 	var bytes := FileAccess.get_file_as_bytes(path)
 	if bytes.is_empty():
+		# Fallback: try ResourceLoader (covers imported FLAC and other resource formats)
+		if ResourceLoader.exists(path):
+			var res := ResourceLoader.load(path)
+			if res is AudioStream:
+				return res
 		return null
 	match ext:
 		"mp3":
@@ -268,5 +273,13 @@ func _load_stream(path: String) -> AudioStream:
 			return s
 		"ogg":
 			return AudioStreamOggVorbis.load_from_buffer(bytes)
-	push_warning("AudioSource: unsupported format '%s'" % ext)
-	return null
+		"wav":
+			return AudioStreamWAV.load_from_buffer(bytes)
+		_:
+			# Try ResourceLoader for unsupported extensions (e.g. imported .flac)
+			if ResourceLoader.exists(path):
+				var res := ResourceLoader.load(path)
+				if res is AudioStream:
+					return res
+			push_warning("AudioSource: unsupported format '%s'" % ext)
+			return null

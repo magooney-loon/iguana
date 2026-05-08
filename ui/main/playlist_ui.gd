@@ -728,7 +728,8 @@ func _on_add_pressed() -> void:
 	var dialog := FileDialog.new()
 	dialog.access     = FileDialog.ACCESS_FILESYSTEM
 	dialog.file_mode  = FileDialog.FILE_MODE_OPEN_FILES
-	dialog.filters    = PackedStringArray(["*.mp3,*.ogg ; Audio Files"])
+	dialog.filters    = PackedStringArray(["*.mp3,*.ogg,*.wav ; Audio Files"])
+	dialog.filters.append("*.flac,*.opus,*.wma,*.aac ; More Audio (may require import)")
 	dialog.files_selected.connect(func(paths: PackedStringArray) -> void:
 		_playlist.add_many(paths)
 		dialog.queue_free()

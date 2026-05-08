@@ -9,7 +9,7 @@ func _ready() -> void:
 
 
 func _on_files_dropped(files: PackedStringArray) -> void:
-	var audio_exts := ["mp3", "ogg", "wav", "flac"]
+	var audio_exts := ["mp3", "ogg", "wav"]
 	var audio_files: PackedStringArray = []
 	for file in files:
 		if file.get_extension().to_lower() in audio_exts:
