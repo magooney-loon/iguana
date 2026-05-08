@@ -69,10 +69,11 @@ func crossfade_to(path: String) -> void:
 		play(path)
 		return
 
-	# Kill any in-progress crossfade and reset state
+	# Kill any in-progress crossfade — preserve _player volume to avoid snapping back
+	var interrupted := false
 	if _crossfade_tween and _crossfade_tween.is_valid():
 		_crossfade_tween.kill()
-		_player.volume_db = 0.0
+		interrupted = true
 		_fade_player.stop()
 		_fade_player.volume_db = -80.0
 	_stopping = false
@@ -85,10 +86,16 @@ func crossfade_to(path: String) -> void:
 	# Keep _near_end_triggered = true during the fade so _check_near_end doesn't
 	# re-fire on the still-playing old track and trigger a second advance().
 
+	# Scale fade-out time by remaining volume so interrupted fades don't drag on
+	var fade_out_time := crossfade_duration
+	if interrupted:
+		var vol_fraction := clampf((_player.volume_db + 80.0) / 80.0, 0.0, 1.0)
+		fade_out_time = maxf(crossfade_duration * vol_fraction, 0.05)
+
 	# Tween: fade out current player, fade in fade player
 	_crossfade_tween = create_tween()
 	_crossfade_tween.set_parallel(true)
-	_crossfade_tween.tween_property(_player, "volume_db", -80.0, crossfade_duration)\
+	_crossfade_tween.tween_property(_player, "volume_db", -80.0, fade_out_time)\
 		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
 	_crossfade_tween.tween_property(_fade_player, "volume_db", 0.0, crossfade_duration)\
 		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
