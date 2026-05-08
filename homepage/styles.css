@@ -17,8 +17,7 @@
     --amber-dim: #c8902a;
     --rust: #d97a2c;
     --shadow: rgba(0, 0, 0, 0.55);
-    --mono:
-        "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
     --term: "VT323", "JetBrains Mono", monospace;
     --disp: "Space Grotesk", system-ui, sans-serif;
 }

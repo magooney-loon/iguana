@@ -1,16 +1,17 @@
-// ── Hero canvas shader ──────────────────────────────────────────────────
+// Hero canvas shader
 (function () {
-    var canvas = document.getElementById("hero-canvas");
-    if (!canvas) return;
+  var canvas = document.getElementById("hero-canvas");
+  if (!canvas) return;
 
-    var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-    if (!gl) return;
+  var gl =
+    canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+  if (!gl) return;
 
-    var VERT = `
+  var VERT = `
 attribute vec2 a_pos;
 void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }`;
 
-    var FRAG = `
+  var FRAG = `
 precision mediump float;
 uniform float u_t;
 uniform vec2  u_res;
@@ -91,95 +92,95 @@ void main() {
     gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }`;
 
-    function mkShader(type, src) {
-        var sh = gl.createShader(type);
-        gl.shaderSource(sh, src);
-        gl.compileShader(sh);
-        if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
-            console.error("shader:", gl.getShaderInfoLog(sh));
-            return null;
-        }
-        return sh;
+  function mkShader(type, src) {
+    var sh = gl.createShader(type);
+    gl.shaderSource(sh, src);
+    gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+      console.error("shader:", gl.getShaderInfoLog(sh));
+      return null;
     }
+    return sh;
+  }
 
-    var vs = mkShader(gl.VERTEX_SHADER, VERT);
-    var fs = mkShader(gl.FRAGMENT_SHADER, FRAG);
-    if (!vs || !fs) return;
+  var vs = mkShader(gl.VERTEX_SHADER, VERT);
+  var fs = mkShader(gl.FRAGMENT_SHADER, FRAG);
+  if (!vs || !fs) return;
 
-    var prog = gl.createProgram();
-    gl.attachShader(prog, vs);
-    gl.attachShader(prog, fs);
-    gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-        console.error("link:", gl.getProgramInfoLog(prog));
-        return;
+  var prog = gl.createProgram();
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    console.error("link:", gl.getProgramInfoLog(prog));
+    return;
+  }
+  gl.useProgram(prog);
+
+  var buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
+    gl.STATIC_DRAW,
+  );
+  var aPos = gl.getAttribLocation(prog, "a_pos");
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+  var uT = gl.getUniformLocation(prog, "u_t");
+  var uRes = gl.getUniformLocation(prog, "u_res");
+  var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  var start = performance.now();
+  var raf;
+
+  function resize() {
+    var w = (canvas.clientWidth * dpr) | 0;
+    var h = (canvas.clientHeight * dpr) | 0;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+      gl.viewport(0, 0, w, h);
     }
-    gl.useProgram(prog);
+    gl.uniform2f(uRes, w || 1, h || 1);
+  }
 
-    var buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER,
-        new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
-    var aPos = gl.getAttribLocation(prog, "a_pos");
-    gl.enableVertexAttribArray(aPos);
-    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+  new ResizeObserver(resize).observe(canvas);
+  resize();
 
-    var uT   = gl.getUniformLocation(prog, "u_t");
-    var uRes = gl.getUniformLocation(prog, "u_res");
-    var dpr  = Math.min(window.devicePixelRatio || 1, 1.5);
-    var start = performance.now();
-    var raf;
+  function draw() {
+    gl.uniform1f(uT, (performance.now() - start) * 0.001);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    raf = requestAnimationFrame(draw);
+  }
 
-    function resize() {
-        var w = canvas.clientWidth  * dpr | 0;
-        var h = canvas.clientHeight * dpr | 0;
-        if (canvas.width !== w || canvas.height !== h) {
-            canvas.width  = w;
-            canvas.height = h;
-            gl.viewport(0, 0, w, h);
-        }
-        gl.uniform2f(uRes, w || 1, h || 1);
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+      cancelAnimationFrame(raf);
+    } else {
+      draw();
     }
+  });
 
-    new ResizeObserver(resize).observe(canvas);
-    resize();
-
-    function draw() {
-        gl.uniform1f(uT, (performance.now() - start) * 0.001);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        raf = requestAnimationFrame(draw);
-    }
-
-    document.addEventListener("visibilitychange", function () {
-        if (document.hidden) {
-            cancelAnimationFrame(raf);
-        } else {
-            draw();
-        }
-    });
-
-    draw();
+  draw();
 })();
 
-// ── Lightbox ─────────────────────────────────────────────────────────────
+// Lightbox
 (function () {
-    var lb = document.getElementById("lb");
-    var lbImg = document.getElementById("lb-img");
-    document.querySelectorAll(".shot img").forEach(function (img) {
-        img.addEventListener("click", function () {
-            lbImg.src = img.src;
-            lbImg.alt = img.alt;
-            lb.classList.add("open");
-        });
+  var lb = document.getElementById("lb");
+  var lbImg = document.getElementById("lb-img");
+  document.querySelectorAll(".shot img").forEach(function (img) {
+    img.addEventListener("click", function () {
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lb.classList.add("open");
     });
-    lb.addEventListener("click", function (e) {
-        if (
-            e.target === lb ||
-            e.target.classList.contains("lb-close")
-        )
-            lb.classList.remove("open");
-    });
-    document.addEventListener("keydown", function (e) {
-        if (e.key === "Escape") lb.classList.remove("open");
-    });
+  });
+  lb.addEventListener("click", function (e) {
+    if (e.target === lb || e.target.classList.contains("lb-close"))
+      lb.classList.remove("open");
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") lb.classList.remove("open");
+  });
 })();
